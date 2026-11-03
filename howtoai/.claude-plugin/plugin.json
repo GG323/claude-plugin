@@ -1,0 +1,5 @@
+{
+  "name": "howtoai",
+  "version": "0.1.0",
+  "description": "HowToAI skills: skill-builder (create, improve, or repair a skill) and environment-audit (audit the Claude environment and its workspaces)"
+}

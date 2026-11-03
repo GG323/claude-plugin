@@ -1,0 +1,4 @@
+# Skill run state stays on this machine, never in the public repository
+howtoai/skills/*/state/
+
+__pycache__/
