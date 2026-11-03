@@ -1,0 +1,5 @@
+{
+  "name": "command-pane",
+  "version": "0.3.0",
+  "description": "A star button above the prompt that puts a build-a-skill prompt in the chat box"
+}

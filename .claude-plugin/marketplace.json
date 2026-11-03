@@ -1,0 +1,7 @@
+{
+  "name": "howtoai-mods",
+  "owner": { "name": "GG323" },
+  "plugins": [
+    { "name": "command-pane", "source": "./command-pane", "description": "A star button above the prompt that puts a build-a-skill prompt in the chat box" }
+  ]
+}
