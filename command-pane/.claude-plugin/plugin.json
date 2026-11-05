@@ -1,7 +1,7 @@
 {
   "name": "command-pane",
   "version": "0.4.0",
-  "description": "One-click buttons above the prompt, in folders the user customizes, with custom prompt buttons: a build-a-skill prompt, a settings pane for technical level, approval detail, and recommended setup, and a Today pane of tasks and email per workspace",
+  "description": "One-click buttons above the prompt, in folders the user customizes, with custom prompt buttons: a build-a-skill prompt, a handover to a new session whose button turns yellow and red as the context fills, a settings pane for technical level, approval detail, and recommended setup, and a Today pane of tasks and email per workspace",
   "types": "./types/index.d.ts",
   "userConfig": {
     "techLevel": {
@@ -17,6 +17,20 @@
       "description": "How much detail Claude gives before asking for approval: auto, low, mid, or high",
       "options": ["auto", "low", "mid", "high"],
       "default": "mid"
+    },
+    "handoverWarn": {
+      "type": "string",
+      "title": "Handover yellow at",
+      "description": "Context window fill (percent) at which the Handover button turns yellow",
+      "options": ["30", "40", "50", "60", "70", "80", "90"],
+      "default": "50"
+    },
+    "handoverAlert": {
+      "type": "string",
+      "title": "Handover red at",
+      "description": "Context window fill (percent) at which the Handover button turns red",
+      "options": ["30", "40", "50", "60", "70", "80", "90"],
+      "default": "70"
     }
   }
 }

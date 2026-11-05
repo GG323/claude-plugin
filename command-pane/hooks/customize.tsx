@@ -3,6 +3,7 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { BandGroup, BandItem, BandLayout, BuiltinId, PromptMode } from '../types'
 import { openToday, openTodaySettings } from './today'
+import { contextPercent, handoverColor, runHandover } from './handover'
 
 // The band above the prompt and the Customize pane that sets it.
 // Which buttons show, in which folders, is set per user in one file:
@@ -27,6 +28,7 @@ const BUILTINS: Record<BuiltinId, { label: string; icon: string; color?: string;
   star: { label: 'Star prompt', icon: '★', color: 'warning', group: MAIN, visible: true },
   settings: { label: 'Settings', icon: '⚙', group: MAIN, visible: true },
   today: { label: 'Today', icon: '☰', color: 'suggestion', group: MAIN, visible: true },
+  handover: { label: 'Handover', icon: '⇄', group: MAIN, visible: true }, // colour follows the context fill (handover.tsx)
   compact: { label: 'Compact', icon: '⇣', group: 'session', visible: false },
   context: { label: 'Context', icon: '◔', group: 'session', visible: false },
   usage: { label: 'Usage', icon: '◷', group: 'session', visible: false },
@@ -85,7 +87,8 @@ function normalize(input: unknown): BandLayout {
   for (const id of BUILTIN_IDS) {
     if (!groups.some(g => g.items.some(it => it.builtin === id))) {
       const home = groups.find(g => g.id === BUILTINS[id].group) ?? main
-      home.items.push({ ...builtinItem(id), visible: false })
+      // Absent = added to the mod after this layout was saved: show it as its default says
+      home.items.push(builtinItem(id))
     }
   }
   return { version: 1, groups }
@@ -177,6 +180,7 @@ function press($: EngineInterface, item: BandItem) {
     case 'star': return void $.prompt.fill({ text: STAR_PROMPT, mode: 'replace' })
     case 'settings': return void $.ui.open({ id: SETTINGS_PANE, title: 'Settings' })
     case 'today': return void openToday($)
+    case 'handover': return void runHandover($)
     case 'compact': return void runCommand($, 'compact')
     case 'context': return void runCommand($, 'context')
     case 'usage': return void runCommand($, 'usage')
@@ -245,15 +249,27 @@ export const registerCustomize = (on: Parameters<Register>[0]) => {
     const { Box, Text, Button } = $.ui.resolve(e)
     const layout = await current($)
     const open = await read($, bandOpen)
+    // Handover's colour and label follow the context window's fill (hooks/handover.tsx)
+    const hoColor = await handoverColor($)
+    const hoPercent = await contextPercent($)
 
-    const itemButton = (item: BandItem) => (
-      <Box key={`band-${item.id}`} flexDirection="row" gap={1}>
-        <Button key={`band-btn-${item.id}`} plain onPress={() => press($, item)}>
-          <Text color={item.color || undefined}>{item.icon || '◆'}</Text>
-        </Button>
-        {item.label && <Text dimColor>{item.label}</Text>}
-      </Box>
-    )
+    const itemButton = (item: BandItem) => {
+      const isHandover = item.kind === 'builtin' && item.builtin === 'handover'
+      const color = isHandover ? hoColor : item.color || undefined
+      return (
+        <Box key={`band-${item.id}`} flexDirection="row" gap={1}>
+          <Button key={`band-btn-${item.id}`} plain onPress={() => press($, item)}>
+            <Text color={color}>{item.icon || '◆'}</Text>
+          </Button>
+          {item.label && (
+            <Text dimColor={!(isHandover && color)} color={isHandover ? color : undefined}>
+              {item.label}
+              {isHandover && hoPercent !== undefined ? ` ${hoPercent}%` : ''}
+            </Text>
+          )}
+        </Box>
+      )
+    }
 
     const parts = layout.groups.map(group => {
       const items = group.items.filter(it => it.visible)

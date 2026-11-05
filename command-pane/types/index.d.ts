@@ -2,7 +2,7 @@
 export type SettingsRev = number
 
 // The band's buttons, set per user in ~/.claude/command-pane/buttons.json
-export type BuiltinId = 'star' | 'settings' | 'today' | 'compact' | 'context' | 'usage'
+export type BuiltinId = 'star' | 'settings' | 'today' | 'handover' | 'compact' | 'context' | 'usage'
 export type PromptMode = 'fill' | 'send'
 export type BandItem = {
   id: string

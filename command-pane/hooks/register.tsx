@@ -3,6 +3,7 @@ import type { ConfigRow, EngineInterface, Register } from 'claude-code'
 
 import { registerToday, startToday } from './today'
 import { registerCustomize, startCustomize } from './customize'
+import { HANDOVER_ALERT_KEY, HANDOVER_DEFAULTS, HANDOVER_LEVELS, HANDOVER_WARN_KEY, registerHandover } from './handover'
 
 // Settings: two userConfig fields of this mod, shown in /config and in the Settings pane
 const TECH_KEY = 'command-pane.techLevel'
@@ -91,6 +92,9 @@ export const register: Register = (on, options) => {
   // The band and the Customize pane (hooks/customize.tsx)
   registerCustomize(on)
 
+  // Handover button colour levels (hooks/handover.tsx)
+  registerHandover(on, options)
+
   const techLevel = String(options.techLevel ?? RECOMMENDED.techLevel)
   const approvalLevel = String(options.approvalLevel ?? RECOMMENDED.approvalLevel)
 
@@ -129,6 +133,8 @@ export const register: Register = (on, options) => {
     const tech = value(TECH_KEY, techLevel)
     const approval = value(APPROVAL_KEY, approvalLevel)
     const styleRow = findRow(rows, OUTPUT_STYLE_KEY)
+    const hoWarn = value(HANDOVER_WARN_KEY, String(options.handoverWarn ?? HANDOVER_DEFAULTS.warn))
+    const hoAlert = value(HANDOVER_ALERT_KEY, String(options.handoverAlert ?? HANDOVER_DEFAULTS.alert))
 
     const choiceRow = (key: string, prefix: string, levels: readonly string[], current: string) => (
       <Box flexDirection="row" gap={1} flexWrap="wrap">
@@ -156,6 +162,15 @@ export const register: Register = (on, options) => {
           <Text bold>Approval detail</Text>
           <Text dimColor>How much Claude explains before asking for approval.</Text>
           {choiceRow(APPROVAL_KEY, 'approval', APPROVAL_LEVELS, approval)}
+        </Box>
+        <Box flexDirection="column">
+          <Text bold>Handover button</Text>
+          <Text dimColor>Context window fill (%) at which the ⇄ Handover button turns yellow, then red.</Text>
+          <Text color="warning">Yellow at</Text>
+          {choiceRow(HANDOVER_WARN_KEY, 'ho-warn', HANDOVER_LEVELS, hoWarn)}
+          <Text color="error">Red at</Text>
+          {choiceRow(HANDOVER_ALERT_KEY, 'ho-alert', HANDOVER_LEVELS, hoAlert)}
+          {Number(hoAlert) <= Number(hoWarn) && <Text dimColor>Red is at or below yellow, so the button goes straight to red.</Text>}
         </Box>
         <Box flexDirection="column">
           <Text bold>Claude Code</Text>

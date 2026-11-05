@@ -2,7 +2,7 @@
   "name": "howtoai-mods",
   "owner": { "name": "GG323" },
   "plugins": [
-    { "name": "command-pane", "source": "./command-pane", "description": "One-click buttons above the prompt, in folders the user customizes, with custom prompt buttons: a build-a-skill prompt, a settings pane for technical level, approval detail, and recommended setup, and a Today pane of tasks and email per workspace" },
+    { "name": "command-pane", "source": "./command-pane", "description": "One-click buttons above the prompt, in folders the user customizes, with custom prompt buttons: a build-a-skill prompt, a handover to a new session whose button turns yellow and red as the context fills, a settings pane for technical level, approval detail, and recommended setup, and a Today pane of tasks and email per workspace" },
     { "name": "howtoai", "source": "./howtoai", "description": "HowToAI skills: skill-builder and environment-audit" }
   ]
 }

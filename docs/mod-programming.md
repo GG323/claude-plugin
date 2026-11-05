@@ -156,6 +156,13 @@ Tested 2026-10-26 in the desktop app:
   - Folders in the band: there is no pop-up menu, so a folder button opens its buttons in place, in a round-bordered `Box`, and closes again on a second press.
   - A form field's key carries a counter (`cz-f-label-${formSeq}`): bumping it draws fresh fields with new values, for example when Edit loads another button into the form.
 
+- 2026-11-05, command-pane Today rework, desktop app:
+  - The desktop app's connectors are MCP servers named by ID, not by name (Gmail `12b5f882-...`, Calendar `b28c84ff-...`): their tools show as `mcp__<id>__<tool>`. A mod finds a connector by its tools in `$.tool.list()`, which is empty at `session.start` and filled a little later.
+  - `$.mcp.call` from a mod goes through Claude Code's permission check: in auto mode the classifier stopped `search_threads` ("gave no verdict"). An allow rule for that one read-only tool (`mcp__<id>__search_threads`) in `~/.claude/settings.json` lets it through. The mod does not add rules itself: its Fix connection button asks Claude, who shows the rule and asks the user first.
+  - Keep every error when trying several servers or tools: keeping only the last one hid the real cause.
+  - A multi-line `Input` grows with its text by drawing it with `rows` set from the line count; redrawing only when the row count changes keeps typing smooth.
+  - `$.model.complete({ model: 'haiku', effort: 'low' })` from a hook makes the summaries with no agent turn; results are cached in `$.store` by item.
+
 ## Skills and agents
 
 - `plugin-authoring` - Claude Code's built-in skill for making and debugging mods; loads the engine's type declarations and examples.
