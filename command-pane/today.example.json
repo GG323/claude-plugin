@@ -1,0 +1,32 @@
+{
+  "default": {
+    "sources": []
+  },
+  "workspaces": {
+    "C:/Users/you/Projects/my-project": {
+      "refreshMinutes": 15,
+      "sources": [
+        {
+          "type": "markdown",
+          "name": "TODO",
+          "path": "TODO.md",
+          "sections": [
+            "Buttons",
+            "Today pane"
+          ],
+          "skip": [
+            "Done",
+            "Dropped"
+          ]
+        },
+        {
+          "type": "gmail",
+          "name": "Email",
+          "server": "claude.ai Gmail",
+          "query": "in:inbox is:unread newer_than:2d",
+          "max": 10
+        }
+      ]
+    }
+  }
+}

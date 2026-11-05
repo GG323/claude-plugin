@@ -1,5 +1,22 @@
 {
   "name": "command-pane",
-  "version": "0.3.0",
-  "description": "A star button above the prompt that puts a build-a-skill prompt in the chat box"
+  "version": "0.4.0",
+  "description": "One-click buttons above the prompt, in folders the user customizes, with custom prompt buttons: a build-a-skill prompt, a settings pane for technical level, approval detail, and recommended setup, and a Today pane of tasks and email per workspace",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "techLevel": {
+      "type": "string",
+      "title": "Technical level",
+      "description": "How technical Claude's answers should be: nontechnical, some technical, or developer",
+      "options": ["nontechnical", "some technical", "developer"],
+      "default": "some technical"
+    },
+    "approvalLevel": {
+      "type": "string",
+      "title": "Approval detail",
+      "description": "How much detail Claude gives before asking for approval: auto, low, mid, or high",
+      "options": ["auto", "low", "mid", "high"],
+      "default": "mid"
+    }
+  }
 }

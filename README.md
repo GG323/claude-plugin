@@ -2,7 +2,7 @@
 
 ## Contents
 
-- [Mods](#mods)
+- [Plugins](#plugins)
 - [Install](#install)
 - [Update](#update)
 - [Skills and agents](#skills-and-agents)
@@ -17,6 +17,8 @@ This repository is the `howtoai-mods` plugin marketplace for Claude Code. It hol
   - `howtoai:environment-audit` - audits the Claude environment and its workspaces and publishes one HTML report.
 
 Each skill keeps its run state in its own `state/` folder. The folders are ignored by git, so the state stays on the machine that made it and never reaches this repository.
+
+[Claude Code mod programming](docs/mod-programming.md) is the developer reference for the mods: workflow, the API used so far, and what has been tested.
 
 ## Install
 

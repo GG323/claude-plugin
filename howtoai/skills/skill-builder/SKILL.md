@@ -45,7 +45,7 @@ Every file in this skill uses these terms, one name per thing.
 
 ## The process
 
-1. **Recall** — For every request, first read [stages/recall.md](stages/recall.md). Search past target skills and lessons, write the recall note, and go to Plan.
+1. **Recall** — For every request, first read [stages/recall.md](stages/recall.md). Search past target skills, existing skills, and lessons — and, for a new skill nothing local covers, online skill catalogs — write the recall note, and go to Plan.
 2. **Plan** — Read [stages/plan.md](stages/plan.md). Interpret the problem, inspect context, choose the route (the main route or a handoff to `skill-creator`), draft the plan, and get the user's explicit approval.
 3. **Build** — Only after approval, read [stages/build.md](stages/build.md) and create or revise the target skill. If the plan changes materially, return to Plan for approval first.
 4. **Test** — Read [stages/test.md](stages/test.md). Run checks, propose risk-rated tests, run only approved tests, and deliver the target skill.

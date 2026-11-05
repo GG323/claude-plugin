@@ -14,6 +14,7 @@
 
 - Confirm the user explicitly approved the final plan. If approval is missing or the plan changed materially, return to [Plan](plan.md).
 - Build exactly what the plan approved, following the [core rules](../SKILL.md#core-rules) and the recall-note lessons the plan applied. Use [the example](../examples/example-target-skill.md) as a shape reference.
+- When the plan reuses an online candidate, first run its download, review, audit, and install-approval steps from [Plan](plan.md#inspect-the-target-context). Reusing it as published ends Build there; adapting it continues below with the downloaded copy as the existing skill.
 - When revising an existing skill, first copy its current version to `_sandbox/<name>/baseline/` in the user's working directory. [Test](test.md#design-candidate-tests) uses the copy as the baseline and deletes it after delivery.
 - When revising, leave only current behavior: remove obsolete instructions and stale references, consolidate overlap, update or remove supporting material that no longer matches, regenerate examples that mislead about the new behavior, and update the target skill's `state/` according to its own rules. When the change comes from a failure in real use, add it as a row in the target skill's **Common failures** section. Preserve unrelated files and behavior.
 
