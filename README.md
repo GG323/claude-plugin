@@ -11,7 +11,7 @@
 
 This repository is the `howtoai-mods` plugin marketplace for Claude Code. It holds two plugins:
 
-- [command-pane](command-pane/) - a mod: a star button above the prompt box that fills in "Build a skill based on our conversation, ask if the process to automate is not clear".
+- [command-pane](command-pane/) - a mod: one-click buttons above the prompt box, in folders each user customizes, with their own prompt buttons; a Settings pane (technical level, approval detail, output style, archiving, recommended setup); a Today pane of editable Markdown tasks, email, and calendar per workspace; and a Handover button. Its [README](command-pane/README.md) is the developer guide: files, where data lives, debugging, and how to add settings, buttons, prompts, and Today sources.
 - [howtoai](howtoai/) - two skills:
   - `howtoai:skill-builder` - creates, improves, or repairs a skill.
   - `howtoai:environment-audit` - audits the Claude environment and its workspaces and publishes one HTML report.

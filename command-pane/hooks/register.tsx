@@ -42,7 +42,7 @@ const RECOMMENDED = {
 }
 
 // Archive after 7 days is a desktop app setting: no /config row, so a mod cannot set it
-const ARCHIVE_NOTE = 'Archive inactive sessions after 7 days: set it in the desktop app Settings.'
+const ARCHIVE_NOTE = 'To archive inactive sessions after 7 days, press 7 days under Archive inactive sessions.'
 
 // Bumped after every change so the pane redraws with fresh values
 const settingsRev = atom({ plugin: 'command-pane', key: 'settingsRev' } as const, 0, { shape: 'rev-1' })
@@ -77,6 +77,56 @@ async function applyRecommended($: EngineInterface) {
   $.ui.toast(
     `Recommended setup: set ${done.join(', ') || 'nothing'}${skipped.length ? `; skipped ${skipped.join('; ')}` : ''}. ${ARCHIVE_NOTE}`,
   )
+}
+
+// The desktop app's auto-archive has no /config row. The pane reads it from the app's config file
+// and Claude sets it through the app, which asks the user to approve.
+const ARCHIVE_DAYS = [0, 1, 2, 7, 14, 30] as const // the app's own picker; 0 is never
+const archiveLabel = (days: number) => (days === 0 ? 'Never' : days === 1 ? '1 day' : `${days} days`)
+
+async function readArchiveDays($: EngineInterface): Promise<number | undefined> {
+  const appData = await $.env.get('APPDATA')
+  const home = (await $.env.get('USERPROFILE')) ?? (await $.env.get('HOME'))
+  const localAppData = await $.env.get('LOCALAPPDATA')
+  const paths = [
+    appData && `${appData}/Claude/claude_desktop_config.json`, // Windows, as the app's own processes see it
+    home && `${home}/Library/Application Support/Claude/claude_desktop_config.json`, // macOS
+  ].filter((p): p is string => Boolean(p))
+  // Windows Store install: outside the app the file sits in its package folder
+  if (localAppData) {
+    try {
+      for (const entry of await $.fs.list(`${localAppData}/Packages`)) {
+        if (entry.kind === 'dir' && entry.name.startsWith('Claude_')) {
+          paths.push(`${localAppData}/Packages/${entry.name}/LocalCache/Roaming/Claude/claude_desktop_config.json`)
+        }
+      }
+    } catch {
+      // no Packages folder
+    }
+  }
+  for (const path of paths) {
+    try {
+      if (!(await $.fs.exists(path))) continue
+      const config = (JSON.parse(await $.fs.read(path)) as { preferences?: Record<string, unknown> } & Record<string, unknown>)
+      const value = config.preferences?.ccAutoArchiveInactiveDays ?? config.ccAutoArchiveInactiveDays
+      return typeof value === 'number' ? value : 0
+    } catch {
+      // unreadable: try the next place
+    }
+  }
+  return undefined
+}
+
+async function askArchive($: EngineInterface, days: number) {
+  const text = [
+    days === 0
+      ? 'Please turn off automatic archiving of inactive sessions in the Claude desktop app (the command-pane Settings pane sent this).'
+      : `Please set automatic archiving of inactive sessions to ${archiveLabel(days)} in the Claude desktop app (the command-pane Settings pane sent this).`,
+    'Use the app\'s own settings tools, so I approve the change in the app. If this app or environment has no such setting, tell me in one line where to set it myself.',
+    'Change nothing else, and tell me in one line when it is done; I will reopen the Settings pane to see it.',
+  ].join('\n')
+  const res = await $.prompt.submit({ text, asUser: true })
+  if ('deny' in res && res.deny) $.ui.toast(`Not sent: ${String(res.deny)}`)
 }
 
 async function choose($: EngineInterface, key: string, value: string) {
@@ -133,6 +183,7 @@ export const register: Register = (on, options) => {
     const tech = value(TECH_KEY, techLevel)
     const approval = value(APPROVAL_KEY, approvalLevel)
     const styleRow = findRow(rows, OUTPUT_STYLE_KEY)
+    const archiveDays = await readArchiveDays($)
     const hoWarn = value(HANDOVER_WARN_KEY, String(options.handoverWarn ?? HANDOVER_DEFAULTS.warn))
     const hoAlert = value(HANDOVER_ALERT_KEY, String(options.handoverAlert ?? HANDOVER_DEFAULTS.alert))
 
@@ -173,9 +224,38 @@ export const register: Register = (on, options) => {
           {Number(hoAlert) <= Number(hoWarn) && <Text dimColor>Red is at or below yellow, so the button goes straight to red.</Text>}
         </Box>
         <Box flexDirection="column">
-          <Text bold>Claude Code</Text>
-          <Text dimColor>Output style: {styleRow ? String(styleRow.value) : 'not reachable'}</Text>
-          <Text dimColor>{ARCHIVE_NOTE}</Text>
+          <Text bold>Output style</Text>
+          <Text dimColor>How Claude Code writes its answers (Claude Code's own setting).</Text>
+          {styleRow?.options?.length && !styleRow.isLocked ? (
+            choiceRow(OUTPUT_STYLE_KEY, 'style', styleRow.options, String(styleRow.value))
+          ) : (
+            <Text dimColor>
+              {styleRow ? `${String(styleRow.value)}${styleRow.isLocked ? ' (set by your organization)' : ''}` : 'Not reachable here.'}
+            </Text>
+          )}
+        </Box>
+        <Box flexDirection="column">
+          <Text bold>Archive inactive sessions</Text>
+          <Text dimColor>
+            {archiveDays === undefined
+              ? 'A desktop app setting: Claude sets it and asks you to approve. The current value could not be read here.'
+              : 'A desktop app setting: Claude sets it and asks you to approve.'}
+          </Text>
+          <Box flexDirection="row" gap={1} flexWrap="wrap">
+            {ARCHIVE_DAYS.map(days => (
+              <Button
+                key={`archive-${days}`}
+                variant={days === archiveDays ? 'primary' : undefined}
+                dimColor={days !== archiveDays}
+                onPress={() => void askArchive($, days)}
+              >
+                {archiveLabel(days)}
+              </Button>
+            ))}
+          </Box>
+          {archiveDays !== undefined && !(ARCHIVE_DAYS as readonly number[]).includes(archiveDays) && (
+            <Text dimColor>Now: {archiveLabel(archiveDays)}.</Text>
+          )}
         </Box>
         <Button key="apply-recommended" variant="primary" onPress={() => void applyRecommended($)}>
           Apply recommended

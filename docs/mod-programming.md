@@ -34,7 +34,7 @@ Each mod is a plugin folder in this repository, listed in [marketplace.json](../
 - `hooks/register.tsx` - the module: `export const register: Register = on => { ... }`, types imported from `'claude-code'`.
 - `types/index.d.ts` - only for a mod that keeps values in `$.state`; named in `plugin.json` as `"types"`.
 
-Example: [command-pane](../command-pane/).
+Example: [command-pane](../command-pane/), whose [README](../command-pane/README.md) is a worked guide to a multi-file mod: one feature per file, one `session.start` hook, where data lives, and recipes for extending it.
 
 ## Development workflow
 
@@ -51,7 +51,7 @@ Example: [command-pane](../command-pane/).
 
 The engine writes the API declarations (`claude-code.d.ts`, about 14,000 lines with doc comments and examples) for its own version. The `plugin-authoring` skill names their path when it loads. Once the engine has loaded a mod from a folder the user owns, the same types sit in `<mod>/.claude-plugin/types/`.
 
-Type-check with a `tsconfig.json` kept outside the mod folder (for example in a scratch folder), whose `files` list names the declarations and `hooks/register.tsx`:
+Type-check with a `tsconfig.json` kept outside the mod folder (for example in a scratch folder), with these options:
 
 ```json
 {
@@ -65,7 +65,11 @@ Type-check with a `tsconfig.json` kept outside the mod folder (for example in a 
 }
 ```
 
-Run `tsc -p <that folder>`. `claude plugin validate <mod folder>` also checks the manifest and what the engine would refuse, where the `claude` command is on the PATH.
+Add a `files` list naming the declarations, the mod's `types/index.d.ts` (without it every `$.state` key types as `never`), and every `hooks/*.tsx`. Run `tsc -p <that folder>`.
+
+`claude plugin validate <mod folder>` also checks the manifest and what the engine would refuse. In the desktop app `claude` is not on the PATH; run `"%APPDATA%\Claude\claude-code\<version>\<build>\claude.exe" plugin validate <mod folder>`.
+
+Rules the validator holds: `$` is never passed through a value it cannot trace (an object of callbacks, a computed call), so dispatch with a `switch` of named calls; a pane's `requestId` matcher is a literal string; a types contract exports types only; each event is hooked at most once without a matcher per module.
 
 ## API reference
 
@@ -118,13 +122,14 @@ Tested 2026-10-26 in the desktop app:
 - `$.config.set` changes a `/config` row as if the user did it in the menu; `$.config.list` reads current values.
 - A `prompt.compose` hook can add a system prompt section (for example the user's technical level), so every prompt carries it without a hidden instruction file.
 - `userConfig` in `plugin.json` gives a mod its own settings in `/config`. A `string` field with `options` is a picker; its row key is `<plugin>.<field>` (for example `command-pane.techLevel`), and `$.config.set` on it writes `settings.json` under `pluginConfigs."<plugin>@<marketplace>".options` and reloads the module with the new `options`.
-- Built-in rows a mod can set are listed in the Findings log (2026-11-05 settings probe). Desktop-app settings, such as archiving inactive sessions, have no `/config` row.
+- Built-in rows a mod can set are listed in the Findings log (2026-11-05 settings probe). Desktop-app settings, such as archiving inactive sessions, have no `/config` row: a mod can read them from the app's `claude_desktop_config.json` and change them only by asking Claude in a prompt, which uses the app's settings tools with the user's approval. See [command-pane](../command-pane/README.md#add-a-claude-code-or-desktop-app-setting).
 
 ## What a mod cannot do
 
 - Create or fork a session, or open a split view. Claude can, with the desktop app's session tools, when a prompt asks it to.
 - Press Enter in the prompt box, or trigger desktop-app features that live in the app's own prompt box (`/btw` side chat).
 - Draw in the session info rail or the hint line under the prompt (desktop app).
+- Change a desktop-app setting (such as archiving inactive sessions) or a permission rule itself. A prompt can ask Claude to, and the user approves.
 
 ## Findings log
 
@@ -162,6 +167,10 @@ Tested 2026-10-26 in the desktop app:
   - Keep every error when trying several servers or tools: keeping only the last one hid the real cause.
   - A multi-line `Input` grows with its text by drawing it with `rows` set from the line count; redrawing only when the row count changes keeps typing smooth.
   - `$.model.complete({ model: 'haiku', effort: 'low' })` from a hook makes the summaries with no agent turn; results are cached in `$.store` by item.
+- 2026-11-05, command-pane Settings pane archive row, desktop app:
+  - The desktop app keeps its own settings in `claude_desktop_config.json` under `preferences` (archive: `ccAutoArchiveInactiveDays`, 0 = never). A mod reads it with `$.fs.read` at `%APPDATA%/Claude/` (Windows) or `~/Library/Application Support/Claude/` (macOS).
+  - Windows Store install: the app's own processes (the engine, its shells) see that file at `%APPDATA%/Claude/`; a process started outside the app finds it at `%LOCALAPPDATA%/Packages/Claude_<id>/LocalCache/Roaming/Claude/`. The mod tries both.
+  - Changing it from a button: `$.prompt.submit` asks Claude to use the app's settings tools; the user approves on a card. The pane shows the new value when reopened.
 
 ## Skills and agents
 
