@@ -1,0 +1,40 @@
+{
+  "built": "2026-11-06T11:00:20+00:00",
+  "model": "chromadb DefaultEmbeddingFunction (all-MiniLM-L6-v2, ONNX)",
+  "entries": 6543,
+  "rows": 14968,
+  "expanded_entries": 892,
+  "sources": {
+    "agenticskills": {
+      "ok": true,
+      "entries": 334,
+      "seconds": 15
+    },
+    "claude-plugins-official": {
+      "ok": true,
+      "entries": 317,
+      "seconds": 0
+    },
+    "anthropic-agent-skills": {
+      "ok": true,
+      "entries": 5,
+      "seconds": 0
+    },
+    "claude-directory": {
+      "ok": true,
+      "entries": 3604,
+      "seconds": 0
+    },
+    "claude-community": {
+      "ok": true,
+      "entries": 2283,
+      "seconds": 1
+    }
+  },
+  "expansion": {
+    "repos_total": 5490,
+    "repos_done": 287,
+    "repos_failed": 13,
+    "left": 5190
+  }
+}

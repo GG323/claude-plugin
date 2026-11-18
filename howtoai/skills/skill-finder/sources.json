@@ -1,0 +1,43 @@
+{
+  "_about": "Approved sources for skill-finder: this list plus every marketplace the user has added to Claude Code (read live from known_marketplaces.json). Remote sources are indexed by 'finder.py index' into index/ and shipped with the skill; local sources are scanned live at search time and never shipped. A new remote source needs its own loader in finder.py. Mark: anthropic (written by Anthropic), curated (hand-picked list), reviewed (directory review done), otherwise unaudited.",
+  "remote": [
+    {
+      "id": "agenticskills",
+      "type": "agenticskills",
+      "url": "https://agenticskills.io",
+      "mark": "curated",
+      "priority": 1
+    },
+    {
+      "id": "claude-plugins-official",
+      "type": "marketplace",
+      "repo": "anthropics/claude-plugins-official",
+      "priority": 2
+    },
+    {
+      "id": "anthropic-agent-skills",
+      "type": "marketplace",
+      "repo": "anthropics/skills",
+      "priority": 2
+    },
+    {
+      "id": "claude-directory",
+      "type": "directory",
+      "path": "~/.claude/plugins/plugin-directory-cache-v2.json",
+      "priority": 3
+    },
+    {
+      "id": "claude-community",
+      "type": "marketplace",
+      "repo": "anthropics/claude-plugins-community",
+      "priority": 4
+    }
+  ],
+  "local": [
+    { "id": "installed-skills", "type": "skills-folder", "path": "~/.claude/skills" },
+    { "id": "installed-plugins", "type": "plugins-folder", "path": "~/.claude/plugins/cache" },
+    { "id": "claude-marketplace", "type": "claude-marketplaces", "path": "~/.claude/plugins/known_marketplaces.json" },
+    { "id": "workspace-skills", "type": "skills-folder", "path": ".claude/skills" },
+    { "id": "vendored", "type": "plugins-folder", "path": "External" }
+  ]
+}

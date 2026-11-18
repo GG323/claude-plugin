@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: redesign-lists-outdated
+expected_outcome: |
+  The redesign stage reads the current reference version with tokens.py show, reads design-log.md, and lists exactly the three rows at version 0 (report-template.html, plan.html, today.tsx) as outdated; the own-style Northwind review and the version-999 dashboard are not listed. It shows the list and asks which rows to rebuild, and changes no file before approval.
+context:
+  scaffold_script: place-files.sh

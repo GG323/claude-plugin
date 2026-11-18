@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: approves-consistent-client-page
+expected_outcome: |
+  The page is judged against its own consistent style plus the hard rules, so its serif type, centred layout and square button raise no findings; the example.com booking link is an H14 HIGH finding, so the verdict is Block with a request for the real URL.
+context:
+  scaffold_script: place-files.sh

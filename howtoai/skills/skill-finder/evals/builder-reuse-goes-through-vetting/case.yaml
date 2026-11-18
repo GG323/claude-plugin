@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: builder-reuse-goes-through-vetting
+expected_outcome: |
+  skill-builder's Recall runs skill-finder, and the recall note lists note-tidy from External/note-tools as a reuse candidate, not as a duplicate of the user's own skill. The plan puts the Reuse decision first and says that Build runs skill-finder's full vetting before anything is installed or copied, with install as a second approval. The run stops at the approval question.
+context:
+  scaffold_script: place-files.sh

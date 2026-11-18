@@ -1,0 +1,1 @@
+Acme Bakery wants a one-page summary of their October automation results for the owner: 3 workflows (order intake from email, daily stock sheet, supplier reminders). Order intake handled 214 orders, saved about 11 hours. Stock sheet ran 31 times, 2 failures (the supplier price list changed format on 14 October). Supplier reminders: 12 sent drafts, all approved by the owner.

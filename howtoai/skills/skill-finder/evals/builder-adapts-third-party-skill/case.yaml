@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: builder-adapts-third-party-skill
+expected_outcome: |
+  skill-builder treats note-tidy as a third-party candidate to adapt, not as the user's own skill to edit. The plan says Build first runs skill-finder's vetting and places the vetted copy in a named build destination, and that the files under External/note-tools stay untouched. The run stops at the approval question.
+context:
+  scaffold_script: place-files.sh

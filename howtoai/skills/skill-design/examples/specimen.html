@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HowToAI house design specimen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* HowToAI house design: tokens and components. Values: assets/design-tokens.json; look and rules: references/design-reference.html and references/rules.md.
+   Inlined into every page by `page.py new`; a client profile's overrides are appended after it. */
+
+:root {
+  /* Color, light theme */
+  --bg: #f5f7fa;
+  --surface: #ffffff;
+  --fg: #1a2330;
+  --muted: #586474;
+  --line: #d9e0e8;
+  --line-strong: #8a96a6;
+  --accent: #1f5aa6;
+  --accent-fg: #ffffff;
+  --accent-bg: #e6eef9;
+  --danger: #b42318;
+  --danger-bg: #fdecea;
+  --warn: #8a5a00;
+  --warn-bg: #fdf3dc;
+  --ok: #17703a;
+  --ok-bg: #e4f4ea;
+  --shade: rgb(26 35 48 / 0.18);
+  color-scheme: light;
+
+  /* Type */
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", "Segoe UI", sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
+  --text-xs: 0.8125rem;  /* 13px: labels, badges; nothing smaller */
+  --text-sm: 0.875rem;   /* 14px: meta, table cells */
+  --text-md: 1rem;       /* 16px: body */
+  --text-lg: 1.125rem;   /* 18px: lead */
+  --text-xl: 1.5rem;     /* 24px: h2 */
+  --text-2xl: 2rem;      /* 32px: h1 */
+  --text-figure: 1.75rem;
+
+  /* Space: 4px steps, then doubling */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+
+  /* Shape */
+  --r-1: 4px;   /* controls, code, badges */
+  --r-2: 8px;   /* cards, callouts */
+  --r-pill: 999px;
+  --page-max: 1120px;
+  --measure: 70ch;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11151b; --surface: #181e26; --fg: #e4e9ef; --muted: #9aa6b5;
+    --line: #2b3441; --line-strong: #5d6a7b;
+    --accent: #8db3ee; --accent-fg: #0d1522; --accent-bg: #1a2a42;
+    --danger: #ff9b8f; --danger-bg: #3a1d1b; --warn: #e8bd5a; --warn-bg: #33290f;
+    --ok: #6fd391; --ok-bg: #16301f; --shade: rgb(0 0 0 / 0.55);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11151b; --surface: #181e26; --fg: #e4e9ef; --muted: #9aa6b5;
+  --line: #2b3441; --line-strong: #5d6a7b;
+  --accent: #8db3ee; --accent-fg: #0d1522; --accent-bg: #1a2a42;
+  --danger: #ff9b8f; --danger-bg: #3a1d1b; --warn: #e8bd5a; --warn-bg: #33290f;
+  --ok: #6fd391; --ok-bg: #16301f; --shade: rgb(0 0 0 / 0.55);
+  color-scheme: dark;
+}
+
+/* Base */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: var(--text-md)/1.55 var(--font-body); -webkit-font-smoothing: antialiased; }
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; line-height: 1.2; margin: 0; text-wrap: balance; }
+h1 { font-size: var(--text-2xl); }
+h2 { font-size: var(--text-xl); }
+h3 { font-size: var(--text-lg); }
+h4 { font-size: var(--text-md); }
+p, ul, ol { margin: 0; }
+p, li { max-width: var(--measure); text-wrap: pretty; }
+a { color: var(--accent); text-underline-offset: 0.15em; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-1); }
+code, kbd, .mono { font-family: var(--font-mono); font-size: 0.9em; overflow-wrap: anywhere; }
+code { background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-1); padding: 0 var(--s-1); }
+img, svg, video { max-width: 100%; height: auto; }
+.num, .figure b, td.num, td.date { font-variant-numeric: lining-nums tabular-nums; } /* serif client faces default to old-style figures */
+.muted { color: var(--muted); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Page frame */
+.page { max-width: var(--page-max); margin: 0 auto; padding-block: var(--s-6) var(--s-8); padding-inline: max(var(--s-4), env(safe-area-inset-left, 0px)) max(var(--s-4), env(safe-area-inset-right, 0px)); display: grid; gap: var(--s-7); }
+.page-head { display: grid; gap: var(--s-3); }
+.lead { font-size: var(--text-lg); color: var(--muted); }
+.meta { color: var(--muted); font-size: var(--text-sm); }
+section { display: grid; gap: var(--s-4); min-width: 0; }
+.section-rule { border-top: 3px solid var(--fg); padding-top: var(--s-4); }
+.label { font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+
+/* Chips: a row of links or filters */
+.chips { display: flex; flex-wrap: wrap; gap: var(--s-2); list-style: none; margin: 0; padding: 0; }
+.chips a, .chips span { display: inline-block; padding: var(--s-1) var(--s-3); border: 1px solid var(--line); border-radius: var(--r-pill); background: var(--surface); font-size: var(--text-sm); text-decoration: none; }
+
+/* Key figures: the numbers a reader needs first */
+.figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-2); overflow: hidden; }
+.figure { background: var(--surface); padding: var(--s-3) var(--s-4); display: grid; gap: 2px; }
+.figure b { font: 600 var(--text-figure)/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+.figure span { color: var(--muted); font-size: var(--text-xs); }
+.figure.danger b { color: var(--danger); }
+.figure.warn b { color: var(--warn); }
+.figure.ok b { color: var(--ok); }
+
+/* Cards: one record each; long fields side by side, stacked when narrow */
+.cards { display: grid; gap: var(--s-3); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-2); padding: var(--s-4); display: grid; gap: var(--s-3); min-width: 0; }
+.card-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-2) var(--s-3); }
+.card-head h3 { font-size: var(--text-md); }
+.card-body { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: var(--s-3) var(--s-5); }
+.card-body > div { display: grid; gap: var(--s-1); min-width: 0; }
+.card.danger { border-left: 4px solid var(--danger); }
+.card.warn { border-left: 4px solid var(--warn); }
+.card.ok { border-left: 4px solid var(--ok); }
+
+/* Badges: short status words; color always next to the word, never instead of it */
+.badge { display: inline-block; padding: 1px var(--s-2); border-radius: var(--r-pill); font-size: var(--text-xs); font-weight: 600; white-space: nowrap; border: 1px solid var(--line); color: var(--fg); background: var(--surface); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); border-color: transparent; }
+.badge.warn { color: var(--warn); background: var(--warn-bg); border-color: transparent; }
+.badge.ok { color: var(--ok); background: var(--ok-bg); border-color: transparent; }
+.badge.accent { color: var(--accent); background: var(--accent-bg); border-color: transparent; }
+
+/* Callouts: one message the reader must not miss */
+.callout { border-radius: var(--r-2); padding: var(--s-3) var(--s-4); background: var(--accent-bg); border: 1px solid transparent; display: grid; gap: var(--s-1); }
+.callout > strong { font-weight: 600; }
+.callout.danger { background: var(--danger-bg); }
+.callout.warn { background: var(--warn-bg); }
+.callout.ok { background: var(--ok-bg); }
+
+/* Tables: short fields only; a scroll container with edge shadows when wider than the page */
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-2); background: linear-gradient(to right, var(--surface) 30%, transparent) left / 40px 100% no-repeat local, linear-gradient(to left, var(--surface) 30%, transparent) right / 40px 100% no-repeat local, radial-gradient(farthest-side at 0 50%, var(--shade), transparent) left / 14px 100% no-repeat scroll, radial-gradient(farthest-side at 100% 50%, var(--shade), transparent) right / 14px 100% no-repeat scroll, var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--text-sm); }
+caption { text-align: left; padding: var(--s-2) var(--s-3); color: var(--muted); }
+th, td { text-align: left; vertical-align: top; padding: var(--s-2) var(--s-3); border-bottom: 1px solid var(--line); }
+th { font-size: var(--text-xs); font-weight: 600; color: var(--muted); white-space: nowrap; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.date { font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+
+/* Buttons: one filled action per view */
+.button { display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2); min-height: 40px; padding: var(--s-2) var(--s-4); border-radius: var(--r-1); border: 1px solid var(--line-strong); background: var(--surface); color: var(--fg); font: 600 var(--text-sm)/1.2 var(--font-body); text-decoration: none; cursor: pointer; }
+.button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.button:disabled, .button[aria-disabled="true"] { opacity: 0.55; cursor: not-allowed; }
+@media (hover: hover) { .button:hover { border-color: var(--fg); } .button.primary:hover { filter: brightness(1.08); } }
+@media (prefers-reduced-motion: no-preference) {
+  .button { transition-property: border-color, filter; transition-duration: 150ms; transition-timing-function: ease-out; }
+}
+
+/* Disclosure */
+details { border: 1px solid var(--line); border-radius: var(--r-2); background: var(--surface); }
+summary { cursor: pointer; padding: var(--s-3) var(--s-4); font-weight: 600; }
+details > :not(summary) { padding: 0 var(--s-4) var(--s-4); }
+
+/* Footer */
+.page-foot { border-top: 1px solid var(--line); padding-top: var(--s-4); color: var(--muted); font-size: var(--text-sm); display: grid; gap: var(--s-1); }
+
+@media (max-width: 640px) {
+  .page { padding-block: var(--s-5) var(--s-7); gap: var(--s-6); }
+  h1 { font-size: 1.625rem; }
+  h2 { font-size: 1.3rem; }
+}
+@media print {
+  :root, :root[data-theme="dark"], :root:not([data-theme="light"]) { --bg: #ffffff; --surface: #ffffff; --fg: #000000; --muted: #3d4652; color-scheme: light; }
+  .page { max-width: none; padding: 0; }
+  .card, .figures, .scroll, details { break-inside: avoid; }
+}
+
+/* Page CSS: only what the house components cannot do, in tokens. */
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="page-head">
+    <p class="label">HowToAI house design</p>
+    <h1>Monthly automation report for Example Ltd</h1>
+    <p class="lead">Every component of the house design on one page, filled with sample content, so the look can be judged as a whole.</p>
+    <p class="meta">Sample data · 6 November 2026 · Built with <code>skill-design</code></p>
+    <ul class="chips" aria-label="Jump to section">
+      <li><a href="#s-needs">What needs you</a></li>
+      <li><a href="#s-findings">Findings</a></li>
+      <li><a href="#s-runs">Runs</a></li>
+      <li><a href="#s-type">Type and controls</a></li>
+    </ul>
+  </header>
+
+  <div class="figures" role="list" aria-label="Key figures">
+    <div class="figure" role="listitem"><b class="num">42</b><span>Workflows run</span></div>
+    <div class="figure ok" role="listitem"><b class="num">39</b><span>Succeeded</span></div>
+    <div class="figure warn" role="listitem"><b class="num">2</b><span>Need review</span></div>
+    <div class="figure danger" role="listitem"><b class="num">1</b><span>Failed</span></div>
+    <div class="figure" role="listitem"><b class="num">18 h</b><span>Time saved</span></div>
+  </div>
+
+  <section class="section-rule" aria-labelledby="s-needs">
+    <h2 id="s-needs">What needs you</h2>
+    <div class="callout danger">
+      <strong>Invoice import failed on 4 November</strong>
+      <p>The accounting export changed its date column. Send the new export file, and the import will be re-run the same day.</p>
+    </div>
+    <div class="callout warn">
+      <strong>Two email drafts wait for approval</strong>
+      <p>Both follow-up drafts are in Gmail drafts. Nothing is sent until you approve them.</p>
+    </div>
+    <div class="callout">
+      <strong>Next review on 4 December 2026</strong>
+      <p>The report is generated on the first Friday of each month.</p>
+    </div>
+  </section>
+
+  <section class="section-rule" aria-labelledby="s-findings">
+    <h2 id="s-findings">Findings</h2>
+    <div class="cards">
+      <article class="card danger">
+        <div class="card-head">
+          <span class="badge danger">Failed</span>
+          <h3>Invoice import stops at the date column</h3>
+          <span class="meta">Workflow <code>invoice-summary</code></span>
+        </div>
+        <div class="card-body">
+          <div><span class="label">What happened</span><p>The export now writes dates as <code>2026-11-04</code> instead of <code>04.11.2026</code>, so the totals step read no rows.</p></div>
+          <div><span class="label">What to do</span><p>Send one new export file. The parser will accept both date formats from then on.</p></div>
+        </div>
+      </article>
+      <article class="card warn">
+        <div class="card-head">
+          <span class="badge warn">Review</span>
+          <h3>Follow-up drafts ready</h3>
+          <span class="meta">Workflow <code>client-follow-up</code></span>
+        </div>
+        <div class="card-body">
+          <div><span class="label">What happened</span><p>Two training sessions ended this week; a thank-you draft with material links was written for each.</p></div>
+          <div><span class="label">What to do</span><p>Read both drafts in Gmail and send them yourself, or reply with changes.</p></div>
+        </div>
+      </article>
+      <article class="card ok">
+        <div class="card-head">
+          <span class="badge ok">Done</span>
+          <h3>Downloads folder sorted</h3>
+          <span class="meta">Workflow <code>downloads-organizer</code></span>
+        </div>
+        <div class="card-body">
+          <div><span class="label">What happened</span><p>212 files sorted by type and month; 9 exact duplicates set aside in a review folder.</p></div>
+          <div><span class="label">What to do</span><p>Nothing. Delete the duplicates folder when you have checked it.</p></div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="section-rule" aria-labelledby="s-runs">
+    <h2 id="s-runs">Runs</h2>
+    <div class="scroll" tabindex="0" role="region" aria-label="Runs table, scrolls sideways">
+      <table>
+        <caption>Last five runs</caption>
+        <thead><tr><th scope="col">Date</th><th scope="col">Workflow</th><th scope="col">Status</th><th scope="col" class="num">Items</th><th scope="col" class="num">Minutes</th></tr></thead>
+        <tbody>
+          <tr><td class="date">2026-11-04</td><td>invoice-summary</td><td><span class="badge danger">Failed</span></td><td class="num">0</td><td class="num">1</td></tr>
+          <tr><td class="date">2026-11-03</td><td>client-follow-up</td><td><span class="badge warn">Review</span></td><td class="num">2</td><td class="num">4</td></tr>
+          <tr><td class="date">2026-11-02</td><td>downloads-organizer</td><td><span class="badge ok">Done</span></td><td class="num">212</td><td class="num">3</td></tr>
+          <tr><td class="date">2026-11-01</td><td>course-clip-prep</td><td><span class="badge ok">Done</span></td><td class="num">6</td><td class="num">12</td></tr>
+          <tr><td class="date">2026-10-31</td><td>environment-audit</td><td><span class="badge ok">Done</span></td><td class="num">37</td><td class="num">9</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <details>
+      <summary>Run log</summary>
+      <p class="mono">2026-11-04 09:00 invoice-summary: 0 rows parsed, stopped before writing the workbook.</p>
+    </details>
+  </section>
+
+  <section class="section-rule" aria-labelledby="s-type">
+    <h2 id="s-type">Type and controls</h2>
+    <h3>A third-level heading</h3>
+    <p>Body text is 16px with a measure of at most 70 characters, so lines stay easy to follow. <a href="#s-needs">Links use the accent color</a>, and <span class="badge accent">accent badges</span> mark neutral labels. Numbers such as <span class="num">1,204.50</span> use tabular figures.</p>
+    <p class="muted">Muted text is for meta information only, never for content the reader needs.</p>
+    <div class="chips">
+      <button class="button primary" type="button">Download report</button>
+      <button class="button" type="button">Open the data</button>
+      <button class="button" type="button" disabled>Archived</button>
+    </div>
+  </section>
+
+  <footer class="page-foot">
+    <p>Sample content only. Source of the design: <code>skill-design/assets/house.css</code>.</p>
+    <p>Light and dark follow your system setting.</p>
+  </footer>
+</main>
+</body>
+</html>

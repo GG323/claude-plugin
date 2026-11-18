@@ -1,0 +1,5 @@
+{
+  "name": "howtoai-dev",
+  "version": "0.1.0",
+  "description": "HowToAI software-development process: plan, tests first, build, test, review, human review, and deploy, with a learn loop and per-technology workbooks. Version 0.1.0 holds the foundations: dev-core (settings, setup, plan folder state, templates) and the plan-review goldfish, scorer, and verifier agents"
+}

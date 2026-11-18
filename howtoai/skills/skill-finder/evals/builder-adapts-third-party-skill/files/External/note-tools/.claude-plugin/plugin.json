@@ -1,0 +1,6 @@
+{
+  "name": "note-tools",
+  "version": "0.1.0",
+  "description": "Tidies Markdown notes and logs each edit.",
+  "author": {"name": "Example Author"}
+}

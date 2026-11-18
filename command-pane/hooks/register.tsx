@@ -142,6 +142,8 @@ export const register: Register = (on, options) => {
   // The band and the Customize pane (hooks/customize.tsx)
   registerCustomize(on)
 
+  // The Design studio pane (hooks/design.tsx)
+
   // Handover button colour levels (hooks/handover.tsx)
   registerHandover(on, options)
 

@@ -1,6 +1,6 @@
 ---
 name: skill-builder
-description: Create, improve, or repair a focused agent skill (SKILL.md plus optional supporting files) for a repeatable technical or nontechnical task. Use when asked to make a skill, turn a workflow or prompt into a skill, write or update a SKILL.md, revise a skill's workflow or supporting material, or fix a skill's behavior after using it. Entry point for all skill work; hands coding skills, creative fine-tuning loops, and stubborn repeated failures to skill-creator.
+description: Creates, changes, or repairs skills, tools, and automated procedures for a repeatable task - a skill or slash command, subagent, hook or "whenever X" automation, mod (pane, band, status line), plugin, or a workflow that runs on a schedule. Interviews the user for crucial details first (goal, where input comes from and results go, anything sent or deleted, when it runs), shows the plan as a page, builds after approval, then checks and tests it. Use when asked to make or build a skill or tool, to automate a process, task, or weekly job, to turn a conversation, workflow, or prompt into a skill, to write or update a SKILL.md or agent file, or to fix a skill or tool after using it. Entry point for all skill and tool work; hands hooks to update-config and mods to plugin-authoring. Not for finding an existing skill (skill-finder), auditing skills (environment-audit), designing a page (skill-design), or sorting a brain dump (brain-dump).
 ---
 
 # Skill builder
@@ -27,45 +27,51 @@ Every file in this skill uses these terms, one name per thing.
 | **stage** | One of the five parts of the process; each is one file in `stages/`. |
 | **section** | A heading inside a file. |
 | **step** | A numbered action inside a section. |
-| **route** | A branch chosen at a decision, such as the main route or the `skill-creator` route. "Path" means only a file or folder path. |
-| **handoff** | Passing work to another skill, such as `skill-creator`. The **brief** is what that skill receives. |
+| **route** | A branch chosen at a decision, such as the main route or the verification-only route. "Path" means only a file or folder path. |
+| **handoff** | Passing work to another skill, such as `update-config`. The **brief** is what that skill receives. |
 | **delivery** | Giving the user a deliverable together with its report. For this skill, the deliverable is the target skill. |
-| **target skill** | The skill being created or changed. |
+| **target skill** | The skill or tool being created or changed: a skill or slash command, subagent, hook or settings change, mod, plugin, or a procedure built from them. Its kinds are listed in [Deliverable kinds](references/skill-types.md#deliverable-kinds). |
 | **workflow** | The target skill's own procedure. This skill's procedure is the process. |
 | **instructions** | The text of a skill that tells the main agent what to do. |
 | **rule** | A standing constraint that applies to every stage, listed in [Core rules](#core-rules). |
-| **check** | A read-only verification of files; nothing is run. |
+| **crucial item** | A detail that changes what is built, where data goes, or what happens without the user; defined in [references/grilling.md](references/grilling.md#crucial-items). |
+| **plan page** | The full plan, rendered from `plan.json` and shown as an artifact or file; chat carries the summary, questions, and approval. |
+| **check** | A read-only verification of files, run by the **checker**: a fresh built-in subagent with the brief in [references/check-brief.md](references/check-brief.md). |
 | **test** | Running the target skill on a prompt. A **test case** is a test saved in the target skill's `evals/` folder. |
 | **deliverable** / **report** | The target skill's main output / the status message about it. |
-| **loop** / **round** | `skill-creator`'s repeated test-and-improve cycle / one pass through it. |
+| **loop** / **round** | Test's repeated fix-and-rerun cycle / one pass through it. A **grilling round** is one message of numbered questions in Plan. |
 | **main agent** / **subagent** | The agent running a skill / a helper agent it starts. |
 | **registry** | The list of target skills this skill has built, changed, or retired, in [state/registry.md](state/registry.md). |
 | **lesson** | One recorded finding from past runs, in [state/lessons.md](state/lessons.md). |
 | **recall note** | The short summary of relevant past work that Recall writes for the later stages. |
+| **sandbox** | `_sandbox/<name>/` in the workspace root: the folder the session started in, or, when that is inside a nested git repository of a workspace, the outer folder holding the workspace's `AGENTS.md` or `CLAUDE.md`. It holds this run's probes, `plan.json`, baseline copy, and test outputs; Learn deletes it. |
 
 ## The process
 
-1. **Recall** — For every request, first read [stages/recall.md](stages/recall.md). Search past target skills, existing skills, and lessons — and, for a new skill nothing local covers, online skill catalogs — write the recall note, and go to Plan.
-2. **Plan** — Read [stages/plan.md](stages/plan.md). Interpret the problem, inspect context, choose the route (the main route or a handoff to `skill-creator`), draft the plan, and get the user's explicit approval.
-3. **Build** — Only after approval, read [stages/build.md](stages/build.md) and create or revise the target skill. If the plan changes materially, return to Plan for approval first.
-4. **Test** — Read [stages/test.md](stages/test.md). Run checks, propose risk-rated tests, run only approved tests, and deliver the target skill.
+1. **Recall** — For every request, first read [stages/recall.md](stages/recall.md). Ask only the goal question when no task is named; search past target skills and lessons, and, for a new one, run `skill-finder` over the user's skills and every approved marketplace. When one of the user's own skills covers or partly covers the request, ask whether to extend it instead of building a new one. Write the recall note, and go to Plan.
+2. **Plan** — Read [stages/plan.md](stages/plan.md). Interpret the request, inspect context, grill the request for its crucial items in short rounds of numbered questions with recommended answers, choose the route (the main route, which also takes coding skills, creative tuning, and repeated failures; a hook or settings change for `update-config` or a mod for `plugin-authoring`, handed off in Build; verification only, for which Build writes nothing; a new MCP server is not built), draft the plan, show it as a plan page, and get the user's explicit approval in chat.
+3. **Build** — Only after approval, read [stages/build.md](stages/build.md) and create or revise the target skill, or hand the writing to `update-config` or `plugin-authoring` as its first section, [Hand off or skip writing](stages/build.md#hand-off-or-skip-writing), says. If the plan changes materially, return to Plan for approval first.
+4. **Test** — Read [stages/test.md](stages/test.md). Have the checker run the checks, propose risk-rated tests sized to the change, run only approved tests, review an HTML deliverable's design, and deliver the target skill.
 5. **Learn** — Every run ends with [stages/learn.md](stages/learn.md): update the registry and lessons, promote proven lessons with the user's approval, and clean up.
 
 There is no separate fix stage. A change or a reported problem goes through the same process as a new skill, with a plan sized to the change; problems Test finds are fixed in Test's automatic fix loop when they stay within the approved plan, and go back to Plan otherwise.
+
+**Supplied change plan.** Another skill (for example `dev-learn`, `dev-review`, or `dev-deploy`) may hand over a ready change plan for one of the user's own skills or tools: the target files, the cause with its evidence, and the smallest change. It runs the same process, but Recall skips the skill search and Plan skips grilling and the Reuse decision: Plan checks the supplied plan against the files and asks for one approval, as its [Supplied change plan](stages/plan.md#supplied-change-plan) section says.
 
 The rules below apply to every stage. Stage files refer to them instead of repeating them.
 
 ## Core rules
 
-- **Infer, then ask.** Infer ordinary details from the request, project instructions, existing files, and examples. Ask only about unknowns that materially affect scope, behavior, output, permissions, side effects, or placement. Group related questions in one message.
+- **Infer, then ask.** Infer ordinary details from the request, project instructions, existing files, and examples, and state them as defaults. Ask about the rest with the items in [references/grilling.md](references/grilling.md) and the `grilling` skill's method: look up facts first, ask the user only decisions, in short numbered rounds with a recommended answer each. Crucial items are asked, never assumed.
+- **Plain words.** Word every question, plan, and report for the user's technical level: the `# User settings (command-pane)` block in the system prompt when present, else inferred, as the `grilling` skill's wording table describes. Keep chat messages short; detail goes on the plan page and in the delivery's details.
 - **Code before AI for deterministic work.** Before assigning repeatable, deterministic work to instructions, consider existing code or an official API, SDK, CLI, or integration. Keep AI for judgment and synthesis.
 - **Start small.** Make the first version focused and useful. Add inputs, runtime questions, templates, examples, scripts, and folders only when the workflow benefits. Never create empty or speculative folders.
 - **Current behavior only.** When revising a skill, remove obsolete instructions, files, and references within the authorized skill; do not leave change notes or compatibility fallbacks. Preserve unrelated files and history.
 - **Portable core, verified harness.** Follow the [Agent Skills specification](https://agentskills.io/specification) for the portable core. Verify each target harness's discovery paths and optional features; do not promise universal behavior.
 - **Target-repository conventions win.** Follow the target repository's `AGENTS.md`, `CLAUDE.md`, or equivalent for naming, documentation structure, and packaging. The exception is files whose format is fixed by a tool or by the deliverable — test-case files in `evals/` (`prompt.md`, `case.yaml`, graders, input files), run state in `state/` (logs, registries, lessons in the skill's own format), templates in `assets/` that are copied into outputs, and deliverables such as email drafts or newsletter copy. They follow their own format, because added titles or contents lists would break them; Test records them as exempt.
-- **Missing tools.** Whenever the work needs a tool, library, or connector — to build, check, or test the target skill — first check that it is available:
+- **Missing tools.** Whenever the work needs a tool, library, or connector — to build, check, or test the target skill, or for the target skill to run — first check that it is available:
   - **Available:** use it.
-  - **Missing, but obtainable** from its official source or the platform's package manager (for example, `winget` or `pip`): install it, continue, and name it in the report.
+  - **Missing, but obtainable** from its official source or the platform's package manager (for example, `winget` or `pip`): list the install in the plan with its source and any license terms it accepts (for example, `--accept-package-agreements`), and install it only after approval, before Build or the first test subagent needs it, because the test brief forbids installs. Then check that it runs in this shell; when PATH is stale, call it by its full path. Name it in the report.
   - **Missing and not obtainable** (no trusted source, no permission, or a connector only the user can turn on): stop that part, and propose another way that needs only the main agent — for example, a standard-library script, doing the step without the tool, or a manual step for the user — then continue with the one the user picks.
 - **Dates and times from the system.** Whenever a date, weekday, time, time zone, or interval matters — today's date for a registry row, the age of a lesson, a test's "as of" date, a deadline in a target skill — read it from the system clock (for example, `date`, PowerShell `Get-Date`, or Python `datetime`) and compute weekdays and date arithmetic with code. Never infer them, because a guessed date looks right and is often wrong.
 - **Honest reporting.** Never claim an unrun check or test passed.
@@ -81,14 +87,14 @@ Every target skill must define its deliverable separately from its report, and s
 **Standardized outputs.** A deliverable that reads like a document, such as a written report, summary, brief, overview, or fact or data sheet, gets a standard shape, whether it is saved as a file or returned in chat. Then every run looks the same, readers know where to look, and runs can be compared. These are defaults that point the design in the right direction, not a fixed template: Plan adapts them to the target skill and states any departure with its reason.
 
 - **Structure:** the same sections in the same order, with the same labels and fields, and a stated placeholder for missing data (for example, "none found") instead of a dropped section. When the structure is longer than a few lines, keep it as a template in `assets/` or a sample in `examples/`, so the main agent copies it instead of reinventing it each run.
-- **Presentation:** show data in the form that reads fastest. Use tables for records and comparisons; charts or simple graphics for trends, shares, timelines, and progress; key figures up front; and prose for reasoning, context, and caveats. Choose by the data, and leave out a table or chart that adds nothing to the text. Where the harness offers page-design or chart skills, depend on them by name instead of writing styling rules into the target skill.
+- **Presentation:** show data in the form that reads fastest. Use tables for records and comparisons; charts or simple graphics for trends, shares, timelines, and progress; key figures up front; and prose for reasoning, context, and caveats. Choose by the data, and leave out a table or chart that adds nothing to the text. Write no styling rules into the target skill: for a page or report, use `skill-design` (or a chart skill) once, to build a template the target skill ships and fills each run, so every run looks the same ([item 11](references/skill-types.md#every-target-skill)).
 - **Format:** artifact-compatible by default, so the output opens anywhere and can be shown or shared as an artifact where the harness offers one. A file deliverable defaults to one self-contained HTML file, with styles and graphics inline and no local dependencies. A deliverable returned in chat uses Markdown, with tables where they fit. Use another format when the user asks for it, when the destination needs it, or when a tool fixes the format.
 
 Messages, drafts, code, and other deliverables with conventions of their own keep those conventions. The report after delivery also keeps one short, fixed shape across runs.
 
 ## Working memory and sources
 
-- **Static material.** `references/` holds documentation the main agent reads on demand; `assets/` holds templates and files copied into outputs; `examples/` holds complete samples. Treat these as read-only during normal runs. In `skill-builder` itself, only [Learn](stages/learn.md) changes `references/`, and only with the user's approval.
+- **Static material.** `references/` holds documentation the main agent reads on demand; `assets/` holds templates and files copied into outputs; `examples/` holds complete samples. Treat these as read-only during normal runs. In `skill-builder` itself, `references/` changes only through a promotion in [Learn](stages/learn.md#promote-proven-lessons) or a run with `skill-builder` as the target skill, both with the user's approval.
 - **Persistent state.** If the target skill must remember things across runs (for example, a decision log or a history of past outputs to avoid repeats), plan a `state/` folder in the skill, or a project path the user chooses when the skill folder may not be writable (plugin installs, shared or read-only locations). Define what it holds, how it is seeded, and how runs update, replace, and prune it. If no state is needed, say so. Records of individual runs (plans, journals, logs, histories of what a run produced) belong next to the run's outputs instead, with a prune rule, so test runs never share history with real runs.
 - **Sources.** Prefer an authoritative web link or local directory path over copying changeable material. Check access when the source is needed. If it fails, ask the user to restore or update it; do not silently use a stale copy or guess a replacement. Keep local copies only when the file is the maintained artifact or a justified snapshot.
 
@@ -96,12 +102,13 @@ Messages, drafts, code, and other deliverables with conventions of their own kee
 
 Some target skills produce creative or open-ended outputs (names, copy, concepts, designs, strategies) where comparing several distinct candidates improves the result. For those, Plan may recommend a multi-generator model:
 
-- Several separate subagents (five is a good starting point), each returning exactly one distinct idea that takes a different viable direction, adapted to the user's case — not a rewording.
+- Several separate subagents (five is a good starting point), each returning exactly one distinct idea that takes a different viable direction, adapted to the user's case — not a rewording. Each generator brief bans the openers the others are likely to share, because cheap generators with distinct lenses still converge on the same first line.
 - When the plan has reference materials, a mix of reference-grounded and deliberately original generators (for example, 3/2). Originality never permits breaking user constraints, safety requirements, or facts.
-- The cheapest model that can do the job well; use a stronger model when quality depends on it.
-- A main-agent **Choose one** step: compare, deduplicate, and choose or combine according to planned criteria. Return candidates to the user only when the plan calls for options.
+- Every brief gives the exact spelling of names that must appear (people, companies, products), because drafters shorten or alter them.
+- A model tier named by role, not by product name: a fast, low-cost model for the generators, and a stronger one when quality depends on it, mapped to the target harness's model setting (in Claude Code, the subagent's `model`).
+- A main-agent **Choose one** step: compare, deduplicate, check every name against its given spelling, and choose or combine according to planned criteria. Return candidates to the user only when the plan calls for options.
 
-Do not use it for procedural, deterministic, or single-correct-answer outputs, or when the output must return exact items from a fixed list. When recommended, disclose the count, split, model choice, and selection method in the plan and invite adjustment. If the harness cannot run subagents, say so in the plan and ask how to proceed instead of silently reducing the batch.
+Do not use it for procedural, deterministic, or single-correct-answer outputs, or when the output must return exact items from a fixed list. When recommended, disclose the count, split, model choice, and selection method in the plan and invite adjustment. Whether the target skill can start subagents when it runs is decided at plan time, for each harness it must run on: where it cannot, the plan says so and states the fallback the target skill uses there (for example, the main agent writes the candidates itself), instead of the target skill silently reducing the batch.
 
 ## Feedback note for target skills
 
@@ -111,15 +118,23 @@ Every target skill has a short **Feedback** section, placed last before `Skills 
 
 - [stages/recall.md](stages/recall.md), [stages/plan.md](stages/plan.md), [stages/build.md](stages/build.md), [stages/test.md](stages/test.md), [stages/learn.md](stages/learn.md) — read only the file for the current stage.
 - [state/registry.md](state/registry.md) and [state/lessons.md](state/lessons.md) — this skill's own knowledge store: written only by Learn, searched by Recall.
-- [references/skill-types.md](references/skill-types.md) — requirements for every target skill and for each skill type; read in Plan, written in Build, checked in Test.
+- [references/grilling.md](references/grilling.md) — this skill's crucial and default items, asked in Plan with the `grilling` skill's method; also used by Recall's goal question.
+- [references/skill-types.md](references/skill-types.md) — the deliverable kinds, the requirements for every target skill, and each skill type; read in Plan, written in Build, checked in Test.
+- [references/check-brief.md](references/check-brief.md) — the numbered checks and the checker's prompt; used in Test.
 - [references/test-cases.md](references/test-cases.md) — the format for test cases saved in a target skill's `evals/` folder; used in Test.
+- [scripts/render_plan.py](scripts/render_plan.py) — renders `plan.json` into the plan page (its keys are documented at the top); [assets/plan.html](assets/plan.html) — the page template it fills; [examples/plan-sample.json](examples/plan-sample.json) — a filled plan. Used in Plan.
 - [examples/example-target-skill.md](examples/example-target-skill.md) — a short, complete sample of a target skill's `SKILL.md`; adapt its shape, not its content.
-- The official Claude Code [skills](https://code.claude.com/docs/en/skills) and [subagents](https://code.claude.com/docs/en/sub-agents) docs — the authoritative source for harness-specific features.
+- The official Claude Code [skills](https://code.claude.com/docs/en/skills), [subagents](https://code.claude.com/docs/en/sub-agents), [hooks](https://code.claude.com/docs/en/hooks), and [plugins](https://code.claude.com/docs/en/plugins) docs — the authoritative source for harness-specific features.
 
 Resolve links to files inside this skill relative to this directory. If a bundled file is missing, stop and ask the user to restore it or give its new location; do not skip it or guess its contents.
 
 ## Skills and agents
 
 - [Recall](stages/recall.md), [Plan](stages/plan.md), [Build](stages/build.md), [Test](stages/test.md), [Learn](stages/learn.md) — this skill's stages.
-- `skill-creator` — receives coding skills, creative tuning, and repeated failures from [Plan](stages/plan.md#choose-the-route).
-- No custom agent definition is required. Target skills that use the idea-generation option rely on the harness's built-in subagents unless the plan says otherwise.
+- `skill-finder` — finds existing skills, tools, and procedures for a new target skill in [Recall](stages/recall.md#search-past-work); its candidates go to the user in Plan's Reuse decision, and it vets and installs or places the chosen one in [Build](stages/build.md#before-writing). It owns all vetting; this skill never vets a candidate itself.
+- `update-config` and `plugin-authoring` — write a hook or settings automation and a mod, routed in [Plan](stages/plan.md#choose-the-route) and handed off in [Build](stages/build.md#hand-off-or-skip-writing); Test then checks and tests what they made.
+- `skill-design` — builds a target skill's page or report template once (never called at runtime); reviews one HTML test output in [Test](stages/test.md#design-pass). `skill-builder`'s own plan page was built with it.
+- `artifact-design` — loaded before the plan page is published as an artifact, where the harness asks for it.
+- The local scheduled-tasks tools (for example, `mcp__scheduled-tasks__*` in Claude Code Desktop) and `schedule` (cloud routines) — create a scheduled procedure's unattended run in [Test](stages/test.md#save-and-deliver).
+- `command-pane` — writes the **User settings** block that sets the technical level.
+- The checker and the test subagents are the harness's built-in general-purpose subagents; no custom agent definition is required. Target skills that use the idea-generation option rely on the harness's built-in subagents unless the plan says otherwise.

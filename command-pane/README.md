@@ -25,13 +25,16 @@
 
 ## What it does
 
-A Claude Code mod that puts one-click buttons above the prompt box, in folders each user customizes, plus three side panes:
+A Claude Code mod that puts one-click buttons above the prompt box, in folders each user customizes, plus four side panes:
 
 - **Band** - the Main group drawn inline, every other group as a folder (`▸ Name`) that opens in place; ✎ opens the Customize pane.
 - **Customize pane** (`/buttons`) - show, hide, reorder, and move buttons; add, rename, and delete folders; add prompt buttons (fill the box or send at once; text starting with `/` runs a slash command).
 - **Settings pane** (⚙) - technical level, approval detail, Handover levels, output style, archive inactive sessions, and Apply recommended.
 - **Today pane** (☰, `/today`) - tabs per source: editable Markdown files, Gmail and Google Calendar (read only, with optional summaries), + to add a source, ⚙ for the sources editor, and Fix connection for a failing connector.
-- **Handover** (⇄) - writes a handover and starts a new session with it; the button turns yellow, then red, as the context fills.
+- **Handover** (⇄) - runs this plugin's `handover` skill (`/command-pane:handover`, [skills/handover/SKILL.md](skills/handover/SKILL.md)): Claude writes a handover of the session's latest work and current state and proposes a new session with it (a New task card); one click on the card starts a session in the same folder whose first message is the handover, shown as a Task card. The brief tells the new session to detach itself to top level first, so this session gets no reports from it. No file is written. A mod-sent turn may only propose a session, not start one. The button turns yellow, then red, as the context fills.
+- **Design studio** (◧) - opens the `skill-design` design studio, a local web app for the house design and client designs. If a studio is running (its `~/.claude/howtoai/design-studio.json` URL answers `/api/health`), it opens in the default browser; otherwise the mod starts `skills/skill-design/scripts/design_studio.py serve` detached and opens it once healthy. Only if that fails is Claude asked to start it.
+- **FreeLLMAPI** (⇌, hidden by default; show it in the Customize pane) - opens the dashboard of a local [FreeLLMAPI](https://github.com/tashfeenahmed/freellmapi) router at `http://localhost:3001/`. It opens in the default browser; if the dashboard does not answer, the mod first starts the server install (`~/freellmapi/server`, `node dist/index.js`) detached and waits up to 90 s for it. Only if that fails is Claude asked to start it. To start the router at Windows logon, put a hidden launcher in the Startup folder (`shell:startup`); the desktop app's installer starts itself from the tray instead.
+- **Mods** (⚡) - runs `/mods`, which opens the Mods pane of the `mods` plugin from [token-saving-mods](../token-saving-mods/): turn each mod on or off, show or hide it, and see today's token savings. If the `mods` plugin is not installed, the press shows a toast that `/mods` did not run.
 
 General mod programming (API, workflow, what has been tested) is in [mod-programming.md](../docs/mod-programming.md); this file covers only command-pane.
 
@@ -44,7 +47,11 @@ General mod programming (API, workflow, what has been tested) is in [mod-program
 | [hooks/register.tsx](hooks/register.tsx) | `register`: calls each feature's register function, the one `session.start` hook, the `prompt.compose` hook (user settings section of the system prompt), and the Settings pane. |
 | [hooks/customize.tsx](hooks/customize.tsx) | The band, the Customize pane, `/buttons`, built-in button defaults (`BUILTINS`), the default layout, and what each built-in does (`press`). |
 | [hooks/today.tsx](hooks/today.tsx) | The Today pane, `/today`, source readers, Markdown editing, connector lookup, summaries, the sources editor, and the + and Fix connection prompts. |
-| [hooks/handover.tsx](hooks/handover.tsx) | The Handover prompt, its colour levels, and the `turn.complete` redraw. |
+| [hooks/handover.tsx](hooks/handover.tsx) | The Handover button's action (runs the `handover` skill), its colour levels, and the `turn.complete` redraw. |
+| [skills/handover/SKILL.md](skills/handover/SKILL.md) | The handover instructions: what the handover holds, and how the new session is proposed and detached. |
+| [hooks/browser.tsx](hooks/browser.tsx) | Opening a URL in the default browser, starting a detached local server, and waiting for it. |
+| [hooks/design.tsx](hooks/design.tsx) | The Design studio button's action: health check, detached start, open in the browser, the fallback start prompt. |
+| [hooks/freellm.tsx](hooks/freellm.tsx) | The FreeLLMAPI button's action: dashboard check, detached start, open in the browser, the fallback start prompt. |
 | [types/index.d.ts](types/index.d.ts) | The `$.state` contract: every `$.state` key of every feature, under the one `'command-pane'` entry. |
 | [today.example.json](today.example.json) | An example `today.json`. |
 
@@ -56,7 +63,7 @@ A feature lives in its own file and exports `register<Feature>(on)` (hooks) and,
 
 Per user, in `~/.claude/command-pane/`; the panes write them, so users never edit JSON:
 
-- `buttons.json` - the band layout: `{ version: 1, groups: [{ id, name, items }] }`. Loaded at session start by `normalize()`, which puts Main first, adds any missing built-in with its default visibility, and drops duplicate ids. A file that fails to read falls back to the defaults with a toast.
+- `buttons.json` - the band layout: `{ version: 1, groups: [{ id, name, items }] }`. Loaded at session start by `normalize()`, which puts Main first, adds any missing built-in with its default visibility (appended to its default group, the user's own items and order unchanged), and drops duplicate ids. When a built-in was missing, `loadLayout()` saves the file once with it, so a new built-in such as Design studio reaches existing layouts. A file that fails to read falls back to the defaults with a toast.
 - `today.json` - Today sources: `{ default: { sources, refreshMinutes }, workspaces: { "<folder>": { ... } } }`. The longest workspace folder that holds the session's folder wins, else `default`. Example: [today.example.json](today.example.json).
 
 ### Session state and store
@@ -139,9 +146,10 @@ A setting of the mod's own, shown in `/config` and the Settings pane:
 A button whose action is code, not a prompt:
 
 1. `types/index.d.ts`: add the id to `BuiltinId`.
-2. `customize.tsx` `BUILTINS`: add `{ label, icon, color?, group, visible }`. The group is `main`, `session`, or another default folder id. `normalize()` adds it to existing users' layouts with this visibility.
+2. `customize.tsx` `BUILTINS`: add `{ label, icon, color?, group, visible }`. The group is `main`, `session`, or another default folder id. `normalize()` adds it to existing users' layouts with this visibility, and `loadLayout()` saves that once.
 3. `customize.tsx` `press`: add a `case` that calls the action by name, for example `case 'mine': return void runMine($)`. Put the function in its feature's file and import it.
-4. A slash command already known to the session needs only `runCommand($, '<name>')`; [command-run-list.md](../docs/command-run-list.md) lists what can run.
+4. A button that opens a web page: call `openInBrowser($, url)` from `browser.tsx` (the default browser, through `$.process.run`); a local server is started with `startDetached` and awaited with `waitFor`, as `freellm.tsx` does.
+5. A slash command already known to the session needs only `runCommand($, '<name>')`; [command-run-list.md](../docs/command-run-list.md) lists what can run.
 
 ### Add a default prompt button
 

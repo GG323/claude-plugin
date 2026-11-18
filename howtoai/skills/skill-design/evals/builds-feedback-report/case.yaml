@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: builds-feedback-report
+expected_outcome: |
+  One self-contained feedback-report.html in the house design: key figures first, long comments as cards, every number matches the CSV, page.py check shows no FAIL, and the report names the design source and lists what was not verified.
+context:
+  scaffold_script: place-files.sh

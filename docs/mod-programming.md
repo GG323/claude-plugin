@@ -67,7 +67,7 @@ Type-check with a `tsconfig.json` kept outside the mod folder (for example in a 
 
 Add a `files` list naming the declarations, the mod's `types/index.d.ts` (without it every `$.state` key types as `never`), and every `hooks/*.tsx`. Run `tsc -p <that folder>`.
 
-`claude plugin validate <mod folder>` also checks the manifest and what the engine would refuse. In the desktop app `claude` is not on the PATH; run `"%APPDATA%\Claude\claude-code\<version>\<build>\claude.exe" plugin validate <mod folder>`.
+`claude plugin validate <mod folder>` also checks the manifest and what the engine would refuse. In the desktop app `claude` is not on the PATH; run `"%APPDATA%\Claude\claude-code\<version>\<build>\claude.exe" plugin validate <mod folder>`. A Windows Store install keeps it at `%LOCALAPPDATA%\Claude-Data\claude_<id>\claude-code\<version>\<build>\claude.exe` instead; the path of the running `claude` process shows which.
 
 Rules the validator holds: `$` is never passed through a value it cannot trace (an object of callbacks, a computed call), so dispatch with a `switch` of named calls; a pane's `requestId` matcher is a literal string; a types contract exports types only; each event is hooked at most once without a matcher per module.
 
@@ -81,7 +81,7 @@ The full list is in the engine's declarations; grep them for the name at hand (`
 | Side pane | `$.ui.open({ id, title })` plus a `ui.render` hook on `{ component: 'Pane', requestId: id }` |
 | Status line, toast | `$.ui.status(text)`, `$.ui.toast(text)` |
 | Elements | `const { Box, Text, Button } = $.ui.resolve(e)`; `e.surface` is `terminal`, `desktop`, `vscode` or `mobile` |
-| Link | `Link` element with `href`; the surface opens it |
+| Link | `Link` element with `href`; the surface opens it when clicked (a mod has no call that opens a URL itself) |
 | Prompt box | `$.prompt.read()`, `$.prompt.fill({ text, mode })`, `$.prompt.submit({ text })` |
 | Slash commands | `$.command.list()`, `$.command.run({ command, args })`, `$.command.register({ name, description })` |
 | Settings menu | `$.config.list()`, `$.config.set(...)` |
@@ -126,7 +126,7 @@ Tested 2026-10-26 in the desktop app:
 
 ## What a mod cannot do
 
-- Create or fork a session, or open a split view. Claude can, with the desktop app's session tools, when a prompt asks it to.
+- Create or fork a session, or open a split view. Claude can, with the desktop app's session tools, when a prompt asks it to. A mod can open an independent new session in the desktop app through the deep link `claude://code/new?folder=<path>&q=<prompt>`, which only fills in the text box (see the Findings log, 2026-11-12 Handover).
 - Press Enter in the prompt box, or trigger desktop-app features that live in the app's own prompt box (`/btw` side chat).
 - Draw in the session info rail or the hint line under the prompt (desktop app).
 - Change a desktop-app setting (such as archiving inactive sessions) or a permission rule itself. A prompt can ask Claude to, and the user approves.
@@ -171,6 +171,23 @@ Tested 2026-10-26 in the desktop app:
   - The desktop app keeps its own settings in `claude_desktop_config.json` under `preferences` (archive: `ccAutoArchiveInactiveDays`, 0 = never). A mod reads it with `$.fs.read` at `%APPDATA%/Claude/` (Windows) or `~/Library/Application Support/Claude/` (macOS).
   - Windows Store install: the app's own processes (the engine, its shells) see that file at `%APPDATA%/Claude/`; a process started outside the app finds it at `%LOCALAPPDATA%/Packages/Claude_<id>/LocalCache/Roaming/Claude/`. The mod tries both.
   - Changing it from a button: `$.prompt.submit` asks Claude to use the app's settings tools; the user approves on a card. The pane shows the new value when reopened.
+- 2026-11-10, command-pane Design studio button (0.5.0), engine 2.1.321 declarations; not yet pressed live:
+  - No `$` call opens a URL. `Link` (`href`, `label`) is the only way: an anchor on desktop, an OSC 8 span in the terminal, opened by the surface on a click. On a remote surface only an `https:` link is drawn as a link, so a `http://127.0.0.1` link may show as plain text there. A `Button` cannot hold a `Link`, so the button opens a pane that shows the link.
+  - The built-in browser pane is reached only through Claude: a `$.prompt.submit` asking Claude to open the URL there (its browser tools). `$.mcp.call` names only servers the session has, and goes through the permission check, so it was not used for this.
+  - `$.http.fetch` takes `http://127.0.0.1:<port>/...`, so a mod can health-check a local server before deciding; `$.fs.read` reads its runtime file.
+  - `$.process.spawn` could start a server, but the child dies when the loop ends or the module unloads (every reload), so a long-lived server is started by Claude in the background instead.
+  - A new built-in reaches existing `buttons.json` layouts through `normalize()`, which appends it to its default group; saving the file once when a built-in was missing makes it last.
+  - On this machine (Windows Store install) the validator was `%LOCALAPPDATA%\Claude-Data\claude_pzs8sxrjxfjjc\claude-code\2.1.321\d020ce1b5d30\claude.exe`, not under `%APPDATA%\Claude\claude-code\`, and the API declarations were in the `plugin-authoring` skill's `types/claude-code.d.ts` (23,600 lines in 2.1.321).
+  - Update 2026-11-12: a mod can open a URL in the user's default browser with `$.process.run(['rundll32', 'url.dll,FileProtocolHandler', url])` on Windows (`open` on macOS, `xdg-open` on Linux); it returns at once. A server that must outlive the module starts detached through `powershell -Command Start-Process -WindowStyle Hidden ...`, which `$.process.run` waits on only briefly. Waits use `$.clock.sleep` and `$.clock.now`. command-pane's `browser.tsx` holds these; validated with 2.1.321 and pressed live in the desktop app on 2026-11-12 (both buttons open the default browser).
+  - The validator lists the new pane as `requestId=command-pane-design` (a literal) and the calls through named functions (`via healthyUrl`, `via askToStart`).
+- 2026-11-12, token-saving-mods: a plugin from a directory marketplace (`claude plugin marketplace add <folder>`) runs in place, so `$.plugin.root` is that folder, not a copy under `~/.claude/plugins/cache/`. Mods that derive the home folder from `$.plugin.root` cut at `/.claude/` (all of Ben AI's pack) then write their files inside their own folder and the Mods pane comes up empty. Adding the marketplace through a junction under `~/.claude/` fixes it without code changes. Each mod in the pack now also ships `hooks/paths.ts` (master copy `token-saving-mods/_shared/paths.ts`): `resolvePaths($)` runs first in its `session.start` handler and picks the first of `USERPROFILE`, `HOME`, the `paths` saved in its `$.store`, and the root cut at `/.claude/` that holds a `.claude` folder; `homeSync($)` returns it everywhere the old expression was. A new mod should do the same.
+  - The validator refuses a second `on('session.start')` without a matcher in one mod, even from a helper file, so shared setup is called from the mod's one handler.
+- 2026-11-12, command-pane Handover, desktop app 4.23118.1.0 (Windows Store):
+  - A turn sent by `$.prompt.submit` (even `asUser: true`) does not count as the user's own words: Claude's `start_session` refuses it ("Start sessions only on the user's own words"). Sessions Claude starts from a typed prompt are linked side sessions, and the app refused a one-time scheduled task started from a mod-sent turn too (auto mode).
+  - The app registers `claude://` (`HKCR\claude`). Its bundle routes `claude://code/new` with `folder` (repeatable), `file`, and `q` or `prompt` (cut at 14,336 characters); `ssh_host`, `ssh_port`, `ssh_folder` open on an SSH connection instead and refuse `folder`. Other routes: `code/continue?session=last`, `code/needs-input`, `claude.ai/new?q=`, `cowork/new?q=`.
+  - Opening `claude://code/new?folder=...&q=...` (rundll32 `url.dll,FileProtocolHandler`, or `Start-Process`) opens a new, independent Code session in that folder with the prompt in its text box. It is not sent: the bundle has no auto-submit option, so the user presses Enter.
+  - command-pane's Handover used this first (Claude wrote the handover to a file, the mod opened the deep link with a read-the-file prompt); pressed live on 2026-11-12, it worked, but left files behind. A refresh (`/clear`, then `$.prompt.fill` with the reply) was tried next and dropped before a live press: the user preferred the Task card a started session shows. The current version asks Claude to propose the session (`start_session`, initiation `own_initiative`), which the app allows from a mod-sent turn; one click on the card starts it, with the handover as the session's first message. No file is written. Pressed live in the desktop app on 2026-11-12: works. The brief's first line has the new session call `detach_session` with `"self"`, so the proposing session gets no turn-end notes; also works live.
+  - The instructions then moved into a skill the plugin ships (`command-pane/skills/handover/SKILL.md`), and the button runs it with `$.command.run({ command: 'command-pane:handover' })`: a mod can run a plugin skill that way, and the transcript shows the short command instead of the prompt. Pressed live on 2026-11-12: works.
 
 ## Skills and agents
 

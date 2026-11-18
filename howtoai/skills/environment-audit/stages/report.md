@@ -8,11 +8,14 @@
 - [Update the log](#update-the-log)
 - [Propose and fix](#propose-and-fix)
 - [Summarize in chat](#summarize-in-chat)
+- [Return a candidate result](#return-a-candidate-result)
 - [Skills and agents](#skills-and-agents)
 
 ## Entry and inputs
 
-Entered from [Workspace audit](workspace-audit.md) with the run folder, whose `report.json` now holds every verified finding.
+Entered from [Skill index](skill-index.md) with the run folder, whose `report.json` now holds every verified finding, or, in a candidate run, from [Instruction audit](instruction-audit.md).
+
+A candidate run is not one of the user's own runs, so it has no recurring findings and no run-log row: skip the Find recurring findings section and go to [Render and publish](#render-and-publish).
 
 ## Find recurring findings
 
@@ -26,9 +29,11 @@ Read the last two rows of [state/run-log.md](../state/run-log.md). A check ID th
    py -3 "${CLAUDE_SKILL_DIR}/scripts/render_report.py" render "<run folder>/report.json" --log "${CLAUDE_SKILL_DIR}/state/run-log.md" --out "<run folder>/environment-audit-YYYY-MM-DD.html"
    ```
 
-   It validates the run file first. If it stops with errors, fix the named findings in the run file and render again. It numbers the findings in the run file (`n`), so the chat, the page, and later fix requests use the same numbers. Text fields may use `code` spans and `[text](https://…)` links.
-2. Publish the HTML file as a **new** private artifact (no `url`), with the icon `checklist` and a one-sentence description naming the date and the targets. Where the harness asks for its page-design skill before a publish (in Claude Code, `artifact-design`), load it; the page already follows its contract, so do not restyle it. Keep the artifact's link for the summary and the log.
-3. Without an Artifact tool, or when the publish fails, render again with `--standalone` (so the file opens on its own in a browser) straight to the folder the run started in, as `environment-audit-YYYY-MM-DD.html` (with `-2`, `-3` when the name is taken), and use its path instead of a link.
+   In a candidate run, leave out `--log`; the page then has no run log, recurring findings, or built-in checks sections. It validates the run file first. If it stops with errors, fix the named findings in the run file and render again. It numbers the findings in the run file (`n`), so the chat, the page, and later fix requests use the same numbers. Text fields may use `code` spans and `[text](https://…)` links; code that contains a backtick takes a double-backtick span, and render stops on a span that would garble it.
+2. Publish the HTML file as a **new** private artifact (no `url`), with the icon `checklist` and a one-sentence description naming the date and the targets (for a candidate, "Candidate audit of <name>"). Where the harness asks for its page-design skill before a publish (in Claude Code, `artifact-design`), load it; the page already follows its contract, so do not restyle it. Keep the artifact's link for the summary and the log.
+3. Without an Artifact tool, or when the publish fails, render again with `--standalone` (so the file opens on its own in a browser) straight to the folder the run started in, as `environment-audit-YYYY-MM-DD.html` (with `-2`, `-3` when the name is taken), and use its path instead of a link. In a candidate run, keep the standalone file in the run folder instead, so nothing is written to the user's folders.
+
+In a candidate run, skip the Update the log, Propose and fix, and Summarize in chat sections and go to [Return a candidate result](#return-a-candidate-result).
 
 ## Update the log
 
@@ -59,7 +64,19 @@ In a scheduled run, skip the Propose and fix section and go to [Summarize in cha
 
 ## Summarize in chat
 
-End the run with the summary in the shape [Output](../SKILL.md#output) gives: date, mode, and targets; defects, suggestions, fixed, and open; up to three headline items; the reminder to run `/skill-doctor`; the link or path. In an on-request run that applied fixes, it reports the final state. In a scheduled run it is the final message of the session, and it asks no questions.
+End the run with the summary in the shape [Output](../SKILL.md#output) gives: date, mode, and targets; defects, suggestions, fixed, and open; up to three headline items; the skill index line from [Skill index](skill-index.md#record-the-result), which also goes into the run's row in [state/run-log.md](../state/run-log.md); the reminder to run `/skill-doctor`; the link or path. In an on-request run that applied fixes, it reports the final state. In a scheduled run it is the final message of the session, and it asks no questions. Skip the Return a candidate result section.
+
+## Return a candidate result
+
+End a candidate run by returning to `skill-finder`, which judges the candidate, in this shape:
+
+1. The candidate folder and the report's link or path.
+2. Counts: files audited and exempt, defects, and suggestions, and findings per check ID.
+3. Every finding as one line: number, check ID, type, file and line, and the message or evidence.
+4. The `needs` list from `check_config.py` (programs and outside paths its hooks and servers run).
+5. The checks that did not run, with the reason.
+
+Propose no fixes and ask nothing: the pass-or-fail rule and the question to the user belong to `skill-finder`.
 
 ## Skills and agents
 
@@ -68,4 +85,5 @@ End the run with the summary in the shape [Output](../SKILL.md#output) gives: da
 - `skill-builder` — recommended for findings with the action "Use `skill-builder`".
 - `artifact-design` — loaded before publishing where the harness asks for it.
 - `/skill-doctor` and `/doctor` — recommended in the report and the summary.
-- Previous stage: [Workspace audit](workspace-audit.md). This is the last stage.
+- `skill-finder` — receives the result of a candidate run in [Return a candidate result](#return-a-candidate-result).
+- Previous stage: [Skill index](skill-index.md). This is the last stage.

@@ -1,5 +1,5 @@
 {
   "name": "howtoai",
-  "version": "0.1.0",
-  "description": "HowToAI skills: skill-builder (create, improve, or repair a skill) and environment-audit (audit the Claude environment and its workspaces)"
+  "version": "0.3.0",
+  "description": "HowToAI skills: skill-builder (create, change, or repair a skill, tool, or automated procedure), skill-finder (find existing skills, plugins, and tools across approved marketplaces), environment-audit (audit the Claude environment and its workspaces), skill-design (build and review HTML pages in the HowToAI house design), brain-dump (sort a brain dump into the right project's plan doc), and grilling (the shared method for asking the user the decisions a task needs)"
 }

@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: vendored-skill-vetted-with-plugin
+expected_outcome: |
+  The candidate table lists note-tidy from External/note-tools as covering the need, with mark local, says it is a third-party copy that must be vetted before use, and that it ships in a plugin with a PostToolUse hook. Nothing is copied or installed before the user picks it and approves the vetting report.
+context:
+  scaffold_script: place-files.sh

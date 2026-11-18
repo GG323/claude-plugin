@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: blocks-off-token-page
+expected_outcome: |
+  A review in the fixed format judged against the house design reference: page.py adherence runs and fails, and HIGH R1 findings name the planted raw colors (the purple-to-blue gradient hex values, the named color purple, the rgb border, the inline hsl color, the SVG fill), the off-token font (Playfair Display), and the off-token radii (13px, 3px). The verdict is Block; off-token.html is not edited.
+context:
+  scaffold_script: place-files.sh

@@ -1,6 +1,10 @@
 import type { EngineInterface, Register } from 'claude-code'
 
-// Handover: one click asks Claude to write a handover and continue in a new session.
+// Handover: one click runs this plugin's handover skill (skills/handover/SKILL.md), so the
+// transcript shows /command-pane:handover instead of a long prompt. The skill has Claude write
+// a handover of the latest work and propose a new session with it: a New task card the user
+// starts with one click. (A mod-sent turn may only propose a session, not start one.) The new
+// session detaches itself first, so this one gets no reports from it. No file is written.
 // The band button's colour follows the context window's fill:
 //   default below the warn level, warning (yellow) from it, error (red) from the alert level.
 // Both levels are this mod's userConfig fields (handoverWarn, handoverAlert), shown in
@@ -11,18 +15,7 @@ export const HANDOVER_ALERT_KEY = 'command-pane.handoverAlert'
 export const HANDOVER_LEVELS = ['30', '40', '50', '60', '70', '80', '90'] as const
 export const HANDOVER_DEFAULTS = { warn: '50', alert: '70' }
 
-export const HANDOVER_PROMPT = [
-  'Hand this work over to a new session.',
-  '',
-  '1. Write a handover with these parts:',
-  '   - Supporting materials: the files, links, sources, and tools used, with their paths or URLs.',
-  '   - Overall: what the work is for and what has been done, in two or three sentences.',
-  '   - Tasks done: one bullet per task, with its result.',
-  '   - Working documents: for each one, its path, its current state, and what is unfinished.',
-  '   - Next steps and open questions.',
-  '2. Start a new session with a fresh context (not a full copy of this conversation) and give it the handover as its first message. Tell me the new session\'s name.',
-  '3. If you cannot start a session here, show the handover so I can copy it into a new session.',
-].join('\n')
+const HANDOVER_SKILL = 'command-pane:handover'
 
 let warnAt = Number(HANDOVER_DEFAULTS.warn)
 let alertAt = Number(HANDOVER_DEFAULTS.alert)
@@ -45,14 +38,28 @@ export async function contextPercent($: EngineInterface): Promise<number | undef
 export async function handoverColor($: EngineInterface): Promise<'warning' | 'error' | undefined> {
   const p = await contextPercent($)
   if (p === undefined) return undefined
-  if (p >= Math.max(alertAt, warnAt)) return 'error'
-  if (p >= warnAt) return 'warning'
+  // The current Settings values (a change in the Settings pane or /config applies at once);
+  // the values from load time when the rows cannot be read
+  let warn = warnAt
+  let alert = alertAt
+  try {
+    const rows = await $.config.list()
+    warn = pct(rows.find(r => r.key === HANDOVER_WARN_KEY)?.value, warnAt)
+    alert = pct(rows.find(r => r.key === HANDOVER_ALERT_KEY)?.value, alertAt)
+  } catch {
+    // keep the load-time values
+  }
+  if (p >= Math.max(alert, warn)) return 'error'
+  if (p >= warn) return 'warning'
   return undefined
 }
 
 export async function runHandover($: EngineInterface) {
-  const result = await $.prompt.submit({ text: HANDOVER_PROMPT, asUser: true })
-  if ('deny' in result && result.deny) $.ui.toast(`Handover not sent: ${String(result.deny)}`)
+  try {
+    await $.command.run({ command: HANDOVER_SKILL })
+  } catch (err) {
+    $.ui.toast(`/${HANDOVER_SKILL} did not run: ${err instanceof Error ? err.message : String(err)}`)
+  }
 }
 
 export const registerHandover = (on: Parameters<Register>[0], options: Record<string, unknown>) => {

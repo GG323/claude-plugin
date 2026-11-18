@@ -1,0 +1,1 @@
+- **{lesson_id}** · {YYYY-MM-DD} · stage: {plan / tests / workbook / build / review / deploy} · change: `{change_id}` · finding: {review ID} — {What went wrong and its root cause, in one or two sentences.} Fix: {what changed, where}. Repeats: {count}.

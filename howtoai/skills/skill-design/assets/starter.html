@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="{{LANG}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{TITLE}}</title>
+{{FONTS}}
+<style>
+/*HOUSE_CSS*/
+
+/* Page CSS: only what the house components cannot do, in tokens. */
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="page-head">
+    <h1>{{TITLE}}</h1>
+    <p class="lead"><!-- One sentence: what this page is and for whom. --></p>
+    <p class="meta"><!-- Date, source, author. --></p>
+  </header>
+
+  <!-- Key figures: the three to six numbers the reader needs first. Delete if there are none. -->
+  <div class="figures" role="list">
+    <div class="figure" role="listitem"><b class="num"><!-- 0 --></b><span><!-- label --></span></div>
+  </div>
+
+  <!-- What needs the reader comes before the detail. -->
+  <section class="section-rule" aria-labelledby="s-needs">
+    <h2 id="s-needs"><!-- What needs you --></h2>
+  </section>
+
+  <section class="section-rule" aria-labelledby="s-detail">
+    <h2 id="s-detail"><!-- Detail section, named by its content --></h2>
+  </section>
+
+  <footer class="page-foot">
+    <p><!-- Source, method, or credit line. --></p>
+  </footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,9 @@
+date,workshop,participant_role,rating,what_worked,what_to_improve
+2026-10-02,AI for accountants,Accountant,5,"The invoice CSV demo was exactly our daily work","More time for questions"
+2026-10-02,AI for accountants,Office manager,4,"Clear steps, handout was useful","Slides were dense in the middle part"
+2026-10-09,Prompting basics,Teacher,5,"Hands-on exercises","Room was too warm"
+2026-10-09,Prompting basics,Student,3,"Examples","Too fast for beginners; would like a recording"
+2026-10-16,Claude Code intro,Developer,5,"Live skill building","Share the repo before the session"
+2026-10-16,Claude Code intro,Product owner,2,"Seeing agents work","Too technical for me, needed a non-technical track"
+2026-10-23,AI for accountants,Accountant,4,"Excel summary demo","Wi-Fi dropped twice"
+2026-10-23,AI for accountants,Controller,5,"Concrete time savings","None"

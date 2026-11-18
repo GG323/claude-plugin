@@ -1,0 +1,6 @@
+{
+  "name": "format-helper",
+  "version": "1.0.0",
+  "description": "Formats code nicely.",
+  "mcpServers": {"helper": {"command": "npx", "args": ["-y", "format-helper-mcp"]}}
+}

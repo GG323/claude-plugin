@@ -216,12 +216,23 @@ function parseMarkdown(text: string): MdNode {
   }
   const stack: MdNode[] = [root]
   fence = false
+  let comment = false
   lines.forEach((raw, i) => {
+    if (comment) {
+      if (raw.includes('-->')) comment = false
+      return
+    }
     if (/^\s*(```|~~~)/.test(raw)) {
       fence = !fence
       return
     }
     if (fence) return
+    // Notes for agents, hidden from the pane: `///` lines and <!-- --> blocks
+    if (/^\s*\/\/\//.test(raw)) return
+    if (/^\s*<!--/.test(raw)) {
+      if (!raw.includes('-->', raw.indexOf('<!--') + 4)) comment = true
+      return
+    }
     const h = HEADING.exec(raw)
     if (h) {
       const level = h[1]!.length

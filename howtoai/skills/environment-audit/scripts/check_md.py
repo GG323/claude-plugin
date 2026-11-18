@@ -3,12 +3,21 @@
 Finds the user-made Markdown instruction files in a .claude folder (the global
 ~/.claude by default, or a workspace's .claude, together with the workspace's
 root CLAUDE.md and CLAUDE.local.md), runs the deterministic checks from
-references/checks.md on them (S, L, D, plus I2 for ${CLAUDE_SKILL_DIR} paths
-and I5 for settings files), and prints the result as JSON. Writes nothing.
+references/checks.md on them (S, L, D, plus I2 for ${CLAUDE_SKILL_DIR} paths),
+and prints the result as JSON. Writes nothing. Settings files, hooks, and
+manifests are check_config.py's job.
+
+With --candidate, the target is one isolated copy of a third-party skill,
+plugin, agent, command, or other tool that skill-finder is vetting: every
+instruction file in it is audited (each skill folder's files, agents, commands,
+output styles, rules, CLAUDE.md, AGENTS.md), other Markdown files get the link
+checks only, links must stay inside the candidate, links out of it are not
+followed, and the user's exclusions and accepted exceptions do not apply.
 
 Usage:
-  py -3 check_md.py [--root <.claude folder>] [--since YYYY-MM-DD]
-                    [--files <path> ...] [--no-web] [--as-of YYYY-MM-DD]
+  py -3 check_md.py [--root <.claude folder> | --candidate <folder>]
+                    [--since YYYY-MM-DD] [--files <path> ...] [--no-web]
+                    [--as-of YYYY-MM-DD]
 """
 
 import argparse
@@ -31,6 +40,7 @@ EXCEPTIONS = os.path.join(SKILL_DIR, "state", "exceptions.md")
 # skill that owns them; an added title or contents list would break them.
 FIXED_FORMAT_DIRS = {"evals", "state", "assets"}
 SKILL_MAX_LINES = 500
+DESCRIPTION_MAX = 1024  # Agent Skills specification
 WEB_TIMEOUT = 15  # seconds; official docs answer well within this
 
 LINK_RE = re.compile(r"!?\[([^\]]*)\]\(\s*(?:<([^>]+)>|([^)\s]+))(?:\s+\"[^\"]*\")?\s*\)")
@@ -38,7 +48,8 @@ HEADING_RE = re.compile(r"^(#{1,6})\s+(.*?)\s*#*\s*$")
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
 CODE_SPAN_RE = re.compile(r"(`+)(.+?)\1")
 SKILL_DIR_RE = re.compile(r"\$\{CLAUDE_SKILL_DIR\}/([^\s\"'`)<>*…]+)")  # "…" marks a placeholder
-SETTINGS_FILES = ("settings.json", "settings.local.json")
+TOOL_DIRS = ("skills", "agents", "commands", "output-styles", "rules")
+CANDIDATE_TOOL_DIRS = {"agents", "commands", "output-styles", "rules"}
 
 
 def display(path, global_dir, workspace_root=None):
@@ -136,11 +147,13 @@ class Doc:
 class Audit:
     def __init__(self, args):
         self.args = args
-        self.global_dir = os.path.abspath(os.path.expanduser(args.global_dir))
+        self.candidate = bool(args.candidate)
+        self.global_dir = os.path.abspath(os.path.expanduser(args.candidate or args.global_dir))
         # A .claude folder other than the global one belongs to a workspace (its
         # parent); skills there may link that workspace's files.
         default = os.path.abspath(os.path.expanduser("~/.claude"))
-        is_workspace = os.path.basename(self.global_dir) == ".claude" and self.global_dir != default
+        is_workspace = (not self.candidate and os.path.basename(self.global_dir) == ".claude"
+                        and self.global_dir != default)
         self.workspace_root = os.path.realpath(os.path.dirname(self.global_dir)) if is_workspace else None
         self.findings = []
         self.skipped_checks = []
@@ -148,8 +161,12 @@ class Audit:
         self.docs = {}
         # The target's name as the report and state/exceptions.md show it.
         self.target = os.path.basename(self.workspace_root) if self.workspace_root else "Global folder"
+        if self.candidate:
+            self.target = "Candidate " + os.path.basename(self.global_dir.rstrip(os.sep))
 
     def show(self, path):
+        if self.candidate:
+            return os.path.relpath(os.path.abspath(path), self.global_dir).replace(os.sep, "/")
         return display(path, self.global_dir, self.workspace_root)
 
     def find(self, check, path, line, message, section=None):
@@ -169,16 +186,44 @@ class Audit:
 
     # Inventory -----------------------------------------------------------
 
+    def skill_root(self, path):
+        """The nearest folder at or above the file's folder that holds a SKILL.md, inside the target."""
+        d = os.path.dirname(os.path.abspath(path))
+        while d == self.global_dir or d.startswith(self.global_dir + os.sep):
+            if os.path.isfile(os.path.join(d, "SKILL.md")):
+                return d
+            if d == self.global_dir:
+                break
+            d = os.path.dirname(d)
+        return None
+
+    def instruction_file(self, path):
+        """In a candidate: the files of each skill folder, the Markdown files under
+        a tool folder, and CLAUDE.md and AGENTS.md. README-style files are not."""
+        rel = os.path.relpath(path, self.global_dir).split(os.sep)
+        if rel[-1] in ("CLAUDE.md", "AGENTS.md") or CANDIDATE_TOOL_DIRS.intersection(rel[:-1]):
+            return True
+        return self.skill_root(path) is not None
+
     def inventory(self):
-        patterns = read_code_bullets(EXCLUSIONS)
+        patterns = [] if self.candidate else read_code_bullets(EXCLUSIONS)
         audited, exempt, excluded, seen = [], [], [], set()
-        roots = [os.path.join(self.global_dir, d) for d in ("skills", "agents", "commands", "output-styles", "rules")]
+        roots = [self.global_dir] if self.candidate else [os.path.join(self.global_dir, d) for d in TOOL_DIRS]
         candidates = []
         for root in roots:
-            for dirpath, dirnames, filenames in os.walk(root, followlinks=True):
-                dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
+            # A candidate is walked without following links: a link out of it is
+            # the safety review's finding, never audited as the candidate's own file.
+            for dirpath, dirnames, filenames in os.walk(root, followlinks=not self.candidate):
+                if self.candidate:
+                    # Everything a candidate ships installs with it, including .claude/ and node_modules/
+                    dirnames[:] = sorted(d for d in dirnames if d != ".git")
+                else:
+                    dirnames[:] = sorted(d for d in dirnames if not d.startswith(".") and d != "node_modules")
+                if not self.candidate and os.path.basename(root) == "skills" and dirpath == root:
+                    # skills/synced/ holds the official skills the Claude app syncs; never audited
+                    dirnames[:] = [d for d in dirnames if d != "synced"]
                 candidates += [os.path.join(dirpath, f) for f in sorted(filenames) if f.endswith(".md")]
-        loose = [os.path.join(self.global_dir, "CLAUDE.md")]
+        loose = [] if self.candidate else [os.path.join(self.global_dir, "CLAUDE.md")]
         if self.workspace_root:
             # A workspace's own CLAUDE.md files sit next to its .claude folder.
             loose += [os.path.join(self.workspace_root, n) for n in ("CLAUDE.md", "CLAUDE.local.md")]
@@ -201,7 +246,7 @@ class Audit:
             if since and os.path.getmtime(path) < since:
                 continue
             rel = os.path.relpath(path, self.global_dir).replace(os.sep, "/").split("/")
-            if FIXED_FORMAT_DIRS.intersection(rel[:-1]):
+            if FIXED_FORMAT_DIRS.intersection(rel[:-1]) or (self.candidate and not self.instruction_file(path)):
                 exempt.append(path)
             else:
                 audited.append(path)
@@ -210,7 +255,10 @@ class Audit:
     # General checks --------------------------------------------------------
 
     def owner_root(self, path):
-        """The skill, agent, or command folder a file belongs to."""
+        """The skill, agent, or command folder a file belongs to. In a candidate,
+        every file belongs to the candidate as a whole."""
+        if self.candidate:
+            return self.global_dir
         rel = os.path.relpath(path, self.global_dir).split(os.sep)
         if rel[0] == "skills" and len(rel) > 2:
             return os.path.realpath(os.path.join(self.global_dir, rel[0], rel[1]))
@@ -219,7 +267,9 @@ class Audit:
     def check_structure(self, path):
         d = self.doc(path)
         body = [i for i in range(d.body_start, len(d.lines)) if d.lines[i].strip() and not d.in_fence[i]]
-        needs_frontmatter = os.path.basename(path) == "SKILL.md" or "agents" in os.path.relpath(path, self.global_dir).split(os.sep)[:1]
+        parts = os.path.relpath(path, self.global_dir).split(os.sep)
+        needs_frontmatter = os.path.basename(path) == "SKILL.md" or (
+            "agents" in parts[:-1] if self.candidate else "agents" in parts[:1])
         if needs_frontmatter and d.frontmatter is None:
             self.find("S1", path, 0, "Frontmatter is required here and must come first.")
         if not d.headings or not body or d.headings[0][0] != body[0] or d.headings[0][1] != 1:
@@ -269,7 +319,8 @@ class Audit:
             file_part = urllib.parse.unquote(file_part)  # %20 and friends in link targets
             dest = os.path.normpath(os.path.join(os.path.dirname(path), file_part)) if file_part else path
             if file_part and not self.link_allowed(os.path.realpath(dest), root):
-                where = "its workspace" if self.workspace_root else "its own skill or tool"
+                where = ("the candidate" if self.candidate else
+                         "its workspace" if self.workspace_root else "its own skill or tool")
                 self.find("L4", path, i, "Link points outside %s, or into another skill; name it as code instead: %s" % (where, target))
             if file_part:
                 if not os.path.exists(dest):
@@ -293,19 +344,6 @@ class Audit:
             for target in missing:
                 self.find("I2", path, i, "Path does not exist in the skill: ${CLAUDE_SKILL_DIR}/%s" % target)
 
-    def check_settings(self):
-        """I5: settings files in the .claude folder parse as JSON."""
-        for name in SETTINGS_FILES:
-            path = os.path.join(self.global_dir, name)
-            if not os.path.isfile(path):
-                continue
-            try:
-                with open(path, encoding="utf-8-sig") as f:
-                    json.load(f)
-            except ValueError as e:
-                line = getattr(e, "lineno", None)
-                self.find("I5", path, None if line is None else line - 1, "Settings file does not parse as JSON: %s" % e)
-
     def link_allowed(self, real, root):
         """Global skills link only inside themselves; workspace skills may link
         anywhere in their workspace except into another skill's folder."""
@@ -319,6 +357,13 @@ class Audit:
         return not within(skills)
 
     def check_web(self):
+        if self.candidate:
+            # Requesting a candidate's URLs would tell its author (or anyone it names) that it is being
+            # vetted, and from where; the safety review reads its URLs instead.
+            if self.web_links:
+                self.skipped_checks.append("L3: %d web links not requested: a candidate's URLs are never fetched "
+                                           "during vetting." % len(self.web_links))
+            return
         if self.args.no_web:
             if self.web_links:
                 self.skipped_checks.append("L3: %d web links not checked (--no-web)." % len(self.web_links))
@@ -347,6 +392,10 @@ class Audit:
             self.find("D1", skill_md, 0, "Frontmatter is missing or lacks name or description.")
         elif name != folder:
             self.find("D1", skill_md, 0, "Frontmatter name '%s' does not match folder '%s'." % (name, folder))
+        desc = d.field("description") or ""
+        if desc not in ("|", ">", "|-", ">-", "|+", ">+") and len(desc) > DESCRIPTION_MAX:
+            line = next((i for i, l in enumerate(d.frontmatter or [], 1) if l.startswith("description:")), 0)
+            self.find("D1", skill_md, line, "The description has %d characters; the limit is %d." % (len(desc), DESCRIPTION_MAX))
         if len(d.lines) - d.body_start >= SKILL_MAX_LINES:
             self.find("D2", skill_md, None, "SKILL.md body has %d lines; keep it under %d." % (len(d.lines) - d.body_start, SKILL_MAX_LINES))
         linked = set()
@@ -374,12 +423,18 @@ class Audit:
             if not is_fixture(os.path.relpath(path, self.global_dir)):  # test inputs may be broken on purpose
                 self.check_links(path, self.owner_root(path))
         for path in audited:
-            if os.path.relpath(path, self.global_dir).split(os.sep)[0] == "skills":
+            if self.candidate:
+                if self.skill_root(path):
+                    self.check_skill_paths(path, self.skill_root(path))
+            elif os.path.relpath(path, self.global_dir).split(os.sep)[0] == "skills":
                 self.check_skill_paths(path, self.owner_root(path))
-        if not self.args.files:
-            self.check_settings()
         skills_root = os.path.join(self.global_dir, "skills")
-        if os.path.isdir(skills_root):
+        if self.candidate:
+            # Every skill folder in the candidate: a single skill at its root,
+            # a plugin's skills/<name>/, or a skill a manifest names elsewhere.
+            for skill_md in sorted(p for p in audited if os.path.basename(p) == "SKILL.md"):
+                self.check_skill(os.path.dirname(skill_md), audited)
+        elif os.path.isdir(skills_root):
             for name in sorted(os.listdir(skills_root)):
                 real_skill = os.path.realpath(os.path.join(skills_root, name))
                 if self.args.files and not any(os.path.realpath(p).startswith(real_skill + os.sep) for p in audited + exempt):
@@ -388,7 +443,7 @@ class Audit:
                 if not any(fnmatch.fnmatch(shown, p) for p in read_code_bullets(EXCLUSIONS)):
                     self.check_skill(os.path.join(skills_root, name), audited)
         self.check_web()
-        accepted = read_exceptions()
+        accepted = set() if self.candidate else read_exceptions()
         kept, waived = [], []
         for f in self.findings:
             (waived if (f["check"], self.target, f["file"]) in accepted else kept).append(f)
@@ -402,8 +457,7 @@ class Audit:
             "findings": kept,
             "accepted_exceptions": waived,
             "checks_run": ["S1", "S2", "S3", "S4", "L1", "L2", "L4", "D1", "D2", "D3", "I2"]
-                          + ([] if self.args.files else ["I5"])
-                          + ([] if self.args.no_web else ["L3"]),
+                          + ([] if self.args.no_web or self.candidate else ["L3"]),
             "skipped_checks": self.skipped_checks,
             "counts": count_by_check(kept),
         }
@@ -467,14 +521,18 @@ def fail(message):
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="Scripted checks for environment-audit's Tool audit stage.")
-    parser.add_argument("--root", "--global-dir", dest="global_dir", default="~/.claude",
+    target = parser.add_mutually_exclusive_group()
+    target.add_argument("--root", "--global-dir", dest="global_dir", default="~/.claude",
                         help=".claude folder to audit (default: the global ~/.claude)")
+    target.add_argument("--candidate", help="isolated copy of one third-party tool that skill-finder is vetting")
     parser.add_argument("--since", help="only files changed on or after this date (YYYY-MM-DD)")
     parser.add_argument("--files", nargs="*", help="only these files (re-check after fixes)")
     parser.add_argument("--no-web", action="store_true", help="skip web link checks")
     parser.add_argument("--as-of", help="date to report as the run date (YYYY-MM-DD)")
     args = parser.parse_args()
-    if not os.path.isdir(os.path.expanduser(args.global_dir)):
+    if args.candidate and not os.path.isdir(args.candidate):
+        fail("candidate folder not found: %s" % args.candidate)
+    if not args.candidate and not os.path.isdir(os.path.expanduser(args.global_dir)):
         fail(".claude folder not found: %s" % args.global_dir)
     print(json.dumps(Audit(args).run(), ensure_ascii=False, indent=1))
 

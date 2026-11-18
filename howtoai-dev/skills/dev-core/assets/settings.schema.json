@@ -1,0 +1,26 @@
+{
+ "$about": "howtoai-dev settings. Each leaf has a type, a default, and a description. User defaults live in ~/.claude/howtoai/dev-settings.json; project values in <workspace>/.howtoai/dev/settings.json win over them. Never store secrets here: name accounts and profiles, not their credentials.",
+ "plan_folder": {"type": "string", "default": "dev-plans", "description": "Folder at the workspace root that holds one subfolder per change and INDEX.md."},
+ "tracker": {
+  "kind": {"type": "enum", "options": ["markdown", "jira", "github"], "default": "markdown", "description": "Where work items go: Markdown files in the change folder, Jira through the Atlassian MCP, or GitHub Issues."},
+  "jira_project": {"type": "string", "default": "", "description": "Jira project key, when kind is jira."},
+  "jira_issue_type": {"type": "string", "default": "Task", "description": "Jira issue type for a work item."},
+  "github_repo": {"type": "string", "default": "", "description": "owner/name, when kind is github."}
+ },
+ "environments": {
+  "allow": {"type": "array", "default": [], "description": "Targets tests may use. Each item: {\"name\", \"kind\": local|dev|test|remote-test, \"match\": {\"host\"|\"database\"|\"profile\"|\"env\": value}}."},
+  "deny": {"type": "array", "default": [], "description": "Production markers the safety hook denies: host names, connection-string fragments, cloud profiles, or account names."}
+ },
+ "hook_rules": {"type": "array", "default": [], "description": "Enforceable process rules the hooks read. Each item: {\"id\", \"match\": regex on the command or path, \"action\": warn|block, \"reason\"}."},
+ "review": {
+  "confidence_threshold": {"type": "integer", "default": 80, "description": "Findings scored below this go to the review doc's appendix."},
+  "max_rounds": {"type": "integer", "default": 5, "description": "Goldfish loop cap; at the cap the user decides."},
+  "clean_rounds_to_stop": {"type": "integer", "default": 2, "description": "Consecutive rounds without Blocker or Major findings that end the loop."}
+ },
+ "deploy": {
+  "entry_points": {"type": "array", "default": [], "description": "Existing deploy commands, scripts, or workflow names, in the order they run, each {\"name\", \"command\" or \"workflow\", \"target\"}."}
+ },
+ "workbooks": {
+  "technologies": {"type": "array", "default": [], "description": "Languages and tools the project uses, for example [\"csharp\", \"dotnet\", \"docker\", \"terraform\"]; dev-workbook keeps one workbook for each."}
+ }
+}

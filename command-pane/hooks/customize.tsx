@@ -3,7 +3,9 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { BandGroup, BandItem, BandLayout, BuiltinId, PromptMode } from '../types'
 import { openToday, openTodaySettings } from './today'
-import { contextPercent, handoverColor, runHandover } from './handover'
+import { handoverColor, runHandover } from './handover'
+import { openDesignStudio } from './design'
+import { openFreeLlm } from './freellm'
 
 // The band above the prompt and the Customize pane that sets it.
 // Which buttons show, in which folders, is set per user in one file:
@@ -16,7 +18,7 @@ const MAIN = 'main'
 
 // Shared with register.tsx (its Settings pane and the star prompt)
 export const SETTINGS_PANE = 'command-pane-settings'
-export const STAR_PROMPT = 'Build a skill based on our conversation, ask if the process to automate is not clear'
+export const STAR_PROMPT = 'Use skill-builder to turn what we did in this conversation into a skill or tool that automates it; ask me about anything crucial that is unclear.'
 
 const layoutAtom = atom({ plugin: 'command-pane', key: 'layout' } as const, null, { shape: 'layout-1' })
 const bandOpen = atom({ plugin: 'command-pane', key: 'bandOpen' } as const, '', { shape: 'open-1' })
@@ -29,6 +31,9 @@ const BUILTINS: Record<BuiltinId, { label: string; icon: string; color?: string;
   settings: { label: 'Settings', icon: '⚙', group: MAIN, visible: true },
   today: { label: 'Today', icon: '☰', color: 'suggestion', group: MAIN, visible: true },
   handover: { label: 'Handover', icon: '⇄', group: MAIN, visible: true }, // colour follows the context fill (handover.tsx)
+  design: { label: 'Design studio', icon: '◧', color: 'claude', group: MAIN, visible: true }, // skill-design's studio (design.tsx)
+  freellm: { label: 'FreeLLMAPI', icon: '⇌', color: 'success', group: MAIN, visible: false }, // a local FreeLLMAPI dashboard (freellm.tsx); off until the user shows it
+  mods: { label: 'Mods', icon: '⚡', color: 'success', group: MAIN, visible: true }, // the token-saving-mods switchboard pane (/mods, from the mods plugin)
   compact: { label: 'Compact', icon: '⇣', group: 'session', visible: false },
   context: { label: 'Context', icon: '◔', group: 'session', visible: false },
   usage: { label: 'Usage', icon: '◷', group: 'session', visible: false },
@@ -101,10 +106,30 @@ async function layoutPath($: EngineInterface) {
   return home ? `${home.replace(/\\/g, '/')}/${LAYOUT_REL}` : undefined
 }
 
+// Built-ins a stored layout already holds, in any group
+const builtinsIn = (input: unknown) => {
+  const groups = (input as Partial<BandLayout> | undefined)?.groups
+  return new Set(Array.isArray(groups) ? groups.flatMap(g => (Array.isArray(g?.items) ? g.items : []).map(it => it?.builtin)) : [])
+}
+
 async function loadLayout($: EngineInterface): Promise<BandLayout> {
   const path = await layoutPath($)
   try {
-    if (path && (await $.fs.exists(path))) return normalize(JSON.parse(await $.fs.read(path)))
+    if (path && (await $.fs.exists(path))) {
+      const raw: unknown = JSON.parse(await $.fs.read(path))
+      const layout = normalize(raw)
+      // Migration: a built-in added to the mod after this file was saved (such as Design studio) is
+      // appended to its default group by normalize(); save that once, the user's own items and order unchanged
+      const had = builtinsIn(raw)
+      if (BUILTIN_IDS.some(id => !had.has(id))) {
+        try {
+          await $.fs.write(path, JSON.stringify(layout, null, 2) + '\n')
+        } catch {
+          // not writable: the band still shows the new button this session
+        }
+      }
+      return layout
+    }
   } catch (err) {
     $.ui.toast(`buttons.json could not be read, using the default buttons: ${err instanceof Error ? err.message : String(err)}`)
   }
@@ -181,6 +206,9 @@ function press($: EngineInterface, item: BandItem) {
     case 'settings': return void $.ui.open({ id: SETTINGS_PANE, title: 'Settings' })
     case 'today': return void openToday($)
     case 'handover': return void runHandover($)
+    case 'design': return void openDesignStudio($)
+    case 'freellm': return void openFreeLlm($)
+    case 'mods': return void runCommand($, 'mods')
     case 'compact': return void runCommand($, 'compact')
     case 'context': return void runCommand($, 'context')
     case 'usage': return void runCommand($, 'usage')
@@ -249,25 +277,16 @@ export const registerCustomize = (on: Parameters<Register>[0]) => {
     const { Box, Text, Button } = $.ui.resolve(e)
     const layout = await current($)
     const open = await read($, bandOpen)
-    // Handover's colour and label follow the context window's fill (hooks/handover.tsx)
+    // Icons only, in the default text colour; Handover alone turns yellow or red as the
+    // context fills (hooks/handover.tsx). Names show in the Customize pane.
     const hoColor = await handoverColor($)
-    const hoPercent = await contextPercent($)
 
     const itemButton = (item: BandItem) => {
       const isHandover = item.kind === 'builtin' && item.builtin === 'handover'
-      const color = isHandover ? hoColor : item.color || undefined
       return (
-        <Box key={`band-${item.id}`} flexDirection="row" gap={1}>
-          <Button key={`band-btn-${item.id}`} plain onPress={() => press($, item)}>
-            <Text color={color}>{item.icon || '◆'}</Text>
-          </Button>
-          {item.label && (
-            <Text dimColor={!(isHandover && color)} color={isHandover ? color : undefined}>
-              {item.label}
-              {isHandover && hoPercent !== undefined ? ` ${hoPercent}%` : ''}
-            </Text>
-          )}
-        </Box>
+        <Button key={`band-btn-${item.id}`} plain onPress={() => press($, item)}>
+          <Text color={isHandover ? hoColor : undefined}>{item.icon || '◆'}</Text>
+        </Button>
       )
     }
 
@@ -287,7 +306,7 @@ export const registerCustomize = (on: Parameters<Register>[0]) => {
             {`${isOpen ? '▾' : '▸'} ${group.name}`}
           </Button>
           {isOpen && (
-            <Box flexDirection="row" gap={2} borderStyle="round" paddingX={1}>
+            <Box flexDirection="row" gap={2}>
               {items.map(itemButton)}
             </Box>
           )}

@@ -1,0 +1,10 @@
+/* Acme Bakery brand tokens */
+:root {
+  --brand-primary: #8b3a1e;
+  --brand-cream: #fbf5ec;
+  --brand-ink: #2b1d14;
+  --brand-muted: #6b5544;
+  --radius: 0px;
+  --font-heading: "Playfair Display", Georgia, serif;
+  --font-body: "Source Sans 3", Arial, sans-serif;
+}

@@ -1,0 +1,1 @@
+{ "mcpServers": { "remote": { "type": "http", "url": "https://mcp.example.org/x", "headers": { "Authorization": "Bearer FAKE-TOKEN-FOR-TESTS-0000" } } } }

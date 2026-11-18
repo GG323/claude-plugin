@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Northwind opening hours</title>
+<style>
+:root { --paper: #fffdf7; --ink: #1d1b16; --soft: #5a5446; --brand: #0b5d4b; --brand-ink: #ffffff; --rule: #d8d2c2; }
+@media (prefers-color-scheme: dark) { :root { --paper: #15140f; --ink: #f1ede2; --soft: #b5ad99; --brand: #6fd1b5; --brand-ink: #0e1a16; --rule: #3a372d; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 1.0625rem/1.6 Georgia, "Times New Roman", serif; }
+main { max-width: 640px; margin: 0 auto; padding: 40px 20px; display: grid; gap: 28px; text-align: center; }
+h1, h2 { font-weight: 400; letter-spacing: 0.02em; margin: 0; }
+h1 { font-size: 2.4rem; }
+h2 { font-size: 1.4rem; }
+p { margin: 0; color: var(--soft); }
+.hours { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 16px 0; display: grid; gap: 6px; }
+.hours div { display: flex; justify-content: space-between; color: var(--ink); }
+.cta { display: inline-block; padding: 14px 28px; border-radius: 0; background: var(--brand); color: var(--brand-ink); text-decoration: none; font-family: Georgia, serif; }
+a:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Northwind Tea Room</h1>
+  <p>Loose-leaf teas and cakes on Harbour Street, Riga.</p>
+  <section aria-labelledby="h-hours">
+    <h2 id="h-hours">Opening hours</h2>
+    <div class="hours">
+      <div><span>Monday to Friday</span><span>08:00 to 18:00</span></div>
+      <div><span>Saturday</span><span>09:00 to 17:00</span></div>
+      <div><span>Sunday</span><span>Closed</span></div>
+    </div>
+  </section>
+  <p><a class="cta" href="https://example.com/book">Book a table</a></p>
+</main>
+</body>
+</html>

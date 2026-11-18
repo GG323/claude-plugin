@@ -1,0 +1,107 @@
+{
+ "name": "weekly-sales-report",
+ "display_name": "Weekly sales report",
+ "kind": "scheduled procedure",
+ "change": "new",
+ "date": "2026-11-09",
+ "revision": 2,
+ "status": "waiting",
+ "summary": {
+  "goal": "Every Monday morning, turn last week's sales export into a short Excel summary and leave an email draft with it for your manager, so the report is ready to check and send.",
+  "used_by": "You, and your manager as the reader of the email",
+  "starts": "On its own every Monday at 8:00, or when you ask for it",
+  "from_where": "The weekly sales export in your OneDrive folder Sales/Exports",
+  "to_where": "An Excel file in Sales/Reports and an email draft in your Gmail",
+  "from_what": "One CSV file of last week's orders",
+  "to_what": "A one-page Excel summary: totals per product and per region, and the five largest orders"
+ },
+ "reuse": {
+  "recommendation": "Build new, using invoice-summary as a model. It already reads this kind of CSV export, but it summarizes invoices, not orders, and it cannot run on a schedule or write an email.",
+  "candidates": [
+   {
+    "name": "invoice-summary",
+    "kind": "skill",
+    "fit": "partly covers",
+    "does": "Turns a monthly invoice CSV export into an Excel summary with totals and a chart.",
+    "lacks": "Order fields (product, region), a weekly period, the email draft, and a schedule.",
+    "mark": "local",
+    "source": "~/.claude/skills/invoice-summary",
+    "takes": "Adapting a copy: new columns, a weekly period, and an email step."
+   },
+   {
+    "name": "xlsx",
+    "kind": "skill",
+    "fit": "related",
+    "does": "Creates and edits Excel files.",
+    "lacks": "Everything specific to the sales report; it is a general file tool.",
+    "mark": "anthropic",
+    "source": "https://github.com/anthropics/skills",
+    "takes": "Nothing: the new procedure uses it for the Excel step."
+   }
+  ]
+ },
+ "steps": [
+  {"what": "Find last week's export", "goal": "Use the newest CSV in Sales/Exports, and stop with a clear message if there is none from last week."},
+  {"what": "Check the file", "goal": "Make sure the columns and dates are what the report expects, so a changed export is noticed instead of giving wrong totals."},
+  {"what": "Build the summary", "goal": "Totals per product and per region, and the five largest orders, in one Excel sheet."},
+  {"what": "Save the Excel file", "goal": "Keep every week's report in Sales/Reports, named by the week it covers."},
+  {"what": "Write the email draft", "goal": "A short note with the three main numbers and the file attached, left as a draft for you to check and send."}
+ ],
+ "will": [
+  "Read the newest export in Sales/Exports",
+  "Create one new Excel file each week in Sales/Reports",
+  "Create one email draft in your Gmail"
+ ],
+ "wont": [
+  "Send any email: you send the draft yourself",
+  "Change or delete the export files",
+  "Overwrite an earlier week's report"
+ ],
+ "actions": [
+  {"action": "Reads the sales export in Sales/Exports", "control": "reads"},
+  {"action": "Saves the Excel summary in Sales/Reports", "control": "auto", "note": "A new file each week; an existing file is never replaced."},
+  {"action": "Creates the email to your manager in Gmail", "control": "draft", "note": "You check it and press send."}
+ ],
+ "access": [
+  "Your OneDrive folders Sales/Exports (read) and Sales/Reports (write)",
+  "Your Gmail, to create drafts"
+ ],
+ "assumed": [
+  {"item": "Report language", "value": "English", "why": "You wrote to me in English."},
+  {"item": "Week", "value": "Monday to Sunday", "why": "Your exports start on Mondays."},
+  {"item": "Currency", "value": "EUR, two decimals", "why": "The export's amounts are in EUR."},
+  {"item": "Look of the Excel file", "value": "Plain, with one bar chart of totals per region"}
+ ],
+ "questions": [
+  {"n": 1, "question": "Should the report go to your manager as an email draft, or only be saved as a file?", "recommended": "An email draft that you send yourself.", "status": "answered", "answer": "An email draft."},
+  {"n": 2, "question": "What is your manager's email address?", "recommended": "No default: I need the address to fill in the draft.", "why": "It is not in your files or earlier messages."},
+  {"n": 3, "question": "If there is no export from last week on Monday morning, what should happen?", "recommended": "Skip that week and leave a short note in Sales/Reports saying the export was missing.", "why": "Nothing is sent or guessed, and you see why the report is missing."},
+  {"n": 4, "question": "Is 8:00 on Monday a good time for it to run?", "recommended": "Yes, 8:00 on Monday.", "why": "Your exports arrive on Sunday evening."}
+ ],
+ "details": {
+  "route": "Main route (not a hook or a mod, so nothing is handed off).",
+  "types": [
+   "Scheduled and recurring: an unattended run only prepares the draft and the file, never sends.",
+   "Documents and files: OneDrive folders may be read-only while syncing; failures are reported, not skipped.",
+   "Data: the column check runs before any total is computed."
+  ],
+  "placement": "Personal skills folder `~/.claude/skills/weekly-sales-report`, because it uses your own OneDrive and Gmail rather than one project's files.",
+  "effort": "A bundled Python script does the totals; the main agent writes the email text at normal effort.",
+  "design": "Internal output (Excel and email), so no page design is needed and no design review applies.",
+  "files": [
+   {"path": "SKILL.md", "purpose": "The procedure, its checks, and what it cannot do."},
+   {"path": "scripts/summarize.py", "purpose": "Reads the CSV, checks the columns, and writes the Excel summary."},
+   {"path": "evals/", "purpose": "Saved test cases: a normal week, a missing export, and a changed column."}
+  ],
+  "lessons": [
+   {"id": "L-069", "note": "Unattended runs prepare drafts only; sending stays with you."},
+   {"id": "L-076", "note": "OneDrive read-only folders are reported, not skipped silently."}
+  ],
+  "installs": [
+   {"name": "openpyxl", "why": "Writes the Excel file from the script.", "license": "MIT"}
+  ],
+  "notes": [
+   "The schedule is set up with the `schedule` skill after the build is approved and tested."
+  ]
+ }
+}

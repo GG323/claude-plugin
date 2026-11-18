@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: blocks-flawed-page
+expected_outcome: |
+  A review in the fixed format (Scope, Coverage, Findings, What works well, Verification, Verdict) with verdict Block; HIGH findings cite H1, H2, H4, H9, H12, H13 and H14; bad.html is not edited.
+context:
+  scaffold_script: place-files.sh

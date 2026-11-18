@@ -1,26 +1,29 @@
 """Run file, report page, and run log for environment-audit.
 
 Commands:
-  init   <report.json> --discover <discover.json> --mode <scheduled|on request> --date YYYY-MM-DD
+  init   <report.json> --discover <discover.json> --mode <scheduled|on request|candidate> --date YYYY-MM-DD
          Creates the run file with one entry per target from find_workspaces.py's
          JSON, as Discover edited it ("global": null leaves the global folder out;
-         a named workspace is added as {"name": ..., "path": ...}).
+         a named workspace is added as {"name": ..., "path": ...}; a candidate run
+         lists its one folder under "candidates" the same way).
   render <report.json> --log <run-log.md> --out <page.html> [--standalone]
          Validates the run file, numbers the findings (written back as "n"), and
          renders one HTML report for all targets. --standalone adds the document
-         skeleton for a file opened directly in a browser.
+         skeleton for a file opened directly in a browser. A candidate run's page
+         has no recurring findings, built-in checks, or run log sections.
   log    <report.json> --log <run-log.md> --report <link or path>
          Appends this run's row to the run log and keeps the newest 26 rows. Run
-         again for the same report, it replaces that row instead.
+         again for the same report, it replaces that row instead. A candidate run
+         is never logged.
 
 The run file (report.json):
   {
     "date": "YYYY-MM-DD",
-    "mode": "scheduled" | "on request",
+    "mode": "scheduled" | "on request" | "candidate",
     "targets": [{
       "id": "global" | "<workspace slug>",
       "name": "Global folder" | "<workspace folder name>",
-      "kind": "global" | "workspace",
+      "kind": "global" | "workspace" | "candidate",
       "path": "C:/Users/<user>/.claude",
       "files": {"audited": 0, "exempt": 0, "excluded": 0},
       "not_run": ["L3: 2 web links rate-limited, not verified."],
@@ -42,7 +45,8 @@ The run file (report.json):
     }],
     "recurring": [{"check": "G3", "proposal": "..."}]
   }
-Text fields may use `backticks` for code. Writes only the files named on the command line.
+Text fields may use `backticks` for code; code that itself contains a backtick takes a double-backtick
+span (``like `this` ``), and render stops on a single-backtick span run into a word (`-`name`). Writes only the files named on the command line.
 """
 
 import argparse
@@ -61,6 +65,7 @@ DOMAINS = [("tool", "Tool audit"), ("instruction", "Instruction audit"), ("works
 ACTIONS = {"fix": "Fix in the audit", "skill-builder": "Use skill-builder", "decision": "Needs your decision"}
 TYPES = {"defect", "suggestion"}
 STATUSES = {"open", "fixed", "deferred", "accepted"}
+CHECKS = os.path.join(SKILL_DIR, "references", "checks.md")
 LOG_HEADER = ["Date", "Mode", "Targets", "Audited", "Found", "Fixed", "Deferred", "Open by check", "Report"]
 
 
@@ -97,6 +102,13 @@ def cmd_init(args):
         used.add(tid)
         targets.append({"id": tid, "name": w["name"], "kind": "workspace", "path": w["path"],
                         "files": {"audited": 0, "exempt": 0, "excluded": 0}, "not_run": [], "notes": []})
+    for c in found.get("candidates", []):
+        tid = "candidate-" + slug(c["name"])
+        while tid in used:
+            tid += "-2"
+        used.add(tid)
+        targets.append({"id": tid, "name": "Candidate " + c["name"], "kind": "candidate", "path": c["path"],
+                        "files": {"audited": 0, "exempt": 0, "excluded": 0}, "not_run": [], "notes": []})
     data = {"date": args.date, "mode": args.mode, "targets": targets,
             "skipped_targets": [{"path": s.get("path") or s.get("history"), "reason": s["reason"]}
                                 for s in found.get("skipped", [])],
@@ -111,8 +123,10 @@ def validate(data):
     errors = []
     if not re.match(r"^\d{4}-\d{2}-\d{2}$", str(data.get("date", ""))):
         errors.append("date must be YYYY-MM-DD")
-    if data.get("mode") not in ("scheduled", "on request"):
-        errors.append("mode must be 'scheduled' or 'on request'")
+    if data.get("mode") not in ("scheduled", "on request", "candidate"):
+        errors.append("mode must be 'scheduled', 'on request', or 'candidate'")
+    if data.get("mode") == "candidate" and any(t.get("kind") != "candidate" for t in data.get("targets", [])):
+        errors.append("a candidate run audits only its candidate folder")
     ids = [t.get("id") for t in data.get("targets", [])]
     if not ids:
         errors.append("no targets")
@@ -133,9 +147,32 @@ def validate(data):
         for field in ("file", "evidence", "fix"):
             if not str(f.get(field) or "").strip():
                 errors.append("%s: %s is empty" % (where, field))
+            elif BAD_CODE.search(str(f.get(field))):
+                errors.append("%s: %s has a backtick inside a code span; wrap that code in double backticks (``like `this` ``)"
+                              % (where, field))
         if f.get("line") is not None and not isinstance(f.get("line"), int):
             errors.append("%s: line must be a number or null" % where)
     return errors
+
+
+BAD_CODE = re.compile(r"(?<!`)`[^`\s]{1,3}`(?!`)[\w]")  # `-`name`: a short span run straight into a word
+
+
+def plural(n, word, many=None):
+    return "%d %s" % (n, word if n == 1 else (many or word + "s"))
+
+
+def check_names():
+    """Check ID -> its first sentence, from the checks table in references/checks.md."""
+    names = {}
+    if os.path.isfile(CHECKS):
+        with open(CHECKS, encoding="utf-8") as f:
+            for line in f:
+                m = re.match(r"^\| ([A-Z]\d+) \| (.+?) \| [^|]+ \|$", line.strip())
+                if m:
+                    first = re.split(r"(?<=\.)\s", m.group(2))[0].rstrip(":")
+                    names[m.group(1)] = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", first)
+    return names
 
 
 def order(data):
@@ -195,22 +232,53 @@ def text(value):
     return re.sub(r"\x00(\d+)\x00", lambda m: codes[int(m.group(1))], out)
 
 
-def finding_rows(findings):
-    rows = []
+def where_of(f):
+    return html.escape(f["file"]) + (":%d" % f["line"] if f.get("line") else "")
+
+
+def finding_cards(findings):
+    """One card per finding: a head line with number, check, type, file, action, and
+    status, then evidence and fix side by side, stacking on narrow screens."""
+    cards = []
     for f in findings:
-        where = "<span class=\"mono\">%s</span>" % html.escape(f["file"])
-        if f.get("line"):
-            where += "<span class=\"mono\">:%d</span>" % f["line"]
-        rows.append(
-            "<tr id=\"f%d\"><td class=\"num\">#%d</td><td><span class=\"check\">%s</span></td>"
-            "<td><span class=\"pill %s\">%s</span></td><td class=\"where\">%s</td>"
-            "<td class=\"text\"><blockquote>%s</blockquote></td><td class=\"text\">%s</td>"
-            "<td><span class=\"pill action\">%s</span></td><td><span class=\"pill %s\">%s</span></td></tr>"
-            % (f["n"], f["n"], html.escape(f["check"]), f["type"], f["type"].capitalize(), where,
-               text(f["evidence"]), text(f["fix"]), ACTIONS[f["action"]], f["status"], f["status"].capitalize()))
-    return ("<div class=\"scroll\"><table><thead><tr><th>#</th><th>Check</th><th>Type</th><th>File</th>"
-            "<th>Evidence</th><th>Proposed fix</th><th>Action</th><th>Status</th></tr></thead><tbody>"
-            + "".join(rows) + "</tbody></table></div>")
+        cards.append(
+            "<li class=\"finding\" id=\"f%d\"><div class=\"f-head\"><span class=\"num\">#%d</span>"
+            "<span class=\"check\">%s</span><span class=\"pill %s\">%s</span>"
+            "<span class=\"where mono\">%s</span><span class=\"f-tags\"><span class=\"pill action\">%s</span>"
+            "<span class=\"pill %s\">%s</span></span></div><div class=\"f-body\">"
+            "<div><p class=\"label\">Evidence</p><blockquote>%s</blockquote></div>"
+            "<div><p class=\"label\">Proposed fix</p><p>%s</p></div></div></li>"
+            % (f["n"], f["n"], html.escape(f["check"]), f["type"], f["type"].capitalize(), where_of(f),
+               ACTIONS[f["action"]], f["status"], f["status"].capitalize(), text(f["evidence"]), text(f["fix"])))
+    return "<ol class=\"findings\">%s</ol>" % "".join(cards)
+
+
+def needs_you(findings):
+    """Open and deferred findings grouped by who acts, in the order the user answers them."""
+    waiting = [f for f in findings if f["status"] in ("open", "deferred")]
+    if not waiting:
+        return "<p class=\"empty\">Nothing needs you. Every finding is fixed or accepted.</p>"
+    link = lambda f: "<a href=\"#f%d\">#%d</a> <span class=\"check\">%s</span>" % (f["n"], f["n"], html.escape(f["check"]))
+    groups = []
+    for action, intro in (("decision", "Give the fact or choice; the audit applies your answer."),
+                          ("fix", "Answer by number: fix, defer, or accept as an exception."),
+                          ("skill-builder", "Run <code>skill-builder</code> for each tool with these findings as evidence; the audit does not apply them.")):
+        fs = [f for f in waiting if f["action"] == action]
+        if not fs:
+            continue
+        if action == "skill-builder":
+            by_tool = {}
+            for f in fs:
+                by_tool.setdefault(tool_of(f), []).append(f)
+            items = "".join("<li><code>%s</code>: %s</li>" % (html.escape(name), ", ".join(link(f) for f in group))
+                            for name, group in sorted(by_tool.items()))
+        else:
+            items = "".join("<li>%s <span class=\"where mono\">%s</span></li>" % (link(f), where_of(f)) for f in fs)
+        groups.append("<div class=\"need\"><h3>%s <span class=\"count\">%d</span></h3><p class=\"meta\">%s</p>"
+                      "<ul class=\"plain\">%s</ul></div>" % (ACTIONS[action], len(fs), intro, items))
+    reply = ("<p>Reply in chat with finding numbers and what to do with each, for example "
+             "<code>fix 2-6, defer 10, accept 1</code>. Check codes are explained under <a href=\"#checks\">Check codes</a>.</p>")
+    return reply + "<div class=\"needs\">%s</div>" % "".join(groups)
 
 
 def figure(value, label, cls=""):
@@ -264,27 +332,17 @@ def render(data, log_path):
         figure(c["defects"], "Defects", "defect"), figure(c["suggestions"], "Suggestions", "suggest"),
         figure(c["fixed"], "Fixed", "ok"), figure(c["open"] + c["deferred"], "Open")]))
 
-    sb = [f for f in data["findings"] if f["action"] == "skill-builder" and f["status"] in ("open", "deferred")]
-    body = "<p class=\"empty\">None. No finding needs skill-builder.</p>"
-    if sb:
-        groups = {}
-        for f in sb:
-            groups.setdefault(tool_of(f), []).append(f)
-        items = "".join("<li><code>%s</code>: %s</li>" % (
-            html.escape(name), ", ".join("<a href=\"#f%d\">#%d %s</a>" % (f["n"], f["n"], html.escape(f["check"])) for f in fs))
-            for name, fs in sorted(groups.items()))
-        body = ("<p>These findings change what a tool does or how its workflow runs. Run <code>skill-builder</code> "
-                "for each tool, with the findings as evidence; the audit does not apply them.</p><ul class=\"plain\">%s</ul>" % items)
-    parts.append("<section><h2>Work for skill-builder</h2>%s</section>" % body)
+    parts.append("<section><h2>What needs you</h2>%s</section>" % needs_you(data["findings"]))
 
     for t in data["targets"]:
         fs = [f for f in data["findings"] if f["target"] == t["id"]]
         tc = counts(fs)
         files = t.get("files", {})
         head = ("<div class=\"target-head\"><h2 id=\"%s\">%s</h2><p class=\"meta mono\">%s</p>"
-                "<p class=\"meta\">%d files audited, %d exempt, %d excluded · %d defects, %d suggestions, %d fixed</p></div>"
-                % (t["id"], html.escape(t["name"]), html.escape(t["path"]), files.get("audited", 0),
-                   files.get("exempt", 0), files.get("excluded", 0), tc["defects"], tc["suggestions"], tc["fixed"]))
+                "<p class=\"meta\">%s audited, %d exempt, %d excluded · %s, %s, %d fixed</p></div>"
+                % (t["id"], html.escape(t["name"]), html.escape(t["path"]), plural(files.get("audited", 0), "file"),
+                   files.get("exempt", 0), files.get("excluded", 0), plural(tc["defects"], "defect"),
+                   plural(tc["suggestions"], "suggestion"), tc["fixed"]))
         blocks = [head]
         for note in t.get("notes", []):
             blocks.append("<p>%s</p>" % text(note))
@@ -292,7 +350,7 @@ def render(data, log_path):
             if dom == "workspace" and t["kind"] != "workspace":
                 continue
             dfs = [f for f in fs if f["domain"] == dom]
-            content = finding_rows(dfs) if dfs else "<p class=\"empty\">No findings.</p>"
+            content = finding_cards(dfs) if dfs else "<p class=\"empty\">No findings.</p>"
             blocks.append("<div class=\"domain\"><h3>%s</h3>%s</div>" % (label, content))
         not_run = t.get("not_run", [])
         nr = ("<ul class=\"plain\">%s</ul>" % "".join("<li>%s</li>" % text(x) for x in not_run)) if not_run \
@@ -300,10 +358,22 @@ def render(data, log_path):
         blocks.append("<div class=\"domain\"><h3>Checks that did not run</h3>%s</div>" % nr)
         parts.append("<section class=\"target\">%s</section>" % "".join(blocks))
 
+    used = sorted({f["check"] for f in data["findings"]}, key=lambda c: (c[0], int(c[1:])))
+    if used:
+        names = check_names()
+        parts.append("<section><h2 id=\"checks\">Check codes</h2><dl class=\"legend\">%s</dl></section>" % "".join(
+            "<div><dt><span class=\"check\">%s</span></dt><dd>%s</dd></div>" % (c, text(names.get(c, "See references/checks.md.")))
+            for c in used))
+
     if data.get("skipped_targets"):
         parts.append("<section><h2>Skipped folders</h2><ul class=\"plain\">%s</ul></section>" % "".join(
             "<li><span class=\"mono\">%s</span>: %s</li>" % (html.escape(str(s["path"])), text(s["reason"]))
             for s in data["skipped_targets"]))
+
+    if data["mode"] == "candidate":
+        parts.append("<footer>Generated by <code>environment-audit</code> in candidate mode for "
+                     "<code>skill-finder</code>'s vetting. Nothing in the candidate was run or changed.</footer>")
+        return "\n".join(parts)
 
     rec = data.get("recurring", [])
     rec_html = ("<ul class=\"plain\">%s</ul>" % "".join(
@@ -324,7 +394,7 @@ def render(data, log_path):
     shown = [current] + list(reversed(rows))[:LOG_SHOWN - 1]
     cols = LOG_HEADER
     trs = "".join("<tr>%s</tr>" % "".join("<td>%s</td>" % cell_html(c) for c in (r + [""] * len(cols))[:len(cols)]) for r in shown)
-    parts.append("<section><h2>Run log</h2><div class=\"scroll\"><table><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div></section>"
+    parts.append("<section><h2 id=\"run-log\">Run log</h2><div class=\"scroll\" role=\"region\" aria-labelledby=\"run-log\" tabindex=\"0\"><table><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div></section>"
                  % ("".join("<th>%s</th>" % c for c in cols), trs))
     parts.append("<footer>Generated by <code>environment-audit</code>. Finding numbers match the chat summary.</footer>")
     return "\n".join(parts)
@@ -360,6 +430,8 @@ def cmd_render(args):
 def cmd_log(args):
     data = load(args.report)
     errors = validate(data)
+    if data.get("mode") == "candidate":
+        errors.append("a candidate run is never logged; the run log holds the user's own runs only")
     if errors:
         print(json.dumps({"ok": False, "errors": errors}, ensure_ascii=False, indent=1))
         sys.exit(1)
@@ -391,7 +463,7 @@ def main():
     p = sub.add_parser("init")
     p.add_argument("report")
     p.add_argument("--discover", required=True)
-    p.add_argument("--mode", required=True, choices=["scheduled", "on request"])
+    p.add_argument("--mode", required=True, choices=["scheduled", "on request", "candidate"])
     p.add_argument("--date", required=True)
     p = sub.add_parser("render")
     p.add_argument("report")

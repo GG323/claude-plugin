@@ -8,15 +8,18 @@
 - [case.yaml](#caseyaml)
 - [Graders](#graders)
 - [Input files](#input-files)
+  - [Connector fixtures](#connector-fixtures)
 - [Trigger requests](#trigger-requests)
 - [Running saved test cases](#running-saved-test-cases)
 - [Skills and agents](#skills-and-agents)
 
 ## Why save test cases
 
-[Test](../stages/test.md#run-and-deliver) saves approved tests in the target skill's `evals/` folder so that every later fix can rerun them as regression tests. The layout is the one `claude plugin eval` and `skill-creator` read, so a handoff to `skill-creator` starts with tests already in place.
+[Test](../stages/test.md#run-and-deliver) saves approved tests in the target skill's `evals/` folder so that every later fix can rerun them as regression tests. The layout is the one `claude plugin eval` reads.
 
 Save only tests that are safe to rerun without manual setup: read-only tests, tests with disposable inputs, and tests that use dry runs or mocks. List any other approved test in the delivery as not saved, with the reason.
+
+**A test where the target skill asks a question** cannot run unattended past the question, because a saved case has no scripted answer. Save it up to the question: `prompt.md` holds the request as the user typed it, and the graders judge the question itself — that it is asked, before anything is written or sent, and what it asks. The branch after the answer is tested by the main agent in [Test](../stages/test.md#how-tests-run), and the delivery lists it as not saved.
 
 ## Folder layout
 
@@ -105,6 +108,34 @@ Input files follow the privacy rule in [Every target skill](skill-types.md#every
 - **Shared inputs.** Keep fixtures small and copy them into each case's `files/`; every case must load on its own.
 - **Results that depend on the machine.** Word `expected_outcome` so it holds on any machine, or state the requirement in it (for example, "needs FFmpeg; without it the skill stops with install steps").
 
+### Connector fixtures
+
+A target skill that reads a connector (mail, calendar, documents) is tested without real accounts through fixtures: files that stand in for the connector's answers. Keep them in `files/connectors/`:
+
+```text
+files/connectors/
+├── CONNECTORS.md
+├── calendar-list-events.json
+└── gmail-get-thread.json
+```
+
+`CONNECTORS.md` starts with the "as of" line and maps each tool call the target skill makes to the JSON file that answers it:
+
+```markdown
+As of: 2026-03-12 09:30, time zone Europe/Riga
+
+| Tool call | Arguments | Answer file |
+| --- | --- | --- |
+| list events | next 7 days | calendar-list-events.json |
+| get thread | the thread linked in the event | gmail-get-thread.json |
+```
+
+- Shape each JSON file like the real tool's output, including the fields a search or list result leaves out, so the target skill meets the same partial records it meets in real use.
+- The "as of" date, time, and time zone are explicit, and the target skill uses them instead of the machine clock, so "next meeting" or "overdue" gives the same answer on every rerun.
+- End `prompt.md` with a setup line after the request, in place of setup notes each test would otherwise invent: `Connectors are replaced by fixtures: read files/connectors/CONNECTORS.md and, instead of calling a listed tool, read its answer file. Use its "as of" date and time zone as now.`
+- Fixtures cover read-only calls only. A target skill that writes through a connector is tested on drafts in the sandbox, never through a fixture that pretends a send succeeded.
+- Fixture contents follow the privacy rule above: invented people, addresses, and messages.
+
 ## Trigger requests
 
 Save approved trigger tests as `evals/trigger-queries.json`, a list of requests with whether each should load the target skill:
@@ -116,8 +147,6 @@ Save approved trigger tests as `evals/trigger-queries.json`, a list of requests 
 ]
 ```
 
-This is the same shape `skill-creator` uses for its description optimization, so the set can be reused there.
-
 ## Running saved test cases
 
 - **By the main agent:** sync the test copy, give each test case's prompt and input files to a test subagent, then grade the results against the graders, as [Test](../stages/test.md#how-tests-run) does for any test.
@@ -126,4 +155,3 @@ This is the same shape `skill-creator` uses for its description optimization, so
 ## Skills and agents
 
 - [skill-builder](../SKILL.md) — the skill this reference belongs to; used by [Test](../stages/test.md#run-and-deliver).
-- `skill-creator` — reads the same layout when it receives a handoff.

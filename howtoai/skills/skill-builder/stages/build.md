@@ -3,6 +3,7 @@
 ## Contents
 
 - [Before writing](#before-writing)
+- [Hand off or skip writing](#hand-off-or-skip-writing)
 - [Metadata and discovery](#metadata-and-discovery)
 - [Instructions](#instructions)
 - [Split the workflow into stages](#split-the-workflow-into-stages)
@@ -14,16 +15,27 @@
 
 - Confirm the user explicitly approved the final plan. If approval is missing or the plan changed materially, return to [Plan](plan.md).
 - Build exactly what the plan approved, following the [core rules](../SKILL.md#core-rules) and the recall-note lessons the plan applied. Use [the example](../examples/example-target-skill.md) as a shape reference.
-- When the plan reuses an online candidate, first run its download, review, audit, and install-approval steps from [Plan](plan.md#inspect-the-target-context). Reusing it as published ends Build there; adapting it continues below with the downloaded copy as the existing skill.
-- When revising an existing skill, first copy its current version to `_sandbox/<name>/baseline/` in the user's working directory. [Test](test.md#design-candidate-tests) uses the copy as the baseline and deletes it after delivery.
+- When the plan reuses or adapts a candidate (a skill, tool, or procedure, from any source, already on this computer or not), first run the `skill-finder` skill (for example, `/skill-finder`) on it, at its "Vet and install a candidate" section, with the candidate, whether it is reused or adapted, and the approved plan, including the build destination for an adaptation. `skill-finder` does the whole vetting; this skill does none of it itself and copies no candidate file on its own. Give the user its vetting report and ask for approval; on a clear yes, tell `skill-finder` to install it (reuse) or to place the vetted copy in the build destination (adapt). Never install, copy, or treat a candidate as checked on any other evidence, such as its mark, an earlier vetting, or its being installed already. Reusing it as published ends Build there; adapting it continues below with the copy `skill-finder` placed as the existing skill. A failed or declined candidate goes back to [Plan](plan.md#inspect-the-target-context).
+- When revising an existing skill, first copy its current version to `baseline/` in the [sandbox](../SKILL.md#vocabulary). [Test](test.md#design-candidate-tests) uses the copy as the baseline and deletes it after delivery.
 - When revising, leave only current behavior: remove obsolete instructions and stale references, consolidate overlap, update or remove supporting material that no longer matches, regenerate examples that mislead about the new behavior, and update the target skill's `state/` according to its own rules. When the change comes from a failure in real use, add it as a row in the target skill's **Common failures** section. Preserve unrelated files and behavior.
+
+## Hand off or skip writing
+
+Two routes from [Choose the route](plan.md#choose-the-route) write nothing in this stage:
+
+- **Verification only:** for a third-party target, first run `skill-finder`'s "Vet and install a candidate" section on it report-only (no copy placed, no install), and give the user its vetting report. Then go to [Test](test.md#check) with the approved test depth tier; a third-party target takes the "Reused as published" tier, so nothing edits its files. Skip the rest of Build.
+- **Handoff to `update-config` or `plugin-authoring`:** invoke that skill (for example, `/update-config`) with the approved plan as its brief: what to add or change, the location the plan chose from [Deliverable kinds](../references/skill-types.md#deliverable-kinds), and the limits — it writes only what the plan names, installs nothing the plan does not list, and leaves other settings, hooks, and files untouched. When it finishes, go to [Test](test.md#check) with where it put each change. Skip the rest of Build.
+
+Every other route continues below.
 
 ## Metadata and discovery
 
 - YAML frontmatter with `name` and `description`, in the format the target harness supports.
 - `name`: 1–64 characters of lowercase letters, digits, and single hyphens; no leading, trailing, or consecutive hyphens; matches the target skill's directory.
 - `description`: non-empty, at most 1,024 characters. Say what the target skill does and when to use it, including phrases users actually say.
-- Add optional, harness-specific fields only when the target harness supports them (for Claude Code, check the [skills documentation](https://code.claude.com/docs/en/skills)).
+- Add optional, harness-specific fields only when the target harness supports them (for Claude Code, check the [skills documentation](https://code.claude.com/docs/en/skills)), including the `effort` and `model` the plan chose under [thinking effort](../references/skill-types.md#every-target-skill) (item 10).
+- **Subagent:** one Markdown agent file named `<name>.md`, with `name` and `description` frontmatter, `tools` and `model` where the plan limits them, and the agent's system prompt as its body, per the [subagents documentation](https://code.claude.com/docs/en/sub-agents). Its description says when the main agent should hand it work.
+- **Plugin bundle:** the manifest `.claude-plugin/plugin.json` with the plugin's name, version, and description, and each piece in its own folder (`skills/`, `agents/`, `hooks/`), per the [plugins documentation](https://code.claude.com/docs/en/plugins); raise the version on every change.
 
 ## Instructions
 
@@ -33,6 +45,7 @@ Write the workflow, decision points, and meaningful edge cases without spelling 
 - Nontechnical tasks: audience, sources, tone, format, and quality criteria.
 - Make consequential permissions and side effects explicit, including what the target skill must not do.
 - Write the [output contract](../SKILL.md#output-contract) as its own section, including the audience and the deliverable's own format, so the main agent does not add workspace documentation rules (titles, contents lists) to it. For a standardized output, write the fixed structure (or link its template in `assets/`), which data goes in tables or charts, and the default format with the cases that change it.
+- **Look:** make it work first, and write no styling into the target skill. Write the look the plan chose under [Look and design](../references/skill-types.md#every-target-skill) (item 11): a template in `assets/` that you make now with `skill-design`, stamped with what it was built from, and that a script or fixed step fills each run. The target skill never calls `skill-design` at runtime.
 - If the plan uses the [idea-generation option](../SKILL.md#idea-generation-option), write the agreed count, split, model choice, and an explicit **Choose one** step into the workflow.
 - If the plan uses `state/` or external sources, write their update/prune rules and failure handling into the workflow, per [Working memory and sources](../SKILL.md#working-memory-and-sources).
 - **Requirements:** write each requirement the plan applied from [references/skill-types.md](../references/skill-types.md) where it acts:
@@ -48,15 +61,15 @@ Write the workflow, decision points, and meaningful edge cases without spelling 
   - Every target skill links its own files and sections with relative Markdown links, for example to `stages/review.md` or to `#output` in the same file.
   - A project skill (in a workspace's `.claude/skills/`) may also link that workspace's files, such as `../../../Job posts/`, because they belong to the same workspace.
   - A personal or plugin skill runs in every workspace, so it names workspace paths as code instead of linking them.
-  - Other skills, tools, commands, and infrastructure artifacts are always quoted as code, for example `skill-creator`, `ffmpeg`, or `.claude/skills/`.
-- **Bundled scripts:** a relative `scripts/...` path fails when the user's working directory is elsewhere, so call every bundled script through the skill's own folder. For Claude Code, write `${CLAUDE_SKILL_DIR}`, which Claude Code replaces with the folder holding the skill's `SKILL.md`, quoted and with the interpreter from the startup check, for example `py -3 "${CLAUDE_SKILL_DIR}/scripts/tidy.py" plan "<folder>"`. A matching frontmatter rule such as `allowed-tools: Bash(py -3 "${CLAUDE_SKILL_DIR}/scripts/tidy.py" *)` lets those exact commands run without a permission prompt; add it only for scripts that are safe to run unprompted. For other harnesses, add one sentence saying that paths under `scripts/` are relative to the skill's folder. Scripts force UTF-8 output (on Windows the default console encoding crashes on names like "Jānis"), and scripts that use today's date take an optional "as of" date, so tests can fix it.
+  - Other skills, tools, commands, and infrastructure artifacts are always quoted as code, for example `update-config`, `ffmpeg`, or `.claude/skills/`.
+- **Bundled scripts:** a relative `scripts/...` path fails when the user's working directory is elsewhere, so call every bundled script through the skill's own folder. For Claude Code, write `${CLAUDE_SKILL_DIR}`, which Claude Code replaces with the folder holding the skill's `SKILL.md`, quoted and with the interpreter from the startup check, for example `py -3 "${CLAUDE_SKILL_DIR}/scripts/tidy.py" plan "<folder>"`. A matching frontmatter rule such as `allowed-tools: Bash(py -3 "${CLAUDE_SKILL_DIR}/scripts/tidy.py" *)` lets those exact commands run without a permission prompt; add it only for scripts that are safe to run unprompted. For other harnesses, add one sentence saying that paths under `scripts/` are relative to the skill's folder. Python scripts call `sys.stdout.reconfigure(encoding="utf-8")` themselves, because on Windows the default console encoding crashes on names like "Jānis" and `py -3 -I` ignores `PYTHONIOENCODING`. A script that needs a package installed with `pip install --user` is called without `-I`, which hides user-site packages. Scripts that use today's date take an optional "as of" date, so tests can fix it.
 - Place the **Feedback** section last before `Skills and agents`, as described in [Feedback note for target skills](../SKILL.md#feedback-note-for-target-skills).
 
 ## Split the workflow into stages
 
 When the approved plan splits the workflow into stages, write one stage file per stage under `stages/`:
 
-- `SKILL.md` gives the overview: the stage order, when each stage is entered, and the rules that apply to every stage (such as the output contract). It holds no stage-specific instructions.
+- `SKILL.md` gives the overview: the stage order, when each stage is entered, and what applies to the whole run, which stays there: **Before you start**, the output contract, **Verify the output**, **Common failures**, and **What it can't do**. It holds no stage-specific instructions.
 - Each stage file owns its instructions completely: inputs, sections and steps, decisions, moves to other stages, handoffs to other skills, and what it passes on. Other files link to it instead of repeating or partly describing it.
 - A decision and how to act on it live in the stage that makes it. Do not create shared sections that several stages use; if two stages need similar instructions, each states its own version for its own case.
 - Each stage file says where it is entered from and where it goes next.
@@ -79,7 +92,7 @@ Link each supporting file from `SKILL.md` with a relative path and a note on whe
 
 ## Placement and saving
 
-- Use project scope for a target skill meant for the repository or team and personal scope for reuse across projects. For Claude Code: `.claude/skills/<name>/SKILL.md` (project), `~/.claude/skills/<name>/SKILL.md` (personal), or `<plugin>/skills/<name>/SKILL.md` (plugin; test with `claude --plugin-dir <plugin-directory>`). Check other harnesses' discovery rules.
+- Save the target where the approved plan says, at the location for its kind in [Deliverable kinds](../references/skill-types.md#deliverable-kinds). The plan's default: the project folder when the target uses this workspace's files, personal (`~/.claude/`) otherwise, and a plugin only for the HowToAI pack.
 - If the approved plan stores the target skill outside a discovery path, [Test](test.md#how-tests-run) syncs a copy into the personal skills folder for testing, and the delivery says where that copy is.
 - Change only authorized files. If the destination conflicts with an existing skill or file, stop, leave it untouched, and return to [Plan](plan.md).
 - Move existing reference files only as the approved plan specifies.
@@ -89,4 +102,7 @@ Link each supporting file from `SKILL.md` with a relative path and a note on whe
 
 - [skill-builder](../SKILL.md) — rules and vocabulary this stage applies; [skill types](../references/skill-types.md) — the requirements it writes.
 - [Plan](plan.md) — source of the approved plan; [Test](test.md) — the next stage.
+- `skill-finder` — vets and installs a reuse candidate in [Before writing](#before-writing).
+- `update-config` and `plugin-authoring` — write hooks, settings, and mods in [Hand off or skip writing](#hand-off-or-skip-writing).
+- `skill-design` — makes the template the plan chose, in [Instructions](#instructions).
 - No dedicated build agent is required.

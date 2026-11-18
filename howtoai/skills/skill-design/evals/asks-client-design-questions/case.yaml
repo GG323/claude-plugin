@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: asks-client-design-questions
+expected_outcome: |
+  The skill finds acme-site/css/tokens.css, does not build yet, and asks one message with the client questions, pre-filled from the token file, recommending 'ours with your brand colors' because the design is partial (no status colors, no dark theme). No profile is written before approval.
+context:
+  scaffold_script: place-files.sh
