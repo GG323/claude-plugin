@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: zoom-out-reviewer-searches-wide
+expected_outcome: |
+  The reviewer flags the Redis cache as speculative and names the existing MemoryCache for reuse, with confirmed marks, and also reports problems outside its viewpoint, such as the rename that breaks the two-instance rolling deploy or the undefined sync job, in the same table with their own Area; every row has a Change cell, and there is no Outside my scope line.
+context:
+  scaffold_script: place-files.sh

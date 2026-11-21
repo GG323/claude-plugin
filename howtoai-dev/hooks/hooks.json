@@ -1,0 +1,29 @@
+{
+  "description": "howtoai-dev safety hooks: dev-test-first keeps the test-first order and blocks CI edits during test stages; dev-safe-target denies production markers and asks before destructive commands and migration edits. dev-test-first is silent unless a change is at a test or build stage; dev-safe-target applies deny markers wherever the dev settings name them, and its destructive checks only in workspaces with project dev settings.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "F=\"${CLAUDE_PLUGIN_ROOT}/hooks/dev_test_first.py\"; if command -v py >/dev/null 2>&1; then exec py -3 -I -B \"$F\"; else exec python3 -I -B \"$F\"; fi",
+            "timeout": 15
+          }
+        ]
+      },
+      {
+        "matcher": "^(Bash|PowerShell|Edit|Write|MultiEdit|mcp__.*)$",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "F=\"${CLAUDE_PLUGIN_ROOT}/hooks/dev_safe_target.py\"; if command -v py >/dev/null 2>&1; then exec py -3 -I -B \"$F\"; else exec python3 -I -B \"$F\"; fi",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

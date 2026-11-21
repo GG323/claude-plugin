@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: process-rule-refused
+expected_outcome: |
+  dev-workbook treats the request as a process instruction, writes nothing, and routes it to dev-learn, telling the user so.
+context:
+  scaffold_script: place-files.sh

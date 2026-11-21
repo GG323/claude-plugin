@@ -1,0 +1,16 @@
+{
+  "name": "local-k8s",
+  "technologies": ["kubernetes", "docker", "dotnet"],
+  "production": false,
+  "tools": ["docker", "kubectl"],
+  "ready": ["kubectl --context rancher-desktop cluster-info"],
+  "steps": [
+    {"id": "build", "command": "docker build -t shop-api:1.0.0 .", "rollback": "none: builds a local image only"},
+    {"id": "apply", "command": "kubectl --context rancher-desktop apply -f deploy/k8s/", "rollback": "kubectl --context rancher-desktop rollout undo deployment/shop-api", "watch": "kubectl --context rancher-desktop rollout status deployment/shop-api --timeout=120s"}
+  ],
+  "checks": [
+    {"name": "health", "url": "http://localhost:30080/health", "expect_status": 200, "contains": "ok", "retries": 10, "wait_seconds": 3}
+  ],
+  "approval_minutes": 30,
+  "notes": "Local Rancher Desktop cluster; set up 2026-11-21."
+}

@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: setup-finds-stack-and-asks
+expected_outcome: |
+  Setup reports what the files show (C#, .NET 8, Docker, the production host in .env.example, the staging deploy step and its missing script), asks at most four questions with recommendations, and writes no settings before approval.
+context:
+  scaffold_script: place-files.sh

@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: proposes-gate
+expected_outcome: |
+  The dev settings have no build gate. Before any snapshot or code edit, dev-build looks up the gate from files: the CI only runs tests, so it takes check-mode commands from the workbook Commands (dotnet format --verify-no-changes from dotnet.commands.002, and a build from dotnet.commands.001), and asks the user to confirm the list. It writes no settings before the yes and edits nothing under src/.
+context:
+  scaffold_script: place-files.sh

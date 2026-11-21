@@ -1,0 +1,59 @@
+{
+ "id": "2026-11-19-bulk-discount",
+ "title": "Bulk discount for large orders",
+ "created": "2026-11-19T09:00:00+01:00",
+ "updated": "2026-11-19T10:30:00+01:00",
+ "stage": "test",
+ "size": "Small",
+ "wi": [],
+ "loops": {
+  "plan-review": 1
+ },
+ "approvals": [
+  {
+   "what": "plan",
+   "by": "user",
+   "conditions": "",
+   "at": "2026-11-19T09:40:00+01:00"
+  }
+ ],
+ "receipts": [],
+ "declined": [],
+ "test_runs": [
+  {
+   "n": 1,
+   "route": "red-check",
+   "wi": null,
+   "result": "red",
+   "passed": 4,
+   "failed": 2,
+   "flaky": 0,
+   "commit": "1a2b3c4",
+   "report": "test-run-1.md",
+   "at": "2026-11-19T09:55:00+01:00"
+  }
+ ],
+ "ephemeral": [],
+ "history": [
+  {
+   "at": "2026-11-19T09:00:00+01:00",
+   "stage": "plan"
+  },
+  {
+   "at": "2026-11-19T09:30:00+01:00",
+   "stage": "accept"
+  },
+  {
+   "at": "2026-11-19T09:40:00+01:00",
+   "stage": "tests-first"
+  },
+  {
+   "at": "2026-11-19T10:00:00+01:00",
+   "stage": "build"
+  },
+  {
+   "at": "2026-11-19T10:30:00+01:00",
+   "stage": "test"
+  }
+ ]
+}

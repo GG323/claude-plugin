@@ -1,0 +1,12 @@
+[
+  {"query": "Run the learn step for the bulk discount change", "should_trigger": true},
+  {"query": "Why did the rounding bug get through our dev process? Find the root cause from the review", "should_trigger": true},
+  {"query": "Learn from review round 2 of the session-cache change and update the dev lessons", "should_trigger": true},
+  {"query": "The review found the same Math.Round bug again, fix it where it comes from", "should_trigger": true},
+  {"query": "Root-cause the Critical findings of the last code review", "should_trigger": true},
+  {"query": "Review the bulk discount change", "should_trigger": false},
+  {"query": "Add to the C# workbook that we use banker's rounding", "should_trigger": false},
+  {"query": "Fix the rounding bug the review found", "should_trigger": false},
+  {"query": "Promote the skill-builder lessons", "should_trigger": false},
+  {"query": "Plan a change to add a loyalty discount", "should_trigger": false}
+]

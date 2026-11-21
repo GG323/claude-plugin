@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: declined-finding-goldfish-level
+expected_outcome: |
+  dev-learn collects R1-C1 (Critical) and R1-T2 (declined, with the user's reason). R1-C1's root cause is a missing C# workbook fact (level 1, dev-workbook). R1-T2's reason says the tests reviewer reads too broadly, so its cause stage is review and the fix is a level 2 change to agents/goldfish-tests.md handed to skill-builder as a change plan; no level 3 skill-file change is proposed, because a goldfish change resolves it. Both get new lessons DL-001 and DL-002 in a new .howtoai/dev/lessons.md. learn-1.md passes LEARN check, and the run stops at one approval question; nothing is handed on.
+context:
+  scaffold_script: place-files.sh

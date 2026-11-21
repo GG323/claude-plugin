@@ -1,0 +1,19 @@
+diff --git a/src/Shop/Orders/DiscountCalculator.cs b/src/Shop/Orders/DiscountCalculator.cs
+index 3c9dd38..8f103c2 100644
+--- a/src/Shop/Orders/DiscountCalculator.cs
++++ b/src/Shop/Orders/DiscountCalculator.cs
+@@ -5,11 +5,13 @@ public static class DiscountCalculator
+     public static decimal Calculate(Order order)
+     {
+         var subtotal = OrderTotals.Subtotal(order);
+-        return order.Coupon switch
++        var coupon = order.Coupon switch
+         {
+             "WELCOME10" => Math.Round(subtotal * 0.10m, 2),
+             "SAVE2" => Math.Min(2.00m, subtotal),
+             _ => 0m,
+         };
++        var bulk = order.ItemCount >= 10 ? Math.Round(subtotal * 0.05m) : 0m;
++        return Math.Max(coupon, bulk);
+     }
+ }

@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: large-subsystem
+expected_outcome: |
+  dev-plan sizes a notifications subsystem with a users table rename Large (new subsystem, irreversible contract change read by the export), runs three architect proposals and asks the user to pick, drafts a full top-down plan with expand-then-contract for the rename, runs all four reviewers in the loop, splits into at most ten standalone Markdown work items with dependencies and agent prompts, and stops at the approval question.
+context:
+  scaffold_script: place-files.sh

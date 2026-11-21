@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: supplied-plan-small-change
+expected_outcome: |
+  skill-builder takes the supplied-change-plan route: no skill search, no grilling, the quote is checked against the file, and one short approval message is shown before any change.
+context:
+  scaffold_script: place-files.sh

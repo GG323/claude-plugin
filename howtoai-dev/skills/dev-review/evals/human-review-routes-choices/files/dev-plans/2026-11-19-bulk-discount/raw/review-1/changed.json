@@ -1,0 +1,22 @@
+{
+ "round": 1,
+ "base": "806f41012a1f4e89d0b66384b325e3d5534f34ce",
+ "tree": "b65af424434ddcd8f0cce9669d7f3e0ae5711a56",
+ "since_build": null,
+ "files": {
+  "src/Shop/Orders/DiscountCalculator.cs": [
+   [
+    8,
+    8
+   ],
+   [
+    14,
+    15
+   ]
+  ]
+ },
+ "hunks": [
+  "src/Shop/Orders/DiscountCalculator.cs:8-8",
+  "src/Shop/Orders/DiscountCalculator.cs:14-15"
+ ]
+}

@@ -2,7 +2,7 @@
 
 Change `{change_id}` · Size: {size} · Status: {waiting for approval | approved on YYYY-MM-DD}
 
-Every decision names its source and is marked **confirmed** (file and line, or doc link) or **inferred** (with the reason). Workbook statements are cited by ID, for example `csharp.patterns.004`.
+Every decision names its source and is marked **confirmed** (file and line, or doc link) or **inferred** (with the reason). Workbook statements are technology rules kept by `dev-workbook`, cited by ID, for example `csharp.patterns.004`; the first time an ID is cited, its text follows in quotes. Sources: user, project (a file in this repository), tool (a workbook statement), industry (a named public standard), or general reasoning. The dev settings are `.howtoai/dev/settings.json`.
 
 ## Goal
 
@@ -11,6 +11,14 @@ Every decision names its source and is marked **confirmed** (file and line, or d
 ## Out of scope
 
 - {What this change will not do; "none" when nothing is excluded.}
+
+## Scope and size
+
+| Item | Kind | Fact | Evidence | Mark |
+| --- | --- | --- | --- | --- |
+| {item} | {caller / data / contract / test / untested / outside effect / convention / reuse} | {fact} | {file:line, or the search run} | {confirmed / inferred: reason} |
+
+**Size:** {Small / Medium / Large} - {one-line reason citing the riskiest fact}
 
 ## Decisions
 

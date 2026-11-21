@@ -1,0 +1,48 @@
+{
+ "tracker": {
+  "kind": "markdown"
+ },
+ "environments": {
+  "allow": [
+   {
+    "name": "local postgres",
+    "kind": "local",
+    "match": {
+     "host": "localhost"
+    }
+   }
+  ],
+  "deny": [
+   "shop-prod.postgres.database.azure.com"
+  ]
+ },
+ "workbooks": {
+  "technologies": [
+   "csharp",
+   "dotnet"
+  ]
+ },
+ "testing": {
+  "entry_points": [
+   {
+    "name": "unit",
+    "command": "dotnet test tests/Shop.Tests/Shop.Tests.csproj --logger trx --results-directory TestResults",
+    "results": "TestResults/*.trx"
+   }
+  ]
+ },
+ "build": {
+  "gate": [
+   {
+    "name": "format",
+    "command": "dotnet format src/Shop/Shop.csproj --verify-no-changes",
+    "source": "dotnet.commands.002"
+   },
+   {
+    "name": "build",
+    "command": "dotnet build tests/Shop.Tests/Shop.Tests.csproj -c Release",
+    "source": "dotnet.commands.001"
+   }
+  ]
+ }
+}

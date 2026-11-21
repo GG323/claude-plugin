@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: run-classifies-and-regenerates
+expected_outcome: |
+  dev-test takes the Run route at stage test: classifies the targets (src/Shop/appsettings.json localhost -> local by the allow list; appsettings.Production.json listed but not used; verdict ok), runs the configured entry point, sees PriceFeed_WarmsUp fail, reruns only it, and results.py merge marks it flaky; writes test-run-2.md (green, 1 flaky), rewrites only the generated part of tests/Shop.Tests/TESTING.md with today's run, records run 2 green, moves the stage to review, and has nothing to tear down.
+context:
+  scaffold_script: place-files.sh

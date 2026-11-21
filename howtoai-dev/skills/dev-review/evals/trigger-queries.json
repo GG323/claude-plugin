@@ -1,0 +1,42 @@
+[
+ {
+  "query": "Review the login lockout change before we deploy",
+  "should_trigger": true
+ },
+ {
+  "query": "Run the code review for change 2026-11-19-bulk-discount",
+  "should_trigger": true
+ },
+ {
+  "query": "R1-C1 fix now, R1-T2 later, R1-P1 decline: by design",
+  "should_trigger": true
+ },
+ {
+  "query": "Re-review the fix for the review findings",
+  "should_trigger": true
+ },
+ {
+  "query": "That review finding is wrong, we round half to even on purpose",
+  "should_trigger": true
+ },
+ {
+  "query": "Build the work item for the bulk discount",
+  "should_trigger": false
+ },
+ {
+  "query": "Review my plan for the CSV export before I approve it",
+  "should_trigger": false
+ },
+ {
+  "query": "Run the tests and refresh TESTING.md",
+  "should_trigger": false
+ },
+ {
+  "query": "Review this Python script for bugs",
+  "should_trigger": false
+ },
+ {
+  "query": "Deploy the change to staging",
+  "should_trigger": false
+ }
+]

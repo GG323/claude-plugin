@@ -1,0 +1,4 @@
+| ID | Verdict | Impact now | Evidence |
+| --- | --- | --- | --- |
+| R1-C1 | Stands | Critical | Confirmed: `src/Shop/Orders/DiscountCalculator.cs:14` reads `Math.Round(subtotal * 0.05m)` with no decimals argument, while the coupon line 10 passes `2`. Confirmed: plan.md:48 requires "rounded to 2 decimals". The examples hold: 5.25 gives 5, and 1.50 gives 2 under banker's rounding. Searched the file, the diff (`diff.patch:16`) and the tests for any other rounding step; nothing defuses it. |
+| R1-T1 | Stands | Major | Confirmed: `tests/Shop.Tests/DiscountCalculatorTests.cs:25` and `:33` are the only bulk-path tests; both use `OrderOf(10, 10.00m, ...)`, a subtotal of 100.00 whose 5% is exactly 5.00. `test-run-3.md:18` shows 7 passed, 0 failed. A whole-number `Math.Round` returns 5 for those inputs, so the suite can't catch the missing decimals argument. Nothing defuses it. |

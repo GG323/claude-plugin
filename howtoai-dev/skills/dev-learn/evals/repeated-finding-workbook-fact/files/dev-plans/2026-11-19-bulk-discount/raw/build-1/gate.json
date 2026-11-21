@@ -1,0 +1,65 @@
+{
+ "baseline": {
+  "format": {
+   "command": "dotnet format src/Shop/Shop.csproj --verify-no-changes",
+   "exit_code": 0,
+   "passed": true,
+   "seconds": 11.1,
+   "tree": "8407c47848c42177d1be59456e2f1581d278ef1b",
+   "at": "2026-11-19T22:28:10+01:00",
+   "tail": []
+  },
+  "build": {
+   "command": "dotnet build tests/Shop.Tests/Shop.Tests.csproj -c Release",
+   "exit_code": 0,
+   "passed": true,
+   "seconds": 7.8,
+   "tree": "8407c47848c42177d1be59456e2f1581d278ef1b",
+   "at": "2026-11-19T22:28:18+01:00",
+   "tail": [
+    "  Determining projects to restore...",
+    "  Restored C:\\Users\\Gacog\\OneDrive\\Work\\HowToAI\\_sandbox\\dev-review\\fixture\\tests\\Shop.Tests\\Shop.Tests.csproj (in 913 ms).",
+    "  1 of 2 projects are up-to-date for restore.",
+    "  Shop -> C:\\Users\\Gacog\\OneDrive\\Work\\HowToAI\\_sandbox\\dev-review\\fixture\\src\\Shop\\bin\\Release\\net10.0\\Shop.dll",
+    "  Shop.Tests -> C:\\Users\\Gacog\\OneDrive\\Work\\HowToAI\\_sandbox\\dev-review\\fixture\\tests\\Shop.Tests\\bin\\Release\\net10.0\\Shop.Tests.dll",
+    "",
+    "Build succeeded.",
+    "    0 Warning(s)",
+    "    0 Error(s)",
+    "",
+    "Time Elapsed 00:00:07.10"
+   ]
+  }
+ },
+ "after": {
+  "format": {
+   "command": "dotnet format src/Shop/Shop.csproj --verify-no-changes",
+   "exit_code": 0,
+   "passed": true,
+   "seconds": 12.3,
+   "tree": "d62d1809fa74db0d7329a94d0c64646ea95eed3c",
+   "at": "2026-11-19T22:28:32+01:00",
+   "tail": []
+  },
+  "build": {
+   "command": "dotnet build tests/Shop.Tests/Shop.Tests.csproj -c Release",
+   "exit_code": 0,
+   "passed": true,
+   "seconds": 3.9,
+   "tree": "d62d1809fa74db0d7329a94d0c64646ea95eed3c",
+   "at": "2026-11-19T22:28:37+01:00",
+   "tail": [
+    "  Determining projects to restore...",
+    "  All projects are up-to-date for restore.",
+    "  Shop -> C:\\Users\\Gacog\\OneDrive\\Work\\HowToAI\\_sandbox\\dev-review\\fixture\\src\\Shop\\bin\\Release\\net10.0\\Shop.dll",
+    "  Shop.Tests -> C:\\Users\\Gacog\\OneDrive\\Work\\HowToAI\\_sandbox\\dev-review\\fixture\\tests\\Shop.Tests\\bin\\Release\\net10.0\\Shop.Tests.dll",
+    "",
+    "Build succeeded.",
+    "    0 Warning(s)",
+    "    0 Error(s)",
+    "",
+    "Time Elapsed 00:00:03.19"
+   ]
+  }
+ }
+}

@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: repeated-finding-workbook-fact
+expected_outcome: |
+  dev-learn runs on round 1: LEARN collect lists R1-C1 (Critical) with DL-001 as a likely repeat (same file, same Math.Round cause) and lists R1-T2 (Minor, later) only as a same-file candidate, which the agent judges a different problem (a missing test pair, not the rounding cause), so R1-T2 drops out with no row. The agent confirms the repeat, finds the root cause stage workbook (no C# workbook statement says Math.Round on a decimal rounds to a whole number with banker's rounding unless digits are given), raises DL-001's Repeats to 2 with LEARN lesson repeat, writes learn-1.md from the template with one row (R1-C1, DL-001, stage workbook, quoted evidence, level 1, a C# workbook target such as csharp Pitfalls, route dev-workbook, why not lower -, status proposed), lists README.md's '10% off' for 10 or more items against the code's 5% under Drift, runs LEARN check ok, and stops at one approval question that recommends the workbook fact. It edits no workbook, skill, agent, settings, product code, or state stage.
+context:
+  scaffold_script: place-files.sh

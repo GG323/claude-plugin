@@ -1,0 +1,8 @@
+[
+  {"query": "Grill me on this migration plan before I start, one question at a time with your recommendation", "should_trigger": true},
+  {"query": "skill-builder says to run the grilling method with its items now", "should_trigger": true},
+  {"query": "Interview me about this decision until it's clear what I actually need, suggest answers as you go", "should_trigger": true},
+  {"query": "Give me a recipe for grilling salmon on a gas grill", "should_trigger": false},
+  {"query": "Prepare ten tough interview questions for a senior backend candidate", "should_trigger": false},
+  {"query": "Review this pull request and list the bugs", "should_trigger": false}
+]

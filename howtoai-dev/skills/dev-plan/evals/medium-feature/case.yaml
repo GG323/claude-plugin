@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: medium-feature
+expected_outcome: |
+  dev-plan sizes account lockout after failed logins Medium (one subsystem, a new reversible table), asks crucial details top-down (limits, lockout behaviour users see) with recommendations naming their source, drafts a full plan, runs the review loop with scoring and verification until two clean rounds or the cap, resolves every kept finding, and stops at the approval question.
+context:
+  scaffold_script: place-files.sh

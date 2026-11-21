@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: review-finds-seeded-bug
+expected_outcome: |
+  dev-review runs round 1 at stage review: checks subagents, runs review.py diff and receipts (no missing receipts), resolves the workbook, runs goldfish-spec (pass 1), then correctness and tests (pass 2), inspects the tests (a temporary test with a price like 1.23 shows the bulk discount rounds to whole units, then it is removed), scores and verifies, and tallies review-1.md. The seeded bug (Math.Round without 2 decimals in the bulk discount) is kept as Critical or Major with confidence of at least 80 and ranked first; at least one finding is held back in the appendix (a pre-existing issue on an unchanged line such as Order.ItemCount, below threshold, or refuted). The stage becomes human-review and the run stops at the human review question. No product code changes.
+context:
+  scaffold_script: place-files.sh

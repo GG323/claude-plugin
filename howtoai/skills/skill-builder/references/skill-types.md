@@ -69,6 +69,14 @@ The target skill can be any of these kinds. The kind sets the route [Plan](../st
 
     `skill-design` applies the house design to every surface its description covers. For a surface it does not cover, use the format skill (for example, `pptx` or `docx`) and state in the plan that no design review runs.
 
+12. **Subagent briefs.** When the target skill starts subagents (explorers, checkers, reviewers, vetting):
+    - Every brief that needs exact text says to read long files in ranges of under 100 lines and about 2,000 tokens, because a mod such as Input Router can replace a large read with a summary, and a "read every file" step then silently becomes a summary.
+    - A panel of context-free reviewers gives each reviewer a viewpoint to start from, never a fence: each reviews the change set it is given, reports every problem it finds in any area, and marks a problem outside the change set in a fixed column, so nothing real is dropped. Sorting, merging repeats, and taking findings outside the change to the user belong to the orchestrator, helped by a script that folds exact repeats and routes the marked findings (user direction, 2026-11-20). Test the panel with one planted flaw per viewpoint, and check that each one is reported and kept once after the orchestrator's sort; plant false findings for any scorer or verifier.
+13. **Bundled scripts.** When the target skill bundles scripts or hooks:
+    - Every script command and hook that reads user-level settings takes the same override (a flag such as `--user-file`, or an environment variable for a hook), because with the override on some commands only, the others silently read the real user file during tests.
+    - A script that takes values a model wrote (severities, timestamps, IDs, statuses) checks them against its fixed list or format and refuses the rest, naming the expected form; the main agent sends a refused value back to the agent that wrote it instead of relabelling it. Every agent that writes such a value names the list or format in its own instructions, because a value off the scale, such as "Minor" on a Blocker/Major/Nit scale, otherwise passes through and skews the counts.
+14. **Rule sets.** When the target skill enforces a set of rules (an audit, a linter, safety rules split across scripts, hooks, and instructions), check the rules against each other and against every layer that enforces them before testing, because a contradiction there, such as a deny rule that also blocks an approved step, is hit by every test run.
+
 ## Communication
 
 Emails, chat messages, replies, posts, and announcements.

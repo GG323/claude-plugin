@@ -1,0 +1,42 @@
+[
+ {
+  "query": "Write the tests first for the approved login lockout plan",
+  "should_trigger": true
+ },
+ {
+  "query": "The build is done, run the tests for this change",
+  "should_trigger": true
+ },
+ {
+  "query": "Which databases would our test suite hit if I ran it now?",
+  "should_trigger": true
+ },
+ {
+  "query": "Rerun the failing tests and tell me which ones are flaky",
+  "should_trigger": true
+ },
+ {
+  "query": "Refresh the TESTING.md files after the last test run",
+  "should_trigger": true
+ },
+ {
+  "query": "Plan adding login by username before we write any code",
+  "should_trigger": false
+ },
+ {
+  "query": "Implement the lockout feature now that the tests are red",
+  "should_trigger": false
+ },
+ {
+  "query": "Review this pull request for bugs",
+  "should_trigger": false
+ },
+ {
+  "query": "Deploy the release to staging",
+  "should_trigger": false
+ },
+ {
+  "query": "Explain what a unit test is to a beginner",
+  "should_trigger": false
+ }
+]

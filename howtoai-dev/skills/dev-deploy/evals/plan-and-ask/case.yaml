@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: plan-and-ask
+expected_outcome: |
+  The target exists and the work is committed. dev-deploy runs DEPLOY gate (ok, outside the dev process), the ready command (cluster-info), resolves the workbooks, and shows the plan: build and apply with their commands, the rollback for apply, the rollout watch, the health check, and that the target is not production, then asks one yes for the run and whether a failed check may roll back without asking. It stops at that question; no build or apply runs.
+context:
+  scaffold_script: place-files.sh

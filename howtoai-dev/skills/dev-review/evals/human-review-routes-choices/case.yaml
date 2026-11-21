@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: human-review-routes-choices
+expected_outcome: |
+  dev-review takes the Human review route at stage human-review: writes `fix now` and `later` into the Your choice cells of review-1.md, findings.py check passes, writes wi/1.md from the work-item template for R1-T2 and records it with append.wi (Markdown tracker), keeps the stage at human-review, and hands R1-C1 to dev-build's Fix route as the next step without changing product code.
+context:
+  scaffold_script: place-files.sh

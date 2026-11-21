@@ -1,0 +1,34 @@
+{
+ "tracker": {
+  "kind": "markdown"
+ },
+ "environments": {
+  "allow": [
+   {
+    "name": "local postgres",
+    "kind": "local",
+    "match": {
+     "host": "localhost"
+    }
+   }
+  ],
+  "deny": [
+   "shop-prod.postgres.database.azure.com"
+  ]
+ },
+ "workbooks": {
+  "technologies": [
+   "csharp",
+   "dotnet"
+  ]
+ },
+ "testing": {
+  "entry_points": [
+   {
+    "name": "unit",
+    "command": "dotnet test tests/Shop.Tests/Shop.Tests.csproj --logger trx --results-directory TestResults",
+    "results": "TestResults/*.trx"
+   }
+  ]
+ }
+}

@@ -1,0 +1,45 @@
+{
+ "targets": [
+  {
+   "name": "local-k8s",
+   "technologies": [
+    "kubernetes",
+    "docker",
+    "dotnet"
+   ],
+   "production": false,
+   "tools": [
+    "docker",
+    "kubectl"
+   ],
+   "ready": [
+    "kubectl --context fake-local cluster-info"
+   ],
+   "steps": [
+    {
+     "id": "build",
+     "command": "docker build -t shop-api:1.0.0 .",
+     "rollback": "none: builds a local image only"
+    },
+    {
+     "id": "apply",
+     "command": "kubectl --context fake-local apply -f deploy/k8s/",
+     "rollback": "kubectl --context fake-local rollout undo deployment/shop-api",
+     "watch": "kubectl --context fake-local rollout status deployment/shop-api --timeout=120s"
+    }
+   ],
+   "checks": [
+    {
+     "name": "health",
+     "url": "http://127.0.0.1:30080/health",
+     "expect_status": 200,
+     "contains": "ok",
+     "retries": 10,
+     "wait_seconds": 3
+    }
+   ],
+   "approval_minutes": 30,
+   "notes": "Test fixture target with fake tools."
+  }
+ ]
+}

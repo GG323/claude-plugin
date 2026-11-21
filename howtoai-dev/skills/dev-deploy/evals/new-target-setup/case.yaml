@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: new-target-setup
+expected_outcome: |
+  No target exists, so dev-deploy takes the Set up a target route: DEPLOY discover finds the Dockerfile and no manifests; read-only kubectl calls find the fake-local context; WORKBOOK resolve finds docker and dotnet but no kubernetes workbook, so it proposes dev-workbook's Create route for kubernetes; it drafts a target entry (steps build and apply with explicit --context fake-local, a rollout watch, a rollback, a health check, production false) and a Deployment and Service manifest, runs DEPLOY target write without --write for the preview, and stops at one question asking to approve the entry, the manifest, and the kubernetes workbook. Nothing is written to .howtoai/deploy/targets.json or deploy/, and no kubectl apply or docker build runs.
+context:
+  scaffold_script: place-files.sh

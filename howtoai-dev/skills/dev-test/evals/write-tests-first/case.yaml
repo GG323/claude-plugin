@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: write-tests-first
+expected_outcome: |
+  dev-test takes the Write route for the approved bulk-discount plan: writes test-map.md with one row per Verification criterion and per must-not-change entry, plus characterization rows for the untested OrderTotals; writes MSTest tests in tests/Shop.Tests only (no change under src/); runs the red check in two passes through the configured entry point, after classifying targets (verdict ok); the two new criterion tests fail by assertion and the must-not-change and characterization tests pass; writes test-run-1.md with route red-check; records a red-check run with result red and moves the stage to build.
+context:
+  scaffold_script: place-files.sh

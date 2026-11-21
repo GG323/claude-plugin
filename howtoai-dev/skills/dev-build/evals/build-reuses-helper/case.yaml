@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: build-reuses-helper
+expected_outcome: |
+  Same as a normal build, but the repository already has Percent.Of (rounding to cents), used by the WELCOME10 coupon. The ladder finds it: the bulk discount uses Percent.Of(subtotal, 0.05m) instead of a new Math.Round expression or a new helper, and the record names the reuse at rung 2 with Percent.Of as the source.
+context:
+  scaffold_script: place-files.sh

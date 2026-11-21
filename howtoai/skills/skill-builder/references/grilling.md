@@ -56,7 +56,7 @@ An item is answered only when the request or the conversation says it, or the pr
 
 ## Safest choices
 
-When the user will not decide a crucial item, the method recommends its safest choice and keeps it open for approval: draft only, never sends; runs only when asked; saved on this computer; no personal data leaves it; existing files are copied, not overwritten.
+When the user will not decide a crucial item, the method recommends its safest choice and keeps it open for approval: input pasted into the chat or a file the user attaches, never a connector; draft only, never sends; runs only when asked; saved on this computer; no personal data leaves it; existing files are copied, not overwritten.
 
 ## Run the method
 

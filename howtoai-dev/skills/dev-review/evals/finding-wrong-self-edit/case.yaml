@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: finding-wrong-self-edit
+expected_outcome: |
+  dev-review records R1-C1 fix now and R1-T2 decline with the reason, appends the decline to state, and runs the Self-edit route for the rule claim: quotes the goldfish-tests instruction that raised it (the Reach step), classifies it as a process instruction, shows the smallest change as a diff, and asks for approval without editing any agent or skill file.
+context:
+  scaffold_script: place-files.sh

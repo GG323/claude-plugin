@@ -1,0 +1,3 @@
+- **Runs:** test-run-3.md (full suite, 7 passed, 0 failed) read; one rerun with a temporary test: 7 passed, 1 failed as predicted; a final run after removing it: 7 passed, 0 failed. Targets verdict ok (localhost only).
+- **Temporary tests:** `Review1_BulkRoundsToCents.TenItemsAtOddPrice_DiscountHasCents` (10 items at 1.23, expects a 0.62 discount) failed as R1-S1 predicts, which confirms it; removed after the run.
+- **Coverage gaps:** no test uses a price whose 5% bulk discount has cents (criteria T1 and T2 use 10.00 only).

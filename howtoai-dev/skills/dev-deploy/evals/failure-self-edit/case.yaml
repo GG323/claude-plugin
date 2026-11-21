@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: failure-self-edit
+expected_outcome: |
+  The run is approved up front. dev-deploy runs the gate, builds (docker build tags shop-api:1.0.0), applies, and the rollout watch fails. It reads the platform diagnostics (describe or events, get pods) before anything else, finds ImagePullBackOff for image shop-api:latest, classifies it as a deploy-file cause (the manifest's image tag does not match the built tag 1.0.0), rolls back with kubectl rollout undo as allowed, writes a deploy log row (failed at apply, rollback used), and proposes a self-edit: change the manifest's image to the built tag (or take the tag from the build step), as a deploy-file or target-entry change, recorded with deploy.py self-edit as proposed. It does not edit the manifest or the target entry itself, does not retry the apply, and does not change any skill file.
+context:
+  scaffold_script: place-files.sh

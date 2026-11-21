@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: verifier-refutes-false-finding
+expected_outcome: |
+  The verifier keeps the real findings and refutes P1-X1, which misreads src/auth/session.cs line 11.
+context:
+  scaffold_script: place-files.sh

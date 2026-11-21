@@ -1,0 +1,12 @@
+[
+  {"query": "Plan adding login by username to our API before we write any code", "should_trigger": true},
+  {"query": "Start the dev process for fixing the timeout in the export job", "should_trigger": true},
+  {"query": "We need a new notifications subsystem; plan it and split it into work items for Jira", "should_trigger": true},
+  {"query": "The plan we approved yesterday needs to change: the lockout should be per IP too", "should_trigger": true},
+  {"query": "Plan a refactor of the order service so it can be tested", "should_trigger": true},
+  {"query": "Write the unit tests for the login lockout now", "should_trigger": false},
+  {"query": "Review this pull request for bugs", "should_trigger": false},
+  {"query": "Plan my week: meetings, gym, and the client workshop", "should_trigger": false},
+  {"query": "Add a C# pitfall about async void to the workbook", "should_trigger": false},
+  {"query": "Deploy the release to staging", "should_trigger": false}
+]

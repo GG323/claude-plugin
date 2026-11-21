@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: compliance-finds-broken-rules-and-stale-guidance
+expected_outcome: |
+  The compliance reviewer lists the instruction files it read, reports the plan's breaks of AGENTS.md (tests under src/, Console.WriteLine logging, a migration outside db/migrations) citing AGENTS.md lines and marked in, reports README.md as out of date against the code (.NET 6 against net8.0, tests/Orders.Tests against tests/Api.Tests) marked outside, and, with freshness on, checks .NET 8's support status against an official Microsoft page with its URL; it changes no file.
+context:
+  scaffold_script: place-files.sh

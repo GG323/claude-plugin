@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: gate-stops
+expected_outcome: |
+  The work has an uncommitted change (src/ShopApi/Program.cs edited after the commit). DEPLOY gate reports it, and dev-deploy stops before planning: it tells the user to commit first and changes nothing; no build or apply runs.
+context:
+  scaffold_script: place-files.sh

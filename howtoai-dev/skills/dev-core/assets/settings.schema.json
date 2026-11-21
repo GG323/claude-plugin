@@ -8,8 +8,22 @@
   "github_repo": {"type": "string", "default": "", "description": "owner/name, when kind is github."}
  },
  "environments": {
-  "allow": {"type": "array", "default": [], "description": "Targets tests may use. Each item: {\"name\", \"kind\": local|dev|test|remote-test, \"match\": {\"host\"|\"database\"|\"profile\"|\"env\": value}}."},
+  "allow": {"type": "array", "default": [], "description": "Targets tests may use. Each item: {\"name\", \"kind\": local|dev|test|remote-test, \"match\": {\"host\"|\"database\"|\"profile\"|\"env\": value}}; one match key per item, so a host and a database are two items. Any target not on this list counts as production."},
   "deny": {"type": "array", "default": [], "description": "Production markers the safety hook denies: host names, connection-string fragments, cloud profiles, or account names."}
+ },
+ "testing": {
+  "entry_points": {"type": "array", "default": [], "description": "The project's own test commands, the ones CI runs, in order. Each item: {\"name\", \"command\", optional \"cwd\" relative to the workspace, optional \"results\": a TRX or JUnit XML path or glob}. dev-test finds them on its first run and saves them after the user confirms."},
+  "test_globs": {"type": "array", "default": ["**/tests/**", "**/test/**", "**/*Tests/**", "**/*.Tests/**", "**/*Test.*", "**/*Tests.*", "**/*_test.*", "**/test_*.*", "**/*.test.*", "**/*.spec.*", "**/.env.test", "**/.env.testing", "**/TESTING.md"], "description": "Paths that count as test files for the dev-test-first hook and the Write route; forward slashes, matched against the path relative to the workspace."},
+  "test_first": {"type": "enum", "options": ["block", "warn", "off"], "default": "block", "description": "dev-test-first hook: block non-test edits while a change is at stage tests-first (warn or off softens it); at stage build it only warns when the change has no red test run."},
+  "reruns_per_test": {"type": "integer", "default": 3, "description": "How often the Run route reruns one failed test to tell a flaky test from a real failure."},
+  "max_reruns": {"type": "integer", "default": 10, "description": "Cap on reruns in one run, across all tests."},
+  "ephemeral": {"type": "enum", "options": ["docker", "none"], "default": "docker", "description": "How the Run route creates a throwaway target when no allowed one fits: a labelled Docker container, or none (stop and ask)."}
+ },
+ "build": {
+  "gate": {"type": "array", "default": [], "description": "The build gate, run in order after every build: lint, format check, and type-check or compile. Each item: {\"name\", \"command\", optional \"cwd\" relative to the workspace, \"source\": the CI file and step, or the workbook statement ID it came from}. The WI's tests run after it through dev-test. dev-build proposes it on its first run, from the CI first and the workbook Commands second, and saves it after the user confirms."},
+  "max_fix_rounds": {"type": "integer", "default": 3, "description": "Gate-fix rounds in one build before dev-build stops and reports."},
+  "gate_timeout_seconds": {"type": "integer", "default": 900, "description": "Time limit for one gate command."},
+  "protected_globs": {"type": "array", "default": [".github/workflows/**", "**/azure-pipelines*.yml", "**/.gitlab-ci.yml", "**/Jenkinsfile", "**/packages.lock.json", "**/package-lock.json", "**/yarn.lock", "**/pnpm-lock.yaml", "**/poetry.lock", "**/uv.lock", "**/Cargo.lock", "**/go.sum"], "description": "Paths, besides testing.test_globs, that a build must not change unless the plan approved it: CI configuration and lockfiles. Forward slashes, matched against the path relative to the workspace."}
  },
  "hook_rules": {"type": "array", "default": [], "description": "Enforceable process rules the hooks read. Each item: {\"id\", \"match\": regex on the command or path, \"action\": warn|block, \"reason\"}."},
  "review": {
@@ -18,7 +32,7 @@
   "clean_rounds_to_stop": {"type": "integer", "default": 2, "description": "Consecutive rounds without Blocker or Major findings that end the loop."}
  },
  "deploy": {
-  "entry_points": {"type": "array", "default": [], "description": "Existing deploy commands, scripts, or workflow names, in the order they run, each {\"name\", \"command\" or \"workflow\", \"target\"}."}
+  "entry_points": {"type": "array", "default": [], "description": "Existing deploy commands, scripts, or workflow names, in the order they run, each {\"name\", \"command\" or \"workflow\", \"target\", and an optional \"note\", for example that a script the CI calls is missing}."}
  },
  "workbooks": {
   "technologies": {"type": "array", "default": [], "description": "Languages and tools the project uses, for example [\"csharp\", \"dotnet\", \"docker\", \"terraform\"]; dev-workbook keeps one workbook for each."}

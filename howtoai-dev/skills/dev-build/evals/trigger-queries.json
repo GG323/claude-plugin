@@ -1,0 +1,42 @@
+[
+ {
+  "query": "Build the work item for the login lockout change",
+  "should_trigger": true
+ },
+ {
+  "query": "The tests are red, now implement WI 2 of the dev plan",
+  "should_trigger": true
+ },
+ {
+  "query": "Continue the build stage for change 2026-11-19-bulk-discount",
+  "should_trigger": true
+ },
+ {
+  "query": "Apply the fix-now findings from the code review",
+  "should_trigger": true
+ },
+ {
+  "query": "Write the code for the approved dev plan, smallest change that passes",
+  "should_trigger": true
+ },
+ {
+  "query": "Write the tests first for the approved plan",
+  "should_trigger": false
+ },
+ {
+  "query": "Run the test suite for this change and refresh TESTING.md",
+  "should_trigger": false
+ },
+ {
+  "query": "Plan a new feature: CSV export for invoices",
+  "should_trigger": false
+ },
+ {
+  "query": "Review the diff of this change for bugs",
+  "should_trigger": false
+ },
+ {
+  "query": "Deploy the change to staging",
+  "should_trigger": false
+ }
+]

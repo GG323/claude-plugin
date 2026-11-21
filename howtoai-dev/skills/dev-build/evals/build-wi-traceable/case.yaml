@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: build-wi-traceable
+expected_outcome: |
+  dev-build takes the Build route for the whole-plan change at stage build: resolves the csharp and dotnet workbooks and records the receipt; runs build.py start and the baseline gate (format and build, both pass); adds the bulk discount in src/Shop/Orders/DiscountCalculator.cs only, reusing Order.ItemCount; lists the hunks, traces each to test-map rows; runs the gate after the change and the tests through dev-test's Run route as a progress run (green); writes build-1.md from the template with a Skipped or unchecked line; build.py check passes; records build 1 as passed and moves the stage to test; commits nothing.
+context:
+  scaffold_script: place-files.sh

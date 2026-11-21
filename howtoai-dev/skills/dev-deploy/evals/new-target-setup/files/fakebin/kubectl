@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Fake kubectl for dev-deploy test cases: logs every call, answers from fakebin/mode (ok or fail).
+here="$(cd "$(dirname "$0")" && pwd)"
+echo "kubectl $*" >> "$here/calls.log"
+mode="$(cat "$here/mode" 2>/dev/null || echo ok)"
+args=" $* "
+case "$args" in
+  *" config get-contexts"*) printf 'CURRENT   NAME         CLUSTER      AUTHINFO   NAMESPACE\n*         fake-local   fake-local   admin\n' ;;
+  *" config current-context"*) echo fake-local ;;
+  *" cluster-info"*) echo "Kubernetes control plane is running at https://127.0.0.1:16443" ;;
+  *" version"*) printf 'Client Version: v1.34.1\nServer Version: v1.34.1\n' ;;
+  *" apply "*) printf 'deployment.apps/shop-api configured\nservice/shop-api unchanged\n' ;;
+  *" rollout status"*)
+    if [ "$mode" = fail ]; then
+      echo 'Waiting for deployment "shop-api" rollout to finish: 0 of 1 updated replicas are available...'
+      echo 'error: deployment "shop-api" exceeded its progress deadline' >&2; exit 1
+    fi
+    echo 'deployment "shop-api" successfully rolled out' ;;
+  *" rollout undo"*) echo "deployment.apps/shop-api rolled back" ;;
+  *" get pods"*)
+    if [ "$mode" = fail ]; then printf 'NAME                        READY   STATUS             RESTARTS   AGE\nshop-api-7d9f8c6b5-x2k4p    0/1     ImagePullBackOff   0          2m\n'
+    else printf 'NAME                        READY   STATUS    RESTARTS   AGE\nshop-api-5c8d7b9f4-q8w2n    1/1     Running   0          1m\n'; fi ;;
+  *" describe "*|*" get events"*)
+    if [ "$mode" = fail ]; then
+      printf 'Events:\n  Warning  Failed     kubelet  Failed to pull image "shop-api:latest": rpc error: code = NotFound desc = failed to pull and unpack image "docker.io/library/shop-api:latest": not found\n  Warning  Failed     kubelet  Error: ErrImagePull\n  Normal   BackOff    kubelet  Back-off pulling image "shop-api:latest"\n'
+    else echo "Events: <none>"; fi ;;
+  *" logs "*) [ "$mode" = fail ] && echo 'Error from server (BadRequest): container "shop-api" is waiting to start: trying and failing to pull image' || echo "Now listening on: http://[::]:8080" ;;
+  *) echo "fake kubectl: no canned answer for: $*" >&2; exit 2 ;;
+esac

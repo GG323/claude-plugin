@@ -1,0 +1,215 @@
+{
+ "id": "2026-11-19-bulk-discount",
+ "title": "Bulk discount for large orders",
+ "created": "2026-11-19T09:00:00+01:00",
+ "updated": "2026-11-19T22:29:00+01:00",
+ "stage": "review",
+ "size": "Small",
+ "wi": [],
+ "loops": {
+  "plan-review": 1
+ },
+ "approvals": [
+  {
+   "what": "plan",
+   "by": "user",
+   "conditions": "",
+   "at": "2026-11-19T09:40:00+01:00"
+  }
+ ],
+ "receipts": [
+  {
+   "stage": "plan",
+   "statements": [
+    "csharp.overview.001",
+    "csharp.overview.002",
+    "csharp.overview.003",
+    "csharp.overview.004",
+    "csharp.overview.005",
+    "dotnet.overview.001",
+    "dotnet.overview.002",
+    "dotnet.overview.003",
+    "dotnet.overview.004",
+    "dotnet.testing.001",
+    "dotnet.testing.002",
+    "dotnet.testing.003",
+    "dotnet.testing.004",
+    "dotnet.testing.005",
+    "dotnet.testing.006"
+   ],
+   "workbooks": {
+    "csharp": "base 2026-11-18",
+    "dotnet": "base 2026-11-18"
+   },
+   "at": "2026-11-19T22:27:55+01:00"
+  },
+  {
+   "stage": "tests-first",
+   "statements": [
+    "csharp.overview.001",
+    "csharp.overview.002",
+    "csharp.overview.003",
+    "csharp.overview.004",
+    "csharp.overview.005",
+    "dotnet.overview.001",
+    "dotnet.overview.002",
+    "dotnet.overview.003",
+    "dotnet.overview.004",
+    "dotnet.testing.001",
+    "dotnet.testing.002",
+    "dotnet.testing.003",
+    "dotnet.testing.004",
+    "dotnet.testing.005",
+    "dotnet.testing.006"
+   ],
+   "workbooks": {
+    "csharp": "base 2026-11-18",
+    "dotnet": "base 2026-11-18"
+   },
+   "at": "2026-11-19T22:27:56+01:00"
+  },
+  {
+   "stage": "build",
+   "statements": [
+    "csharp.pitfalls.001",
+    "csharp.pitfalls.002",
+    "csharp.pitfalls.003",
+    "csharp.pitfalls.004",
+    "csharp.pitfalls.005",
+    "csharp.pitfalls.006",
+    "csharp.pitfalls.007",
+    "csharp.pitfalls.008",
+    "csharp.commands.001",
+    "csharp.commands.002",
+    "csharp.commands.003",
+    "csharp.commands.004",
+    "csharp.commands.005",
+    "dotnet.pitfalls.001",
+    "dotnet.pitfalls.002",
+    "dotnet.pitfalls.003",
+    "dotnet.pitfalls.004",
+    "dotnet.pitfalls.005",
+    "dotnet.pitfalls.006",
+    "dotnet.pitfalls.007",
+    "dotnet.commands.001",
+    "dotnet.commands.002",
+    "dotnet.commands.003",
+    "dotnet.commands.004",
+    "dotnet.commands.005",
+    "dotnet.commands.006",
+    "dotnet.commands.007"
+   ],
+   "workbooks": {
+    "csharp": "base 2026-11-18",
+    "dotnet": "base 2026-11-18"
+   },
+   "at": "2026-11-19T22:27:58+01:00"
+  },
+  {
+   "stage": "test",
+   "statements": [
+    "csharp.commands.001",
+    "csharp.commands.002",
+    "csharp.commands.003",
+    "csharp.commands.004",
+    "csharp.commands.005",
+    "dotnet.commands.001",
+    "dotnet.commands.002",
+    "dotnet.commands.003",
+    "dotnet.commands.004",
+    "dotnet.commands.005",
+    "dotnet.commands.006",
+    "dotnet.commands.007",
+    "dotnet.testing.001",
+    "dotnet.testing.002",
+    "dotnet.testing.003",
+    "dotnet.testing.004",
+    "dotnet.testing.005",
+    "dotnet.testing.006"
+   ],
+   "workbooks": {
+    "csharp": "base 2026-11-18",
+    "dotnet": "base 2026-11-18"
+   },
+   "at": "2026-11-19T22:28:59+01:00"
+  }
+ ],
+ "declined": [],
+ "test_runs": [
+  {
+   "n": 1,
+   "route": "red-check",
+   "wi": null,
+   "result": "red",
+   "passed": 4,
+   "failed": 2,
+   "flaky": 0,
+   "commit": "1a2b3c4",
+   "report": "test-run-1.md",
+   "at": "2026-11-19T09:55:00+01:00"
+  },
+  {
+   "n": 2,
+   "route": "run",
+   "wi": null,
+   "result": "green",
+   "passed": 7,
+   "failed": 0,
+   "flaky": 0,
+   "commit": "3f8389f",
+   "report": "test-run-2.md",
+   "at": "2026-11-19T22:28:48+01:00"
+  },
+  {
+   "n": 3,
+   "route": "run",
+   "wi": null,
+   "result": "green",
+   "passed": 7,
+   "failed": 0,
+   "flaky": 0,
+   "commit": "3f8389f",
+   "report": "test-run-3.md",
+   "at": "2026-11-19T22:29:00+01:00"
+  }
+ ],
+ "ephemeral": [],
+ "history": [
+  {
+   "at": "2026-11-19T09:00:00+01:00",
+   "stage": "plan"
+  },
+  {
+   "at": "2026-11-19T09:30:00+01:00",
+   "stage": "accept"
+  },
+  {
+   "at": "2026-11-19T09:40:00+01:00",
+   "stage": "tests-first"
+  },
+  {
+   "at": "2026-11-19T10:00:00+01:00",
+   "stage": "build"
+  },
+  {
+   "at": "2026-11-19T22:28:51+01:00",
+   "stage": "test"
+  },
+  {
+   "at": "2026-11-19T22:29:00+01:00",
+   "stage": "review"
+  }
+ ],
+ "builds": [
+  {
+   "n": 1,
+   "wi": null,
+   "route": "build",
+   "result": "passed",
+   "hunks": 2,
+   "fix_rounds": 0,
+   "report": "build-1.md",
+   "at": "2026-11-19T22:28:51+01:00"
+  }
+ ]
+}

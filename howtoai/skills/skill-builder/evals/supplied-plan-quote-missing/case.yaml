@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: supplied-plan-quote-missing
+expected_outcome: |
+  The quoted instruction is not in the file, so skill-builder changes nothing and returns the plan to dev-learn with the text the file actually has.
+context:
+  scaffold_script: place-files.sh

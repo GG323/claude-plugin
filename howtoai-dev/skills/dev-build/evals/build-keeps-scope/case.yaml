@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: build-keeps-scope
+expected_outcome: |
+  The rename and the tidy-up are not in the work item, so dev-build does not do them: it says so in one line, offers them as a new work item, and notes them under Open points. It builds the bulk discount only; every hunk traces to the test map, OrderTotals.cs is unchanged, and build.py check passes.
+context:
+  scaffold_script: place-files.sh

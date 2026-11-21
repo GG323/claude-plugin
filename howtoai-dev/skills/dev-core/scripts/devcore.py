@@ -2,6 +2,7 @@
 
 Usage (Python 3, standard library only; every command prints one JSON object):
   py -3 -I devcore.py root      [--cwd DIR]
+  (every command except root also takes [--user-file F], read instead of the default user defaults file)
   py -3 -I devcore.py settings  [--workspace W] [--user-file F]
   py -3 -I devcore.py setup     --workspace W --values JSON [--write]
   py -3 -I devcore.py new-change --workspace W --title TEXT [--slug SLUG] [--date YYYY-MM-DD]
@@ -21,7 +22,8 @@ new-change  Creates <workspace>/<plan_folder>/<date>-<slug>/state.json and rebui
             unless --date is given.
 state       Prints a change's state.json. With --patch it applies the patch first:
               {"stage": "build", "size": "Medium", "title": "...",
-               "append": {"approvals": {...}, "receipts": {...}, "wi": {...}, "declined": {...}},
+               "append": {"approvals": {...}, "receipts": {...}, "wi": {...}, "declined": {...},
+                          "test_runs": {...}, "ephemeral": {...}, "builds": {...}},
                "increment": {"review": 1}}
             Stage changes are recorded in history. The index is rebuilt after every write.
 index       Rebuilds <workspace>/<plan_folder>/INDEX.md in full from every state.json.
@@ -41,7 +43,7 @@ SKILL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_PATH = os.path.join(SKILL_DIR, "assets", "settings.schema.json")
 STAGES = ["plan", "accept", "tests-first", "build", "test", "review", "human-review", "deploy", "done", "dropped"]
 SIZES = ["Small", "Medium", "Large"]
-LISTS = ["approvals", "receipts", "wi", "declined"]
+LISTS = ["approvals", "receipts", "wi", "declined", "test_runs", "ephemeral", "builds"]
 SECRET_PATTERNS = [r"-----BEGIN [A-Z ]*PRIVATE KEY", r"\bghp_[A-Za-z0-9]{20,}", r"\bgithub_pat_", r"\bxox[abprs]-",
                    r"\bAKIA[0-9A-Z]{16}\b", r"\bsk-[A-Za-z0-9_-]{20,}", r"://[^/\s:@]+:[^/\s@]+@"]
 
@@ -180,8 +182,8 @@ def load_settings(ws, user_arg=None):
 
 # plan folder ------------------------------------------------------------------------------
 
-def plans_dir(ws):
-    settings, _ = load_settings(ws)
+def plans_dir(ws, user_arg=None):
+    settings, _ = load_settings(ws, user_arg)
     name = settings["plan_folder"]
     if not re.fullmatch(r"[A-Za-z0-9._-]+", name) or name in (".", ".."):
         raise Fail(f"plan_folder must be a plain folder name, got {name!r}")
@@ -200,8 +202,8 @@ def change_dirs(pdir):
                   if os.path.isfile(os.path.join(pdir, d, "state.json")))
 
 
-def rebuild_index(ws):
-    pdir = plans_dir(ws)
+def rebuild_index(ws, user_arg=None):
+    pdir = plans_dir(ws, user_arg)
     rows = []
     for d in change_dirs(pdir):
         st = read_json(os.path.join(d, "state.json")) or {}
@@ -224,7 +226,7 @@ def rebuild_index(ws):
     return path, len(rows)
 
 
-def new_change(ws, title, slug, date, now):
+def new_change(ws, title, slug, date, now, user_arg=None):
     if date:
         try:
             datetime.date.fromisoformat(date)
@@ -233,7 +235,7 @@ def new_change(ws, title, slug, date, now):
     else:
         date = datetime.date.today().isoformat()
     base = f"{date}-{slugify(slug or title)}"
-    pdir = plans_dir(ws)
+    pdir = plans_dir(ws, user_arg)
     cid, n = base, 1
     while os.path.exists(os.path.join(pdir, cid)):
         n += 1
@@ -241,10 +243,11 @@ def new_change(ws, title, slug, date, now):
     ts = now_iso(now)
     state = {"id": cid, "title": title, "created": ts, "updated": ts, "stage": "plan", "size": None,
              "wi": [], "loops": {}, "approvals": [], "receipts": [], "declined": [],
+             "test_runs": [], "ephemeral": [], "builds": [],
              "history": [{"at": ts, "stage": "plan"}]}
     cdir = os.path.join(pdir, cid)
     write_json(os.path.join(cdir, "state.json"), state)
-    index, count = rebuild_index(ws)
+    index, count = rebuild_index(ws, user_arg)
     return {"ok": True, "id": cid, "change_dir": cdir, "state": os.path.join(cdir, "state.json"),
             "index": index, "changes": count}
 
@@ -305,13 +308,14 @@ def main(argv=None):
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("root"); p.add_argument("--cwd", default=os.getcwd())
     p = sub.add_parser("settings"); p.add_argument("--workspace"); p.add_argument("--user-file")
-    p = sub.add_parser("setup"); p.add_argument("--workspace", required=True)
+    p = sub.add_parser("setup"); p.add_argument("--workspace", required=True); p.add_argument("--user-file")
     p.add_argument("--values", required=True); p.add_argument("--write", action="store_true")
     p = sub.add_parser("new-change"); p.add_argument("--workspace", required=True)
     p.add_argument("--title", required=True); p.add_argument("--slug"); p.add_argument("--date")
-    p.add_argument("--now")
+    p.add_argument("--now"); p.add_argument("--user-file")
     p = sub.add_parser("state"); p.add_argument("change_dir"); p.add_argument("--patch"); p.add_argument("--now")
-    p = sub.add_parser("index"); p.add_argument("--workspace", required=True)
+    p.add_argument("--user-file")
+    p = sub.add_parser("index"); p.add_argument("--workspace", required=True); p.add_argument("--user-file")
     a = ap.parse_args(argv)
     try:
         if a.cmd == "root":
@@ -342,7 +346,7 @@ def main(argv=None):
             out({"ok": True, "written": a.write, "path": path, "settings": result})
         if a.cmd == "new-change":
             ws = os.path.abspath(a.workspace)
-            out(new_change(ws, a.title, a.slug, a.date, a.now))
+            out(new_change(ws, a.title, a.slug, a.date, a.now, a.user_file))
         if a.cmd == "state":
             path = os.path.join(a.change_dir, "state.json")
             state = read_json(path)
@@ -355,10 +359,10 @@ def main(argv=None):
                     raise Fail(f"--patch is not valid JSON: {e}")
                 state = apply_patch(state, patch, now_iso(a.now))
                 write_json(path, state)
-                rebuild_index(workspace_of(a.change_dir))
+                rebuild_index(workspace_of(a.change_dir), a.user_file)
             out({"ok": True, "state": state})
         if a.cmd == "index":
-            path, count = rebuild_index(os.path.abspath(a.workspace))
+            path, count = rebuild_index(os.path.abspath(a.workspace), a.user_file)
             out({"ok": True, "index": path, "changes": count})
     except Fail as e:
         out({"ok": False, "error": str(e)}, 1)
