@@ -93,6 +93,7 @@ Link each supporting file from `SKILL.md` with a relative path and a note on whe
 ## Placement and saving
 
 - Save the target where the approved plan says, at the location for its kind in [Deliverable kinds](../references/skill-types.md#deliverable-kinds). The plan's default: the project folder when the target uses this workspace's files, personal (`~/.claude/`) otherwise, and a plugin only for the HowToAI pack.
+- In [dev mode](../references/skill-types.md#deliverable-kinds), save a personal skill or subagent in the source folder, then link it into the personal folder: run `py -3 -I -B "<howtoai_root>/scripts/devmode.py" link --source "<skill folder or agent file>"`, check that its `action` is `create` or `none`, and run it again with `--write`; the approved plan names the link, so it needs no second approval. A refusal (a real folder or file, or another link, at that path) is a destination conflict.
 - If the approved plan stores the target skill outside a discovery path, [Test](test.md#how-tests-run) syncs a copy into the personal skills folder for testing, and the delivery says where that copy is.
 - Change only authorized files. If the destination conflicts with an existing skill or file, stop, leave it untouched, and return to [Plan](plan.md).
 - Move existing reference files only as the approved plan specifies.

@@ -2,10 +2,17 @@
  "$about": "howtoai-dev settings. Each leaf has a type, a default, and a description. User defaults live in ~/.claude/howtoai/dev-settings.json; project values in <workspace>/.howtoai/dev/settings.json win over them. Never store secrets here: name accounts and profiles, not their credentials.",
  "plan_folder": {"type": "string", "default": "dev-plans", "description": "Folder at the workspace root that holds one subfolder per change and INDEX.md."},
  "tracker": {
-  "kind": {"type": "enum", "options": ["markdown", "jira", "github"], "default": "markdown", "description": "Where work items go: Markdown files in the change folder, Jira through the Atlassian MCP, or GitHub Issues."},
+  "kind": {"type": "enum", "options": ["markdown", "jira", "github", "azure-devops"], "default": "markdown", "description": "Where work items go: Markdown files in the change folder, Jira through the Atlassian MCP, GitHub Issues through gh, or Azure DevOps Boards through its MCP server or the az CLI with the azure-devops extension."},
   "jira_project": {"type": "string", "default": "", "description": "Jira project key, when kind is jira."},
   "jira_issue_type": {"type": "string", "default": "Task", "description": "Jira issue type for a work item."},
-  "github_repo": {"type": "string", "default": "", "description": "owner/name, when kind is github."}
+  "github_repo": {"type": "string", "default": "", "description": "owner/name, when kind is github."},
+  "ado_org": {"type": "string", "default": "", "description": "Azure DevOps organization URL, for example https://dev.azure.com/contoso, when kind is azure-devops. A name only, never a token."},
+  "ado_project": {"type": "string", "default": "", "description": "Azure DevOps project name, when kind is azure-devops."},
+  "ado_work_item_type": {"type": "string", "default": "Task", "description": "Azure DevOps work item type for a work item; Task exists in the Basic, Agile, Scrum, and CMMI processes."},
+  "plan_item_type": {"type": "string", "default": "Epic", "description": "Jira issue type or Azure DevOps work item type for the plan's parent item, when plan.publish is tracker; Epic exists in Jira's default schemes and every Azure DevOps process. GitHub uses a plain issue."}
+ },
+ "plan": {
+  "publish": {"type": "enum", "options": ["auto", "artifact", "html-file", "markdown", "tracker"], "default": "auto", "description": "Where dev-plan shows a plan for approval. auto: an artifact when the harness can publish one, else an HTML file. artifact: a private artifact. html-file: plan.html in the change folder. markdown: plan.md itself, no page. tracker: one parent item in the tracker with the plan as its description and the work items as its children (needs tracker.kind other than markdown). plan.md is always the source every stage reads, and approval is always given in chat."}
  },
  "environments": {
   "allow": {"type": "array", "default": [], "description": "Targets tests may use. Each item: {\"name\", \"kind\": local|dev|test|remote-test, \"match\": {\"host\"|\"database\"|\"profile\"|\"env\": value}}; one match key per item, so a host and a database are two items. Any target not on this list counts as production."},

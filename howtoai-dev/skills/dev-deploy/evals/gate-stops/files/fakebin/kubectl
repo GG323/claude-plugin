@@ -16,7 +16,7 @@ case "$args" in
       echo 'error: deployment "shop-api" exceeded its progress deadline' >&2; exit 1
     fi
     echo 'deployment "shop-api" successfully rolled out' ;;
-  *" rollout undo"*) echo "deployment.apps/shop-api rolled back" ;;
+  *" rollout undo"*) echo ok > "$here/mode"; echo "deployment.apps/shop-api rolled back" ;;
   *" get pods"*)
     if [ "$mode" = fail ]; then printf 'NAME                        READY   STATUS             RESTARTS   AGE\nshop-api-7d9f8c6b5-x2k4p    0/1     ImagePullBackOff   0          2m\n'
     else printf 'NAME                        READY   STATUS    RESTARTS   AGE\nshop-api-5c8d7b9f4-q8w2n    1/1     Running   0          1m\n'; fi ;;

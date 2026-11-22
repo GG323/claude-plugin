@@ -1,6 +1,6 @@
 ---
 name: dev-plan
-description: Plans a software change before any code is written - sizes it Small, Medium, or Large from the code's facts, asks the open decisions top-down (architecture, tools and services, languages and frameworks, details), drafts a plan with a Verification section, has context-free reviewers check it in a scored loop, splits large work into standalone work items for Markdown, Jira, or GitHub Issues, and gets explicit approval on a plan page. Entry point of the howtoai-dev process. Use when asked to plan a change, feature, bug fix, refactor, migration, or new system, to start the dev process, or to change a plan that was already approved.
+description: Plans a software change before any code is written - sizes it Small, Medium, or Large from the code's facts, asks the open decisions top-down (architecture, tools and services, languages and frameworks, details), drafts a plan with a Verification section, has context-free reviewers check it in a scored loop, splits large work into standalone work items for Markdown, Jira, GitHub Issues, or Azure DevOps, and gets explicit approval on a plan page. Entry point of the howtoai-dev process. Use when asked to plan a change, feature, bug fix, refactor, migration, or new system, to start the dev process, or to change a plan that was already approved.
 compatibility: Needs Python 3 (standard library only) and the dev-core and dev-workbook skills from the same plugin. Written for Claude Code (subagents, Artifact publishing); in other harnesses the reviewers run one after another in the main conversation and the plan page is saved as an HTML file.
 ---
 
@@ -55,8 +55,8 @@ Read each stage file when you reach it and run its steps in order. A stage that 
 | [grill](stages/grill.md) | Asks the open decisions top-down with the `grilling` method and [the items](references/grill-items.md) | `questions.md` |
 | [draft](stages/draft.md) | Large only: three [architect](references/architects.md) proposals; then fills `plan.md` | `plan.md` |
 | [review](stages/review.md) | The goldfish loop with scoring and verification; you resolve every kept finding | `raw/plan-review-<n>/`, `plan-review-<n>.md`, fixes to `plan.md` |
-| [split](stages/split.md) | Large, and Medium that does not fit one session: work items and the tracker | `wi/<n>.md`, tracker issues after approval, `wi` in state |
-| [accept](stages/accept.md) | The plan page and your explicit approval | `plan.html`, the approval in state |
+| [split](stages/split.md) | Large, and Medium that does not fit one session: work items and the tracker | `wi/<n>.md`, tracker items after approval, `wi` in state |
+| [accept](stages/accept.md) | The plan page and your explicit approval | the plan where `plan.publish` says (an artifact, `plan.html`, `plan.md` itself, or a tracker item), the approval in state |
 
 ## Core rules
 
@@ -69,10 +69,10 @@ Read each stage file when you reach it and run its steps in order. A stage that 
 
 ## Output contract
 
-- **Deliverables**, all in `<workspace>/<plan_folder>/<change-id>/`: `questions.md` (every question, its recommendation with source, and the answer; the stated defaults), `plan.md` (every template section filled, with the Verification section), `plan-review-<n>.md` per round and the reviewers' raw output in `raw/`, `wi/<n>.md` for a split, and `plan.html`. The plan page is also published as a private artifact when the harness can publish one.
+- **Deliverables**, all in `<workspace>/<plan_folder>/<change-id>/`: `questions.md` (every question, its recommendation with source, and the answer; the stated defaults), `plan.md` (every template section filled, with the Verification section), `plan-review-<n>.md` per round and the reviewers' raw output in `raw/`, `wi/<n>.md` for a split, and `plan.html` when `plan.publish` makes a page (`auto`, `artifact`, or `html-file`), also published as a private artifact for `artifact` and for `auto` when the harness can publish one. For `markdown` the plan is `plan.md` itself; for `tracker` it is also the plan item in the tracker.
 - **State:** the size, the review round count, the receipts, the work items, and the approval, in `state.json` through `DEVCORE`.
 - **Chat:** one line per stage saying what it found or decided ("Size: Medium - one subsystem, reversible"), the question rounds, and the approval question. No raw JSON.
-- **Writes outside the change folder:** only tracker issues, and only after the user approves the list. Never commits, pushes, or edits code.
+- **Writes outside the change folder:** only tracker items (issues or work items, and the plan's parent item when `plan.publish` is `tracker`), and only after the user approves the list. Never commits, pushes, or edits code.
 - **Next stage:** after approval, `dev-test` (Write route) writes the tests first from the Verification section and the work items.
 
 ## Verify the output
@@ -83,7 +83,7 @@ Before the approval question:
 - Every Verification criterion has a method and an exact passing result; a bug fix has a "Behaviour that must not change" entry.
 - `FINDINGS check` on the last `plan-review-<n>.md` returns `"ok": true` (no finding left without a resolution).
 - `DEVCORE state` shows the size and, for a split, every work item.
-- The plan page rendered without errors and its figures match the files.
+- The plan was shown where `plan.publish` says; a rendered page (`auto`, `artifact`, `html-file`) rendered without errors and its figures match the files.
 
 ## Common failures
 
@@ -100,7 +100,7 @@ Before the approval question:
 
 - It does not write tests or code: `dev-test` and `dev-build` do.
 - It does not hold technology rules: `dev-workbook` does; this skill reads them.
-- It creates tracker issues but never edits, moves, or closes existing ones.
+- It creates tracker items but never edits, moves, or closes existing ones, except the description of the plan item it created, after a yes.
 - It does not clean up old change folders.
 
 ## Feedback

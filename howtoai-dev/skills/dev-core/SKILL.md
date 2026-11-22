@@ -1,6 +1,6 @@
 ---
 name: dev-core
-description: Shared foundation of the howtoai-dev skills - project settings and their one-time setup, the plan folder (one change folder per change with state.json, and dev-plans/INDEX.md), and the document templates every dev stage fills (plan, questions record, work item, plan review, code review, learn record, deploy log, lesson line, test map, test run, build record, TESTING.md), and the findings tally script both review loops share. Used by dev-plan, dev-test, dev-build, dev-review, dev-deploy, dev-learn, and dev-workbook; not started by the user directly. Use when a dev skill needs the workspace's dev settings, runs the dev setup, starts a change, records a stage, approval, workbook receipt, or work item, tallies review findings, or rebuilds the plan index.
+description: Shared foundation of the howtoai-dev skills - project settings and their one-time setup, the plan folder (one change folder per change with state.json, and dev-plans/INDEX.md), and the document templates every dev stage fills (plan, questions record, work item, plan review, code review, learn record, lesson line, test map, test run, build record, TESTING.md), and the findings tally script both review loops share. Used by dev-plan, dev-test, dev-build, dev-review, dev-deploy, dev-learn, and dev-workbook; not started by the user directly. Use when a dev skill needs the workspace's dev settings, runs the dev setup, starts a change, records a stage, approval, workbook receipt, or work item, tallies review findings, or rebuilds the plan index.
 user-invocable: false
 compatibility: Needs Python 3 (standard library only). Written for Claude Code; other harnesses run the script by its path relative to this skill's folder.
 ---
@@ -47,10 +47,10 @@ Take the route the calling skill names.
 
 ### Setup
 
-Runs once per workspace, the first time `dev-plan` starts there, or when the user asks to change the dev settings.
+Runs once per workspace, the first time `dev-plan` starts there, or when the user asks to change the dev settings. The plugin's `INSTALL.md` runs this route as one of its steps, together with the dependency check, dev mode, workbooks, and deploy; when the plugin was never installed through it, say so in one line and offer it.
 
 1. Look up what can be found before asking, reading files only (never a real `.env` or other secret store):
-   - **Tracker:** a sign of Jira is an issue key such as `ABC-123` in branch names, commit messages, or the README; a sign of GitHub Issues is `.github/ISSUE_TEMPLATE/` or issue links in the README. A `.github/` folder with only workflows is no sign.
+   - **Tracker:** a sign of Jira is an issue key such as `ABC-123` in branch names, commit messages, or the README; a sign of GitHub Issues is `.github/ISSUE_TEMPLATE/` or issue links in the README; a sign of Azure DevOps Boards is an `AB#123` mention in commit messages, a git remote on `dev.azure.com` or `visualstudio.com`, or work item links in the README. A `.github/` folder with only workflows, or an `azure-pipelines.yml` alone, is no sign.
    - **Technologies:** manifests such as `*.csproj`, `package.json`, `pyproject.toml`, `Dockerfile`, `*.tf`.
    - **Deploy entry points:** CI files (`.github/workflows/`, `azure-pipelines.yml`) and `Makefile` targets. A command the CI calls but the workspace does not contain (for example, a missing script) is recorded as found, with a note that it is missing.
    - **Environments:** `.env.example`, compose files, and comments in them that name production or test hosts.
@@ -58,9 +58,9 @@ Runs once per workspace, the first time `dev-plan` starts there, or when the use
    - **Gate commands:** the lint, format-check, and build or type-check steps of the CI files, in check mode only; recorded in `build.gate` as found, each with its `source`, for `dev-build` to confirm on its first run.
 2. Say what the lookups found as "From `<file>`: …", for the user to correct, and ask only what is still open with the `grilling` skill's method, in one round of at most four questions. These items are:
    - **Crucial** (asked unless a file answers them): the production markers to deny (hosts, connection-string fragments, cloud profiles, account names), the allowed test targets, and the deploy entry points when the CI deploys anything.
-   - **Defaults** (stated under **Assumed — tell me if wrong**): the tracker (Markdown, unless step 1 found a sign of Jira or GitHub Issues, then that one is asked), the plan folder `dev-plans`, and the review defaults.
+   - **Defaults** (stated under **Assumed — tell me if wrong**): the tracker (Markdown, unless step 1 found a sign of Jira, GitHub Issues, or Azure DevOps, then that one is asked with its project), the plan format (`plan.publish` `auto`: an artifact where the harness has one, else an HTML file), the plan folder `dev-plans`, and the review defaults.
    - Name accounts and profiles only, never credentials. Safest choices when the user will not decide: Markdown work items; deny every production marker the files name; allow only local targets, because any target not on the allow list counts as production anyway; record no deploy entry points. Technologies found in manifests go into `workbooks.technologies` as found.
-3. After the answers, show the settings as a preview in its own message: `DEVCORE setup --workspace "<workspace>" --values '<json>'`. It validates every key and refuses values that look like secrets.
+3. After the answers, show the settings as a preview in its own message: `DEVCORE setup --workspace "<workspace>" --values '<json>'`. It validates every key, refuses values that look like secrets, and refuses `plan.publish` `tracker` without a tracker other than Markdown. `--scope user` writes the user's defaults file instead of the project's, for choices the user wants in every workspace.
 4. After the user approves the preview, write it: the same command with `--write`. A later run merges new values into the file. The plan folder itself is created by [Start a change](#start-a-change), not by setup.
 
 ### Start a change
@@ -76,6 +76,7 @@ Runs once per workspace, the first time `dev-plan` starts there, or when the use
 | `stage` | `plan`, `accept`, `tests-first`, `build`, `test`, `review`, `human-review`, `deploy`, `done`, `dropped` | every stage, when it starts |
 | `size` | `Small`, `Medium`, `Large` | `dev-plan` scope triage |
 | `title` | new title | `dev-plan` |
+| `plan_item` | `{"tracker_key", "kind", "url"}`, replacing any earlier one | `dev-plan`, when `plan.publish` is `tracker` and it created the plan's parent item |
 | `append.approvals` | `{"what", "by", "conditions"}` | plan acceptance, human review, and the deploy as a whole (`dev-deploy` records each production step's approval, with its exact command and expiry, in `<workspace>/.howtoai/deploy/approvals.json`, which the `dev-safe-target` hook reads) |
 | `append.receipts` | `{"stage", "statements": [IDs], "workbooks": {name: version}}` | every step that consulted `dev-workbook` |
 | `append.wi` | `{"n", "title", "tracker_key", "depends_on"}` | `dev-plan` split |

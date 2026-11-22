@@ -30,16 +30,16 @@ compatibility: Needs Python 3 (standard library only), git, the target's own CLI
    - `WORKBOOK` = `py -3 -I -B "${CLAUDE_SKILL_DIR}/../dev-workbook/scripts/workbook.py"` (workbooks are read through its `resolve`, never by path)
    - `DEVCORE` = `py -3 -I -B "${CLAUDE_SKILL_DIR}/../dev-core/scripts/devcore.py"`, only inside the dev process.
 
-   Each prints one JSON object; `"ok": false` carries the error, which you report before stopping that step. Without Python 3, stop and say the deploy steps need it.
+   Each prints one JSON object. Read its `ok` field, not the exit code: for `gate` and `check`, `"ok": false` with exit code 0 means the gate or check failed; an `"error"` field means the command itself failed, which you report before stopping that step. Without Python 3, stop and say the deploy steps need it.
 2. **The workspace.** The nearest folder at or above the working directory that holds `AGENTS.md` or `CLAUDE.md`, else the working directory. The targets file is `<workspace>/.howtoai/deploy/targets.json`.
 3. **The dev process.** When the user names a change, or a change folder under the workspace's plan folder is at stage `deploy`, this deploy belongs to it: pass `--change "<change folder>"` to `DEPLOY gate` and `DEPLOY log`. Otherwise it is a deploy on its own, and every dev-process step below is skipped.
-4. **The target.** Take it from the request ("to my local Kubernetes", "to staging"). When none is named and the targets file holds exactly one, use it and say so; otherwise ask which target, listing `DEPLOY target list`.
+4. **The target.** Take it from the request ("to my local Kubernetes", "to staging") and match it against `DEPLOY target list --workspace "<workspace>"`: the name, then the technologies and notes ("local Kubernetes" matches a non-production target with `kubernetes`). One match: use it and say so. Several: ask which. None: the target is new, so give it a short name (lowercase, hyphens, for example `local-k8s`) and set it up. When the request names no target and the file holds exactly one, use it and say so.
 
 ## Routes
 
 | State or request | Route |
 | --- | --- |
-| `DEPLOY target show --name <target>` returns no target, or the user asks to set up a target | [Set up a target](routes/setup-target.md), then [Deploy](routes/deploy.md) |
+| `DEPLOY target show --workspace "<workspace>" --name <target>` returns no target, or the user asks to set up a target | [Set up a target](routes/setup-target.md), then [Deploy](routes/deploy.md) |
 | The target exists | [Deploy](routes/deploy.md) |
 | The user asks to roll back the last deploy | [Deploy](routes/deploy.md#roll-back), straight to its rollback section |
 | The user says a step or a rule is wrong ("never deploy on Fridays"), or a step failed because of a rule | [Self-edit](routes/self-edit.md), then back to the route that was running |
@@ -47,7 +47,7 @@ compatibility: Needs Python 3 (standard library only), git, the target's own CLI
 ## Core rules
 
 - **Existing tools first.** Use the project's own deploy files and the computer's own CLIs. A new deploy file (for example a Kubernetes manifest) or tool is written or installed only when none exists, and only after the user's yes.
-- **One yes per production step.** A production step runs only after the user approves that step in chat; `DEPLOY approve` then records its exact command with a short expiry, the only thing that lets the `dev-safe-target` hook pass that command. A target marked `"production": false` still shows its plan and asks once for the run.
+- **One yes per production step.** A production step runs only after the user approves that step in chat. A target marked `"production": false` still shows its plan and asks once for the whole run. Either way, `DEPLOY approve` records each step's exact command with a short expiry before it runs, so every step in the log names its approval; for production steps that record is the only thing that lets the `dev-safe-target` hook pass the command.
 - **Rollback first.** No step runs without its rollback written down; a rollback runs only after the user's yes, except when the user approved "roll back on a failed check" for this run.
 - **Read before acting on failure.** A failed step or check is read (its output, logs, and events) before anything is retried; a retry happens at most once, and a second failure stops the run.
 - **No product code changes.** Inside the dev process a code fix goes back through `dev-build` and `dev-test`; outside it, it is proposed to the user.
@@ -66,7 +66,7 @@ compatibility: Needs Python 3 (standard library only), git, the target's own CLI
 ## Verify the output
 
 - `DEPLOY check` (or the target's command checks) passed after the run, or the run is logged as failed with its rollback state.
-- Every production step in the log names its approval ID; `.howtoai/deploy/approvals.json` shows each one used once.
+- Every step in the log names its approval ID; where the `dev-safe-target` hook is active, `.howtoai/deploy/approvals.json` shows each production approval used once.
 - The log row exists and names the steps, outcome, checks, and rollback.
 
 ## Common failures
@@ -76,6 +76,7 @@ compatibility: Needs Python 3 (standard library only), git, the target's own CLI
 | The hook denies an approved step | The command run differs from the approved one (spacing, quoting, a changed tag) or the approval expired | Run the exact approved command; for a changed command, ask again and `DEPLOY approve` it |
 | A Kubernetes rollout never finishes | The new pods fail to start (bad image tag, crash, failing probe) | Read `kubectl describe` and the pod logs before anything else, then offer the rollback |
 | The health check fails right after the rollout | The service port or the check URL in the target entry is wrong, or the app needs longer to start | Compare the target entry's check with the deploy files; raise retries only with evidence |
+| A local cluster answers in one run and not the next | It runs in a VM that stops when idle (for example WSL shuts down its VM) | The `ready` command fails, so the gate offers the entry's `start` commands; keep them in the target entry |
 | An image built locally is not found by the cluster | The cluster uses a different image store than the docker CLI | Check the workbook's statement for that cluster; build into the cluster's store or load the image there |
 
 ## What it can't do

@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: install-detects-azure-devops
+expected_outcome: |
+  The agent reads the repository before asking: it names the Azure DevOps signs it found (the AB#42 commit mention and the dev.azure.com remote), the two .NET versions (net10.0 in src/Shop and tests, net8.0 in src/Worker), the CI test command, and the production host in appsettings.Production.json. It asks the tracker question with Azure DevOps recommended and asks for the organization and project, offers the plan format choices including tracker, and asks before any write. It creates no tracker item, runs no az command that changes anything, and writes nothing before an answer.
+context:
+  scaffold_script: place-files.sh

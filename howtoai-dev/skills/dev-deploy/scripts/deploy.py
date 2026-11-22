@@ -3,7 +3,7 @@
 Usage (Python 3, standard library only; every command prints one JSON object):
   py -3 -I -B deploy.py discover --workspace WS
   py -3 -I -B deploy.py target   list|show|write --workspace WS [--name N] [--file ENTRY.json] [--write]
-  py -3 -I -B deploy.py gate     --workspace WS --target N [--change CHANGE_DIR]
+  py -3 -I -B deploy.py gate     --workspace WS --target N [--change CHANGE_DIR] [--new-file PATH ...]
   py -3 -I -B deploy.py approve  --workspace WS --target N --step ID --command CMD [--minutes M]
   py -3 -I -B deploy.py check    --url URL [--expect 200] [--contains TEXT] [--retries 5] [--wait 3]
   py -3 -I -B deploy.py log      --workspace WS --target N --steps S --outcome O --rollback R
@@ -20,7 +20,8 @@ target     The workspace's targets file, <ws>/.howtoai/deploy/targets.json. writ
            entry (from --file) and, only with --write, adds or replaces it; without --write it
            prints the preview.
 gate       Checks what code can: the target exists, the work is committed (git status clean
-           apart from .howtoai/ and the plan folder), and, with --change, the change is at
+           apart from .howtoai/, the plan folder, and the deploy files a first setup just wrote,
+           given as --new-file), and, with --change, the change is at
            stage deploy with an accepted human review and a green latest test run. Lists
            checks_run and checks_skipped.
 approve    Records one approved step in <ws>/.howtoai/deploy/approvals.json with its exact
@@ -62,7 +63,8 @@ HOSTING = {"fly.toml": "Fly.io", "vercel.json": "Vercel", "netlify.toml": "Netli
            "serverless.yml": "Serverless Framework", "skaffold.yaml": "Skaffold", "Tiltfile": "Tilt"}
 CI = {".gitlab-ci.yml": "GitLab CI", "azure-pipelines.yml": "Azure Pipelines", "Jenkinsfile": "Jenkins",
       "bitbucket-pipelines.yml": "Bitbucket Pipelines", ".drone.yml": "Drone"}
-ENTRY_KEYS = {"name", "technologies", "production", "tools", "ready", "steps", "checks", "approval_minutes", "notes"}
+ENTRY_KEYS = {"name", "technologies", "production", "tools", "shell", "ready", "start", "steps", "checks",
+              "approval_minutes", "notes"}
 STEP_KEYS = {"id", "command", "rollback", "production", "watch", "note"}
 CHECK_KEYS = {"name", "url", "expect_status", "contains", "command", "retries", "wait_seconds"}
 
@@ -241,6 +243,8 @@ def validate_entry(e):
             problems.append(f"check {i}: needs a url or a command")
     if not e.get("checks"):
         problems.append("checks: at least one check after the deploy (a health URL or a command)")
+    if e.get("shell") not in (None, "bash", "powershell", "cmd"):
+        problems.append("shell: bash, powershell, or cmd (the shell the commands are written for)")
     m = e.get("approval_minutes", 30)
     if not isinstance(m, int) or not 1 <= m <= 240:
         problems.append("approval_minutes: a whole number from 1 to 240")
@@ -308,9 +312,12 @@ def cmd_gate(a):
         if a.change:
             plan_folder = os.path.relpath(os.path.dirname(os.path.abspath(a.change)), ws).replace("\\", "/")
         dirty = []
-        for line in git(ws, "status", "--porcelain").stdout.splitlines():
+        new_files = [n.replace("\\", "/").strip("/") for n in (a.new_file or [])]
+        for line in git(ws, "status", "--porcelain", "--untracked-files=all").stdout.splitlines():
             path = line[3:].strip().strip('"')
             if path.startswith((".howtoai/", plan_folder + "/")) or path in (".howtoai", plan_folder):
+                continue
+            if any(path == n or path.startswith(n.rstrip("/") + "/") for n in new_files):
                 continue
             dirty.append(line)
         if dirty:
@@ -348,12 +355,12 @@ def cmd_approve(a):
     minutes = a.minutes or target.get("approval_minutes", 30)
     if not 1 <= minutes <= 240:
         raise Fail("--minutes must be from 1 to 240")
-    t = now(a).astimezone(datetime.timezone.utc)
+    t = now(a)
     path = ws_path(ws, "approvals.json")
     data = json.loads(read(path)) if os.path.isfile(path) else {"approvals": []}
     keep_after = t - datetime.timedelta(days=30)
     data["approvals"] = [x for x in data.get("approvals", [])
-                         if datetime.datetime.fromisoformat(x["approved"]).astimezone(datetime.timezone.utc) > keep_after]
+                         if datetime.datetime.fromisoformat(x["approved"]) > keep_after]
     n = 1 + max([int(x["id"][1:]) for x in data["approvals"] if re.match(r"^A\d+$", x.get("id", ""))] + [0])
     item = {"id": f"A{n}", "target": a.target, "step": a.step, "command": a.command.strip(),
             "approved": t.isoformat(timespec="seconds"),
@@ -456,7 +463,7 @@ def main(argv=None):
     p.add_argument("--workspace", required=True); p.add_argument("--name"); p.add_argument("--file")
     p.add_argument("--write", action="store_true")
     p = sub.add_parser("gate"); p.add_argument("--workspace", required=True); p.add_argument("--target", required=True)
-    p.add_argument("--change")
+    p.add_argument("--change"); p.add_argument("--new-file", action="append")
     p = sub.add_parser("approve"); p.add_argument("--workspace", required=True)
     p.add_argument("--target", required=True); p.add_argument("--step", required=True)
     p.add_argument("--command", required=True); p.add_argument("--minutes", type=int); p.add_argument("--now")

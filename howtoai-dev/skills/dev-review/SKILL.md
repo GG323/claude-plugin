@@ -56,7 +56,7 @@ Each route is one file in `routes/`. "Stage" always means a stage of the `howtoa
 - **The user decides.** Every kept finding, and every finding outside this change, gets the user's choice: fix now, later, or decline with a reason. AUTO-FIX is a recommendation, never a decision.
 - **Declined stays declined.** Declined findings are recorded and passed to later rounds, so they are not raised again.
 - **Temporary tests leave.** A test you add to confirm a finding is removed at the end of the round, unless the user approves promoting it to the suite.
-- **No outward actions.** No commits, pushes, pull-request comments, or posts. Issues in Jira or GitHub only for findings the user marked later, after approving the list.
+- **No outward actions.** No commits, pushes, pull-request comments, or posts. Tracker items (Jira, GitHub, or Azure DevOps) only for findings the user marked later, after approving the list.
 
 ## Output contract
 
@@ -64,10 +64,10 @@ Each route is one file in `routes/`. "Stage" always means a stage of the `howtoa
 - **Deliverables:**
   - `<change folder>/review-<round>.md`, written by `FINDINGS tally --kind code` in `dev-core`'s [review](../dev-core/assets/templates/review.md) shape: the counts by impact first, then the kept findings by area, ranked by impact, each AUTO-FIX or ASK with a Your choice cell, then Test inspection, Outside this change (verified Critical and Major findings outside the change, each with a Your choice cell), and the appendix of held-back findings with their reasons. Markdown, because agents read it and git diffs it; it keeps its own fixed shape.
   - `<change folder>/raw/review-<round>/`: the diff, the changed lines, each reviewer's reply, the scores, the verdicts, and `findings.json`.
-  - Fix-later work items: `wi/<n>.md` from the [work-item template](../dev-core/assets/templates/wi.md), and the tracker issue when the tracker is Jira or GitHub.
+  - Fix-later work items: `wi/<n>.md` from the [work-item template](../dev-core/assets/templates/wi.md), and the tracker item when the tracker is Jira, GitHub, or Azure DevOps.
 - **State:** each round as `increment.review`, each workbook use as `append.receipts`, each declined finding as `append.declined`, each new work item as `append.wi`, the acceptance as `append.approvals`, and the stage, all through `DEVCORE`.
 - **Chat:** one line per step ("Pass 1: spec clean; pass 2: 3 reviewers"), the human-review question as its own message, and a short closing report: the counts, the kept findings in one line each, what was held back and why, and the next stage. No raw JSON.
-- **Writes outside the change folder:** temporary test files (removed at the end of the round), and tracker issues after approval.
+- **Writes outside the change folder:** temporary test files (removed at the end of the round), and tracker items after approval.
 
 ## Verify the output
 
@@ -107,7 +107,7 @@ Send requested changes or reported problems to the `skill-builder` skill (`/skil
 - `dev-core` - state, settings, `findings.py`, the review and work-item templates, and the [self-edit method](../dev-core/references/self-edit.md).
 - `dev-workbook` - the Pitfalls, Idioms and patterns, Security, and Performance statements, and proposals after a correction.
 - `dev-test` - reruns the tests for the inspection; `dev-build` - applies the fix-now findings.
-- `dev-plan` - creates tracker issues for fix-later work items; `dev-learn` - the learn step after each human review.
+- `dev-plan` - creates tracker items for fix-later work items; `dev-learn` - the learn step after each human review.
 - `grilling` - the question method for the human review.
 - `skill-builder` - applies a supplied change plan from the Self-edit route.
 - Agents: `goldfish-spec`, `goldfish-correctness`, `goldfish-tests`, `goldfish-security`, `goldfish-performance`, `goldfish-compliance`, `goldfish-scorer`, `goldfish-verifier`, from this plugin.

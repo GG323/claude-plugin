@@ -58,7 +58,7 @@ State these, with their source, under **Assumed — tell me if wrong**; ask only
 
 - The existing stack, libraries, and versions.
 - The existing conventions for naming, structure, logging, and error handling, as the explorers found them.
-- The tracker from the settings (Markdown when none is set).
+- The tracker and the plan format, from the settings (`tracker.kind`, Markdown when none is set; `plan.publish`, `auto` when none is set).
 - The review weight from the size.
 - Tests: the frameworks the project already uses; the workbook's Testing statements otherwise.
 - Backwards compatibility kept for every existing contract.

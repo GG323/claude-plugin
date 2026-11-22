@@ -24,6 +24,7 @@ Every Markdown file starts with its title, followed by a `## Contents` section b
 - The contents list links every major section and stays in sync with the headings. In short documents it is short, but it is never omitted.
 - The contents list includes a `Skills and agents` entry. That section is the last section of the file and lists the relevant skills and agents, or states that none apply.
 - Heading levels show how sections relate: one `#` title, each subsection nested one level under its parent, and no skipped levels.
+- A line starting with `///` is a note for AI agents in files that are primarily user work docs, such as how to work with the file. Agents follow it; the `command-pane` Today pane hides it (and `<!-- -->` blocks), so it never shows as a task.
 
 ### Links and sources
 

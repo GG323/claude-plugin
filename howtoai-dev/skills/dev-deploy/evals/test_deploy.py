@@ -122,7 +122,7 @@ class DeployTests(unittest.TestCase):
         self.assertEqual(code, 0, res)
         a = res["approval"]
         self.assertEqual((a["id"], a["command"], a["used"]), ("A1", "kubectl apply -f deploy/k8s/", False))
-        self.assertEqual(a["expires"], "2026-11-21T09:10:00+00:00")
+        self.assertEqual(a["expires"], "2026-11-21T10:10:00+01:00")
         self.assertEqual(run("approve", "--workspace", self.ws, "--target", "local-k8s", "--step", "nope",
                              "--command", "x")[0], 1)
         self.assertEqual(run("approve", "--workspace", self.ws, "--target", "local-k8s", "--step", "rollback-apply",

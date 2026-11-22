@@ -4,7 +4,7 @@ Usage (Python 3, standard library only; every command prints one JSON object):
   py -3 -I devcore.py root      [--cwd DIR]
   (every command except root also takes [--user-file F], read instead of the default user defaults file)
   py -3 -I devcore.py settings  [--workspace W] [--user-file F]
-  py -3 -I devcore.py setup     --workspace W --values JSON [--write]
+  py -3 -I devcore.py setup     --workspace W --values JSON [--scope project|user] [--write]
   py -3 -I devcore.py new-change --workspace W --title TEXT [--slug SLUG] [--date YYYY-MM-DD]
   py -3 -I devcore.py state     CHANGE_DIR [--patch JSON] [--now ISO]
   py -3 -I devcore.py index     --workspace W
@@ -16,12 +16,13 @@ settings    Merges the schema defaults, the user file (default ~/.claude/howtoai
             the source of each top-level key, and whether the project is configured.
 setup       Validates --values (a JSON object of project settings) against the schema. Without
             --write it prints the file it would write (a preview); with --write it writes
-            <workspace>/.howtoai/dev/settings.json. Values that look like secrets are refused.
+            <workspace>/.howtoai/dev/settings.json, or with --scope user the user defaults file.
+            Values that look like secrets are refused.
 new-change  Creates <workspace>/<plan_folder>/<date>-<slug>/state.json and rebuilds INDEX.md.
             An existing folder gets a -2, -3, ... suffix. The date comes from the system clock
             unless --date is given.
 state       Prints a change's state.json. With --patch it applies the patch first:
-              {"stage": "build", "size": "Medium", "title": "...",
+              {"stage": "build", "size": "Medium", "title": "...", "plan_item": {"tracker_key": "..."},
                "append": {"approvals": {...}, "receipts": {...}, "wi": {...}, "declined": {...},
                           "test_runs": {...}, "ephemeral": {...}, "builds": {...}},
                "increment": {"review": 1}}
@@ -255,10 +256,17 @@ def new_change(ws, title, slug, date, now, user_arg=None):
 def apply_patch(state, patch, ts):
     if not isinstance(patch, dict):
         raise Fail("--patch must be a JSON object")
-    allowed = {"stage", "size", "title", "append", "increment"}
+    allowed = {"stage", "size", "title", "plan_item", "append", "increment"}
     extra = set(patch) - allowed
     if extra:
         raise Fail(f"unknown patch keys: {sorted(extra)}")
+    if "plan_item" in patch:
+        item = patch["plan_item"]
+        if not isinstance(item, dict) or not str(item.get("tracker_key", "")).strip():
+            raise Fail("plan_item must be an object with a tracker_key")
+        if secrets_in(item):
+            raise Fail("plan_item looks like it holds a secret; state files never store secrets")
+        state["plan_item"] = {**item, "at": ts}
     if "stage" in patch:
         if patch["stage"] not in STAGES:
             raise Fail(f"stage must be one of {STAGES}")
@@ -310,6 +318,7 @@ def main(argv=None):
     p = sub.add_parser("settings"); p.add_argument("--workspace"); p.add_argument("--user-file")
     p = sub.add_parser("setup"); p.add_argument("--workspace", required=True); p.add_argument("--user-file")
     p.add_argument("--values", required=True); p.add_argument("--write", action="store_true")
+    p.add_argument("--scope", choices=["project", "user"], default="project")
     p = sub.add_parser("new-change"); p.add_argument("--workspace", required=True)
     p.add_argument("--title", required=True); p.add_argument("--slug"); p.add_argument("--date")
     p.add_argument("--now"); p.add_argument("--user-file")
@@ -338,12 +347,16 @@ def main(argv=None):
             if hits:
                 raise Fail("values look like they hold a secret (a token, key, or password in a URL); "
                            "settings never store secrets")
-            path = project_file(ws)
+            path = user_file(a.user_file) if a.scope == "user" else project_file(ws)
             existing = read_json(path) or {}
             result = merge(existing, values)
+            effective = merge(load_settings(ws, a.user_file)[0], values)
+            if effective["plan"]["publish"] == "tracker" and effective["tracker"]["kind"] == "markdown":
+                raise Fail("plan.publish tracker needs tracker.kind jira, github, or azure-devops; "
+                           "with Markdown work items, use auto, artifact, html-file, or markdown")
             if a.write:
                 write_json(path, result)
-            out({"ok": True, "written": a.write, "path": path, "settings": result})
+            out({"ok": True, "written": a.write, "scope": a.scope, "path": path, "settings": result})
         if a.cmd == "new-change":
             ws = os.path.abspath(a.workspace)
             out(new_change(ws, a.title, a.slug, a.date, a.now, a.user_file))

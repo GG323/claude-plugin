@@ -1,6 +1,6 @@
 # WI {n}: {title}
 
-Change `{change_id}` · Tracker: {Markdown / Jira key / GitHub issue} · Depends on: {WI numbers, or "none"}
+Change `{change_id}` · Tracker: {Markdown / Jira key / GitHub issue / Azure DevOps work item} · Depends on: {WI numbers, or "none"}
 
 ## Goal
 

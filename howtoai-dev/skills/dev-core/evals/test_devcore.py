@@ -129,6 +129,43 @@ class DevcoreTests(unittest.TestCase):
         self.assertEqual(merged["settings"]["build"]["max_fix_rounds"], 3)
         self.assertIn(".github/workflows/**", merged["settings"]["build"]["protected_globs"])
 
+    def test_azure_devops_tracker_and_plan_publish(self):
+        _, merged = run("settings", "--workspace", self.ws, "--user-file", self.user)
+        self.assertEqual((merged["settings"]["plan"]["publish"], merged["settings"]["tracker"]["plan_item_type"]), ("auto", "Epic"))
+        code, out = run("setup", "--workspace", self.ws, "--user-file", self.user, "--values", '{"plan": {"publish": "tracker"}}')
+        self.assertEqual(code, 1)
+        self.assertIn("plan.publish tracker", out["error"])
+        code, _ = run("setup", "--workspace", self.ws, "--user-file", self.user, "--values", '{"plan": {"publish": "slides"}}')
+        self.assertEqual(code, 1)
+        good = json.dumps({"tracker": {"kind": "azure-devops", "ado_org": "https://dev.azure.com/contoso", "ado_project": "Shop"},
+                           "plan": {"publish": "tracker"}})
+        code, out = run("setup", "--workspace", self.ws, "--user-file", self.user, "--values", good, "--write")
+        self.assertEqual(code, 0, out)
+        _, merged = run("settings", "--workspace", self.ws, "--user-file", self.user)
+        self.assertEqual((merged["settings"]["tracker"]["kind"], merged["settings"]["tracker"]["ado_work_item_type"]), ("azure-devops", "Task"))
+        code, _ = run("setup", "--workspace", self.ws, "--user-file", self.user, "--values", '{"tracker": {"kind": "markdown"}}')
+        self.assertEqual(code, 1)
+        with open(self.user, "w", encoding="utf-8") as f:
+            json.dump({"tracker": {"kind": "jira", "jira_project": "SHOP"}}, f)
+        ws2 = os.path.join(self.tmp.name, "ws2")
+        os.makedirs(ws2)
+        code, out = run("setup", "--workspace", ws2, "--user-file", self.user, "--values", '{"plan": {"publish": "tracker"}}')
+        self.assertEqual(code, 0, out)
+        _, ch = run("new-change", "--workspace", self.ws, "--user-file", self.user, "--title", "p", "--date", "2026-11-21")
+        code, st = run("state", ch["change_dir"], "--patch", '{"plan_item": {"tracker_key": "4711", "kind": "azure-devops"}}')
+        self.assertEqual((code, st["state"]["plan_item"]["tracker_key"]), (0, "4711"))
+        code, _ = run("state", ch["change_dir"], "--patch", '{"plan_item": {"url": "x"}}')
+        self.assertEqual(code, 1)
+
+    def test_setup_user_scope_writes_user_file(self):
+        code, out = run("setup", "--workspace", self.ws, "--user-file", self.user, "--scope", "user",
+                        "--values", '{"plan": {"publish": "markdown"}}', "--write")
+        self.assertEqual((code, out["scope"], out["path"]), (0, "user", self.user))
+        self.assertFalse(os.path.exists(os.path.join(self.ws, ".howtoai", "dev", "settings.json")))
+        _, merged = run("settings", "--workspace", self.ws, "--user-file", self.user)
+        self.assertEqual((merged["settings"]["plan"]["publish"], merged["sources"]["plan"], merged["configured"]),
+                         ("markdown", "user", False))
+
     def test_plan_folder_must_be_plain_name(self):
         run("setup", "--workspace", self.ws, "--values", '{"plan_folder": "../outside"}', "--write")
         code, out = run("new-change", "--workspace", self.ws, "--user-file", self.user, "--title", "x")

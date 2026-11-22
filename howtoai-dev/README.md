@@ -15,9 +15,9 @@ A software-development process for Claude Code: plan, user acceptance, tests fir
 
 ## What is in this version
 
-Version 0.9.0 holds the plan, test, build, review, learn, and deploy stages, two safety hooks, the foundations, and the workbooks:
+Version 0.10.0 holds the install procedure, the plan, test, build, review, learn, and deploy stages, two safety hooks, the foundations, and the workbooks:
 
-- `dev-plan` - the entry point: say "plan <your change>". It sizes the change Small, Medium, or Large from the code, asks the open decisions top-down with recommendations, drafts a plan with a Verification section, has the goldfish agents review it in a scored loop, splits large work into standalone work items (Markdown, Jira, or GitHub Issues, created only after you approve the list), and asks for your approval on a plan page.
+- `dev-plan` - the entry point: say "plan <your change>". It sizes the change Small, Medium, or Large from the code, asks the open decisions top-down with recommendations, drafts a plan with a Verification section, has the goldfish agents review it in a scored loop, splits large work into standalone work items (Markdown, Jira, GitHub Issues, or Azure DevOps, created only after you approve the list), and asks for your approval on a plan page.
 - `dev-test` - tests before code, and safe test runs: after a plan's approval it turns each Verification criterion into a test and proves it fails first; after the build it classifies every database, queue, API, and server the tests could reach (unknown counts as production and stops the run), runs the project's own test commands, finds flaky tests, uses a throwaway Docker container only after you approve it, and rewrites the Latest run section of each `TESTING.md`.
 - `dev-build` - the build stage: once a work item's tests fail, it writes the smallest change that makes them pass (a reuse-first ladder: skip what is not needed, reuse existing code, the standard library, or an installed dependency before writing new code), follows the workbook rules, traces every changed hunk to an acceptance criterion or test-map row, and passes a gate of your lint, format, and type-check commands, then the work item's tests. It leaves `build-<n>.md` with a Skipped or unchecked footer for review, never edits tests or CI, never adds a dependency without asking, and commits nothing. It also applies review findings you mark fix now.
 - `dev-review` - the review stages: context-free goldfish reviewers check the built change, first against the plan and work items, then for correctness, tests and gate integrity, security, performance, and compliance with the workbooks and instruction files; a scorer and a verifier rate and challenge each finding; it reruns the tests and adds temporary tests itself; `review-<n>.md` ranks the findings, with low-confidence ones, refuted ones, and ones on unchanged lines in an appendix. You then mark each finding fix now, later (a new work item), or decline, and fixes go back through `dev-build` and `dev-test` and a re-review. When you say a finding is wrong, it proposes the smallest fix to its own rules, after your approval.
@@ -40,7 +40,16 @@ Version 0.9.0 holds the plan, test, build, review, learn, and deploy stages, two
 
 ## Install
 
-It needs the `howtoai` plugin (for `skill-builder`, `skill-finder`, and `grilling`) and Python 3.
+Ask your agent to follow [INSTALL.md](INSTALL.md). It checks the dependencies (the `howtoai` plugin for `skill-builder` and `grilling`, Python 3.10 or later, git, and the tools your choices need), asks whether to keep the plugin in workspace files under version control (dev mode) or install it normally, and then asks every per-user and per-project decision:
+
+- the tracker for work items: Markdown files, Jira, GitHub Issues, or Azure DevOps Boards;
+- the plan format, where plans are shown for approval: an artifact, an HTML file, the Markdown plan itself, or a parent item in the tracker;
+- allowed test targets and production markers, test and gate commands, and throwaway Docker targets;
+- workbooks for each technology and code-project version, and an optional deploy target.
+
+It writes only settings, workbooks, deploy targets, links, and an install record, each after your yes, and ends with a double check by `skill-builder`. [docs/install-index.md](docs/install-index.md) lists every install requirement, the files that read it, and what to change when a client needs an option that is not there yet.
+
+The plain plugin install, without the setup, is:
 
 ```bash
 claude plugin install howtoai@howtoai-mods

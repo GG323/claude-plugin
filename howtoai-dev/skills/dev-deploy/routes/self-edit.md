@@ -13,6 +13,7 @@ Entered from [SKILL.md](../SKILL.md#routes) or [Deploy](deploy.md#approve-and-ru
 
 - a step or check failed because of a rule: a wrong command, port, tag, or context in the target entry or a deploy file, or a workbook statement that is missing or wrong;
 - the user corrects a rule ("never deploy on Fridays", "always use the staging context first");
+- the plan check finds the steps and the deploy files disagree before anything runs (a build tag the manifest does not use);
 - the same step was fixed by hand in two runs (the deploy log shows it).
 
 A failure of the app itself or of the platform is not a self-edit.
@@ -24,14 +25,15 @@ Follow `dev-core`'s self-edit and root-cause method when `dev-core` is present (
 1. **Quote** the rule that caused it, with its file and line: the target entry's step, the deploy file, the workbook statement, or this skill's instruction; or say where the missing rule belongs.
 2. **Classify and place it at the lowest level that resolves it:**
    - A technology fact (how Kubernetes rolls out, where a cluster keeps images) goes to a workbook, through `dev-workbook`'s Propose.
-   - A fact about this target (a context, a port, a check, a step order, "never on Fridays" for this target) goes to the target entry.
+   - A fact about this target (a context, a port, a check, a step order, "never on Fridays" for this target) goes to the target entry; a fix to a deploy file the entry runs (a manifest's image tag) is shown as a diff of that file, written only after the yes.
+   - A rule a hook can enforce on every command ("never apply to the prod context from this computer") goes to the project's `hook_rules`, through `dev-core`'s Setup preview, when the workspace has dev settings.
    - Only a process step of this skill itself (what it asks, when it rolls back) goes to this skill's files, with evidence why the workbook and the target entry cannot hold it.
-3. **Show the smallest change** as a diff, with its level, in one message, and ask for the yes. Never apply it yourself.
+3. **Show the smallest change** as a diff, with its level, in one message, and ask for the yes. Never apply it yourself: a yes for the deploy's steps does not cover a change to a rule or a deploy file.
 
 ## Apply and record
 
 1. After the yes: a workbook fact through `dev-workbook`'s Propose; a target entry change through `DEPLOY target write ... --write` after its preview; a skill change through `skill-builder` with the change plan the method describes (target files, cause, smallest change, why not lower, calling skill `dev-deploy`).
-2. `DEPLOY self-edit --workspace "<workspace>" --trigger "<negative response / execution error / repeated correction>" --quote "<the quoted rule, file:line>" --change-text "<the change and its level>" --route "<dev-workbook / target entry / skill-builder>" --status "<proposed, approved, applied: where, or declined: reason>"` (with `--change` inside the dev process); write the row when you propose, and again when its status changes.
+2. Write the row as soon as you propose, before any report: `DEPLOY self-edit --workspace "<workspace>" --trigger "<negative response / execution error / plan check / repeated correction>" --quote "<the quoted rule, file:line>" --change-text "<the change and its level>" --route "<dev-workbook / target entry / deploy file / hook rule / skill-builder>" --status "<proposed, approved, applied: where, or declined: reason>"` (with `--change` inside the dev process); write the row when you propose, and again when its status changes.
 3. Return to the route that was running; a deploy that stopped for the self-edit starts again from [Check the gate](deploy.md#check-the-gate).
 
 ## Skills and agents
