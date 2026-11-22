@@ -62,27 +62,21 @@ def cmd_diff(a, b):
     try:
         core, cdir, ws, settings, state = b.context(a.change_dir, a.user_file)
         now = b.tree_now(ws, settings)
-        root = b.git_root(ws)
         if a.since_build:
             snap = b.snapshot(cdir, a.since_build)
             if snap.get("route") != "fix":
                 raise Fail(f"build {a.since_build} is not a Fix-route build; a re-review starts from a fix")
             base = snap["tree"]
         else:
-            base = b.git(root, "rev-parse", "HEAD^{tree}").strip()
+            base = b.head_trees(ws, settings)
         hunks = b.diff_hunks(ws, settings, base, now)
-        rel = os.path.relpath(ws, root).replace(os.sep, "/")
-        prefix = "" if rel == "." else rel + "/"
-        excludes = [f":(exclude){prefix}{settings.get('plan_folder', 'dev-plans')}", f":(exclude){prefix}.howtoai",
-                    f":(exclude,glob){prefix}**/TESTING.md"]
-        patch = b.git(root, "diff-tree", "-r", "-p", "-U3", "--no-renames", "--no-color", "--no-ext-diff",
-                      base, now, "--", prefix or ".", *excludes)
+        patch = b.patch_text(ws, settings, base, now)
     except b.Fail as e:
         raise Fail(str(e))
     files = {}
     for h in hunks:
         hid = h["id"][len(h["path"]) + 1:]
-        if hid == "binary":
+        if hid in ("binary", "repository-added", "repository-removed"):
             files.setdefault(h["path"], [])
             continue
         if hid.endswith("d"):

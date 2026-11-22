@@ -20,10 +20,10 @@ Entered from [SKILL.md](../SKILL.md#routes) or [Set up a target](setup-target.md
 
 ## Plan the run
 
-1. `DEPLOY target show --workspace "<workspace>" --name <target>`, and `WORKBOOK resolve --workspace "<workspace>" --stage deploy --technologies <the entry's technologies> --paths <the deploy files> --topics "Deployment and operations" Pitfalls --markdown`. A technology in `missing` does not stop the run: say so in the plan and offer `dev-workbook`'s Create route for it after the deploy.
+1. `DEPLOY target show --workspace "<workspace>" --name <target>`, and `WORKBOOK resolve --workspace "<workspace>" --stage deploy --technologies <the entry's technologies> --paths <the deploy files> --markdown`. A technology in `missing` does not stop the run: say so in the plan and offer `dev-workbook`'s Create route for it after the deploy.
 2. Check that the steps and the deploy files agree before anything runs: the image name and tag a build step makes is the one the manifest or compose file references, the ports and paths the checks use are the ones the deploy files expose, and every command names its context. A mismatch is a rule problem: go to [Self-edit](self-edit.md) before running.
 3. Fill in what changes per run (for example `{tag}` from the app's version or the commit) in every step and deploy file that uses it, the same value everywhere, without changing a step's shape; a step whose shape must change is a change to the target entry, shown and approved as in [Set up a target](setup-target.md#ask-and-write).
-4. Show the plan in one message: each step's command and rollback, the watch command, the checks, which steps are production, and the workbook statements that shaped them. Ask for the yes: for a production target, one yes per production step ("approve `apply`"), or for all of them by name; for a non-production target, one yes for the run. Also ask whether a failed check may roll back without asking again.
+4. Show the plan in one message, starting with every entry the gate returned in `checks_skipped`, files outside every repository by name (when one of them is a step's script or a deploy file, it needs its own yes): then each step's command and rollback, the watch command, the checks, which steps are production, and the workbook statements that shaped them. Ask for the yes: for a production target, one yes per production step ("approve `apply`"), or for all of them by name; for a non-production target, one yes for the run. Also ask whether a failed check may roll back without asking again.
 
 ## Approve and run
 

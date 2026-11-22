@@ -1,6 +1,6 @@
 # {title}: test run {n}
 
-Change `{change_id}` · Route: {red check / run} · Run ID: `{run_id}` · Commit: `{commit}` · {date and time} · Result: {green / red / refused}
+Change `{change_id}` · Route: {red check / run} · Run ID: `{run_id}` · Commit: `{commit}` · {date and time} · Result: {green / red / red-failed / refused}
 
 Written by `dev-test`. The Targets table comes from `targets.py classify`, the Results table from `results.py`.
 
@@ -18,7 +18,7 @@ Written by `dev-test`. The Targets table comes from `targets.py classify`, the R
 | --- | --- | --- | --- | --- | --- |
 | {name: command} | {n} | {n} | {n} | {n} | {seconds, from the first pass} |
 
-Passed counts every test that passed in the end, flaky ones included; Flaky counts those again. For a refused run, one row per entry point with "not run (refused)" in every figure.
+Passed counts every test that passed in the end, flaky ones included; Flaky counts those again. For a refused run, one row per entry point with "not run (refused)" in every figure. At stage test, an entry point the user said yes to skipping has "skipped (user's yes)" in every figure.
 
 ## Failures
 
@@ -44,4 +44,4 @@ Passed counts every test that passed in the end, flaky ones included; Flaky coun
 
 ## Next
 
-{review (green) / back to build with the failures above (red) / the question the user must answer (refused)}
+{review (green), plus "waiting: <question>" for one that did not hold the review up / back to build with the failures above (red) / the question the user must answer (refused)}

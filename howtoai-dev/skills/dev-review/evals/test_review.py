@@ -86,6 +86,8 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(json.load(open(d["changed"], encoding="utf-8"))["files"], {"src/calc.py": [[2, 2]]})
 
     def test_rereview_needs_a_fix_build(self):
+        py(DEVCORE, "state", self.cdir, "--patch", json.dumps({"append": {"test_runs": {
+            "n": 1, "route": "red-check", "wi": None, "result": "red", "passed": 0, "failed": 1, "flaky": 0}}}))
         py(BUILD, "start", self.cdir, "--n", "1", "--wi", "whole", "--user-file", self.user)
         code, d = self.r("diff", "--round", "2", "--since-build", "1")
         self.assertEqual(code, 1)

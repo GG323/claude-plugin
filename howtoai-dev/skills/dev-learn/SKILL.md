@@ -46,6 +46,7 @@ compatibility: Needs Python 3 (standard library only) and the dev-core, dev-work
 
 ## Core rules
 
+- **Workbook rules load as `dev-workbook` says.** Before the first `WORKBOOK resolve`, read `${CLAUDE_SKILL_DIR}/../dev-workbook/references/loading.md` and follow it; every resolve prints that rule again.
 - **Lowest level first.** A fix lands at the lowest level that resolves it: a workbook or another reference file, then a goldfish, then a skill file. A skill file change needs evidence, in the record and the change plan, that neither lower level can resolve it; without that evidence, propose the lower level.
 - **Evidence, not opinion.** Every root cause quotes the instruction, statement, or test that let the problem through, with its file and line, or names where the missing one belongs.
 - **The user approves each fix.** Records (the learn record and lesson lines) are written without asking; every fix is proposed with a recommendation and goes to its owner only after the user's yes for that fix. This skill edits no workbook, skill, agent, or settings file itself.

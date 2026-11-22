@@ -11,14 +11,16 @@
 
 Entered from the [Review](review.md#tally-and-hand-on) route, or from [SKILL.md](../SKILL.md#routes) at stage `human-review` when the user answers.
 
-1. Read the latest `review-<round>.md`. When the user's message already gives a choice for every kept finding and every finding outside this change, skip to [Record the choices](#record-the-choices).
+1. Read the latest `review-<round>.md`. When the user's message already gives a choice for every kept finding and every finding outside this change, first ask any question waiting from the test run (Next in the report of the latest run that started at stage `test`), then skip to [Record the choices](#record-the-choices).
 2. Otherwise ask in one message, worded for the user's technical level, with the `grilling` skill's method:
    - The counts line, then each kept finding in one line: ID, impact, location, what goes wrong, and the proposed fix. When two kept findings are the same problem in other words, say so and recommend one choice for both.
    - **Found outside this change:** each finding in the review's Outside this change section in one line, with why it is outside; recommend **later** for a real problem (it becomes a work item for its own change) or **decline** with evidence. Never fix it inside this change unless the user asks.
    - Your recommendation for each: **fix now** for Critical and Major findings and for AUTO-FIX findings; **later** for an ASK finding that is real but outside this work item; **decline** only with evidence that the finding is wrong.
+   - **Possible, not confirmed:** each ID the tally returned in `possible`, in one line with what goes wrong, so a likely bug held back by its score is still seen.
    - Any temporary test worth keeping, as its own yes-or-no question.
+   - Any question waiting from the test run (Next in the report of the latest run that started at stage `test`), as its own question. After a yes to creating `TESTING.md`, create it with `dev-test`'s `TESTINGMD update --create` from the data file the waiting line names for that folder and fill its base part, as step 3 of the Run route's Record says; run no tests.
    - "Reply with your choice for each, for example `R1-C1 fix now, R1-T2 later, R1-P1 decline: the list never holds more than 20 items`. A decline needs a reason."
-3. With no kept findings, ask one question instead: accept the change as reviewed, or name what still worries you.
+3. With no kept findings, ask one question instead, plus any waiting from the test run: accept the change as reviewed, or name what still worries you.
 4. Wait for the answer. A choice with no reason for a decline, or a finding left out, is asked again; never assume a choice.
 
 ## Record the choices

@@ -28,6 +28,8 @@
    - each open question, with its recommended answer, which the approval accepts unless the user says otherwise;
    - any findings left open at the round cap;
    - **found outside this change:** every finding resolved `outside:` in any plan-review round, one line each with its severity and follow-up, and what happens to it - planned later as its own change (recommended for a Blocker or Major) or left as is - which the approval accepts unless the user picks otherwise; "none" when there are none;
+   - **also seen outside this change:** each bug or risk among the explorers' scope facts that this change does not fix, one line each with its file and line;
+   - **possible, not confirmed:** each ID the rounds' tally returned in `possible`, one line each with what goes wrong; the user may have it checked, fixed, or left;
    - the tracker items already created, or still to create, including the plan item.
 2. **Approved** (with or without conditions): set the status line in `plan.md` to "approved on <YYYY-MM-DD>", then run `DEVCORE state "<change folder>" --patch '{"append": {"approvals": {"what": "plan", "by": "user", "conditions": "<conditions, or none>"}}, "stage": "tests-first"}'` and render the page again. Tell the user the next stage: `dev-test` writes the tests first from the Verification section. When `dev-test` is not installed, say so and stop here.
 3. **Changes asked:** a wording fix or a clarification is edited in `plan.md`, the page is rendered again, and the question asked again. A material change (a decision, the scope, the size, a data or contract change, or a Verification criterion) goes back to the stage it affects ([grill](grill.md) or [draft](draft.md)), then through [review](review.md) again (one round for Small), then here.

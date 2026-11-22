@@ -14,11 +14,13 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from datetime import datetime
 from pathlib import Path
 
 PLUGIN = Path(__file__).resolve().parents[2]
 CORE = PLUGIN / "skills" / "dev-core"
 DEVCORE = CORE / "scripts" / "devcore.py"
+WORKBOOK = PLUGIN / "skills" / "dev-workbook" / "scripts" / "workbook.py"
 REVIEW = PLUGIN / "skills" / "dev-review" / "scripts" / "review.py"
 DOCUMENTS = {
     "plan.md": r"plan\.md",
@@ -31,6 +33,9 @@ DOCUMENTS = {
     "build.md": r"build-\d+\.md",
     "wi.md": r"\d+\.md",
 }
+AFTER_TEST = ("review", "human-review", "deploy", "done")  # only a green run at stage test leads here
+SKIPPED = "skipped (user's yes)"
+NO_COUNTS = "ran, no counts"
 SKIP = shutil.ignore_patterns(".git", "bin", "obj", "TestResults", ".env.production")
 
 
@@ -87,6 +92,18 @@ def check_receipts(changes):
     return result(problems, bool(changes))
 
 
+def check_all_rules(copy, changes):
+    every = set(script(WORKBOOK, "resolve", "--workspace", copy).get("receipt", {}).get("statements", []))
+    problems, seen = [], 0
+    for change in changes:
+        for receipt in json.loads((change / "state.json").read_text(encoding="utf-8")).get("receipts", []):
+            seen += 1
+            short = len(every - set(receipt.get("statements", [])))
+            if short:
+                problems.append(f"{change.name}: the {receipt.get('stage')} receipt lacks {short} of {len(every)} statements")
+    return result(problems, seen > 0 and bool(every))
+
+
 def check_templates(changes):
     problems, seen = [], 0
     for change in changes:
@@ -99,6 +116,90 @@ def check_templates(changes):
                 text = path.read_text(encoding="utf-8")
                 if headings(text) != expected:
                     problems.append(f"{path.name}: headings differ from {template}")
+    return result(problems, seen > 0)
+
+
+def started_at_test(state, run):
+    """Whether a run started at stage test: the last stage set before the second the run was recorded."""
+    try:
+        when = datetime.fromisoformat(run["at"])
+        before = [h["stage"] for h in state.get("history", []) if datetime.fromisoformat(h["at"]) < when]
+    except (KeyError, ValueError):
+        return False
+    return bool(before) and before[-1] == "test"
+
+
+def moves_without_a_run(state, runs):
+    """Each move on from the tests that had no green run from stage test since the stage before it."""
+    moves, history = [], state.get("history", [])
+    for before, entry in zip(history, history[1:]):
+        if entry["stage"] not in AFTER_TEST or before["stage"] in AFTER_TEST:
+            continue
+        since, until = datetime.fromisoformat(before["at"]), datetime.fromisoformat(entry["at"])
+        if before["stage"] != "test" or not any(since <= datetime.fromisoformat(r["at"]) <= until for r in runs):
+            moves.append(f"{before['stage']} to {entry['stage']} at {entry['at']}")
+    return moves
+
+
+def result_rows(text, names):
+    """Configured name to its figures, from a test-run report's Results table."""
+    part = re.search(r"^## Results$(.*?)(?=^## |\Z)", text, re.M | re.S)
+    longest_first = sorted(names, key=len, reverse=True)
+    rows = {}
+    for line in part.group(1).splitlines() if part else []:
+        cells = [cell.strip() for cell in re.split(r"(?<!\\)\|", line.strip())[1:-1]]
+        if len(cells) < 2:
+            continue
+        first = cells[0].lstrip("`* ").lower()
+        for name in longest_first:
+            if re.match(re.escape(name.lower()) + r"[`* ]*(:|$)", first):
+                rows.setdefault(name, []).append(cells[1:4])
+                break
+    return rows
+
+
+def ran(figures):
+    if figures[0] == NO_COUNTS:
+        return True
+    return figures[0].isdigit() and any(int(cell) for cell in figures if cell.isdigit())
+
+
+def check_entry_points(copy, changes):
+    answer = script(DEVCORE, "settings", "--workspace", copy)
+    if not answer.get("ok"):
+        return result([f"settings refused: {answer.get('error')}"])
+    points = (answer["settings"].get("testing") or {}).get("entry_points") or []
+    if not points:
+        return result([], False)
+    names = [point["name"] for point in points if point.get("name")]
+    problems, seen = [], 0
+    if len(names) < len(points):
+        problems.append("settings: an entry point has no name, so its row cannot be found")
+        seen += 1
+    for name in sorted({name for name in names if names.count(name) > 1}):
+        problems.append(f"settings: two entry points are named {name}, so one row would stand for both")
+        seen += 1
+    for change in changes:
+        state = json.loads((change / "state.json").read_text(encoding="utf-8"))
+        runs = [r for r in state.get("test_runs", [])
+                if r.get("route") == "run" and r.get("result") == "green" and started_at_test(state, r)]
+        for move in moves_without_a_run(state, runs):
+            seen += 1
+            problems.append(f"{change.name}: moved from {move} with no green run from stage test in that round")
+        if not runs:
+            if state.get("stage") in AFTER_TEST:
+                seen += 1
+                problems.append(f"{change.name}: past stage test with no green run that started at stage test")
+            continue
+        for run in runs:
+            seen += 1
+            report = change / (run.get("report") or f"test-run-{run['n']}.md")
+            rows = result_rows(report.read_text(encoding="utf-8"), names) if report.is_file() else {}
+            for name in names:
+                if not any(ran(row) or row[0] == SKIPPED for row in rows.get(name, [])):
+                    problems.append(f"{report.name}: entry point {name} neither ran nor was skipped with the user's yes")
+            if not any(ran(row) for found in rows.values() for row in found):
+                problems.append(f"{report.name}: green, and no entry point ran")
     return result(problems, seen > 0)
 
 
@@ -158,6 +259,8 @@ def check(workspace):
             "leftovers": check_leftovers(changes),
             "state_and_index": check_state(copy, changes),
             "receipts": check_receipts(changes),
+            "all_rules": check_all_rules(copy, changes),
+            "entry_points": check_entry_points(copy, changes),
         }
 
 

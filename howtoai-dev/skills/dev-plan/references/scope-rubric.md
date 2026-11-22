@@ -19,7 +19,7 @@ Rate each factor from the scope facts. The riskiest factor sets the size, not th
 | Outside effects | None | New calls to a service already in use | New sends, payments, or external services; anything a user outside the team sees at once |
 | Repositories | One | One | More than one |
 | Reversibility | A revert undoes it | A revert plus a known step (a down migration, a flag) | A revert alone does not undo it |
-| Untested neighbours | Covered by tests | Some callers untested | The touched path has no tests and many callers |
+| Untested neighbours | Covered by tests, or untested with at most three callers (`dev-test` pins them with characterization tests before the change) | More than three callers, some of them untested | The touched path has no tests and many callers |
 | Precedent | The codebase does the same thing elsewhere | A new pattern for this codebase that a workbook covers | A technology with no workbook and no precedent |
 
 Each fact in the Scope and size table that sets a factor is cited next to the size reason, for example "Large: renames `users.email` (`db/migrations/012.sql:4`), read by the billing service (inferred: shared schema in `docs/architecture.md`)".

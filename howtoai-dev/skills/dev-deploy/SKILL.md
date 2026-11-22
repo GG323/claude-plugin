@@ -46,6 +46,7 @@ compatibility: Needs Python 3 (standard library only), git, the target's own CLI
 
 ## Core rules
 
+- **Workbook rules load as `dev-workbook` says.** Before the first `WORKBOOK resolve`, read `${CLAUDE_SKILL_DIR}/../dev-workbook/references/loading.md` and follow it; every resolve prints that rule again.
 - **Existing tools first.** Use the project's own deploy files and the computer's own CLIs. A new deploy file (for example a Kubernetes manifest) or tool is written or installed only when none exists, and only after the user's yes.
 - **One yes per production step.** A production step runs only after the user approves that step in chat. A target marked `"production": false` still shows its plan and asks once for the whole run. Either way, `DEPLOY approve` records each step's exact command with a short expiry before it runs, so every step in the log names its approval; for production steps that record is the only thing that lets the `dev-safe-target` hook pass the command.
 - **Rollback first.** No step runs without its rollback written down; a rollback runs only after the user's yes, except when the user approved "roll back on a failed check" for this run.

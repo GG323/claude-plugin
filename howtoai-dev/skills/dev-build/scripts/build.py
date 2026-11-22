@@ -37,6 +37,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CORE = os.path.abspath(os.path.join(HERE, "..", "..", "dev-core", "scripts", "devcore.py"))
@@ -117,40 +118,183 @@ def write_json(path, data):
 
 def git(ws, *args, env=None):
     p = subprocess.run(["git", "-c", "core.quotepath=off", "-c", f"safe.directory={ws.replace(os.sep, '/')}", *args],
-                       cwd=ws, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
+                       cwd=ws, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env,
+                       stdin=subprocess.DEVNULL)
     if p.returncode != 0:
         raise Fail(f"git {' '.join(args[:2])} failed: {p.stderr.strip()[:300]}")
     return p.stdout
 
 
-def git_root(ws):
-    return os.path.abspath(git(ws, "rev-parse", "--show-toplevel").strip())
+SKIP_DIRS = {".git", ".howtoai", "node_modules", ".venv", "venv"}  # never a name a repository could have
 
 
-def tree_now(ws, settings):
-    """Tree ID of the working tree as `git add -A` would stage it, through a throwaway index.
+def git_top(folder):
+    p = subprocess.run(["git", "-c", f"safe.directory={folder.replace(os.sep, '/')}", "rev-parse", "--show-toplevel"],
+                       cwd=folder, capture_output=True, text=True, encoding="utf-8", errors="replace", stdin=subprocess.DEVNULL)
+    return os.path.abspath(p.stdout.strip()) if p.returncode == 0 else None
 
-    The plan folder, .howtoai/, and TESTING.md files (dev-test rewrites their Latest run section after
-    every run) are left out, so records written during the build do not change it."""
-    root = git_root(ws)
-    base = os.path.relpath(ws, root).replace(os.sep, "/")
-    base = "" if base == "." else base + "/"
-    excludes = [f":(exclude){base}{settings.get('plan_folder', 'dev-plans')}", f":(exclude){base}.howtoai",
-                f":(exclude,glob){base}**/TESTING.md"]
+
+def gitlinks(root):
+    """Submodules: the outer repository records their commit, so its tree must keep them."""
+    entries = git(root, "ls-files", "-s", "-z").split("\0")
+    return {e.split("\t", 1)[1] for e in entries if e.startswith("160000 ")}
+
+
+def repositories(ws, settings):
+    """(key, root) of every repository the workspace reaches: the one around it, and each one inside it.
+
+    The key is the root's path relative to the workspace ("." for the workspace itself)."""
+    ws = os.path.abspath(ws)
+    roots = []
+    top = subprocess.run(["git", "-c", f"safe.directory={ws.replace(os.sep, '/')}", "rev-parse", "--show-toplevel"],
+                         cwd=ws, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if top.returncode == 0:
+        roots.append(os.path.abspath(top.stdout.strip()))
+    elif os.path.isfile(os.path.join(ws, ".git")) or (os.path.isdir(os.path.join(ws, ".git")) and os.listdir(os.path.join(ws, ".git"))):
+        raise Fail("the workspace has a .git that git does not accept; repair or remove it")
+    elif "not a git repository" not in top.stderr:
+        raise Fail(f"git rev-parse failed: {top.stderr.strip()[:300]}")
+    plans = settings.get("plan_folder", "dev-plans")
+    for folder, dirs, files in os.walk(ws):
+        if folder != ws and (".git" in files or (".git" in dirs and os.listdir(os.path.join(folder, ".git")))):
+            if not any(os.path.realpath(folder) == os.path.realpath(r) for r in roots):
+                if os.path.realpath(git_top(folder) or "") != os.path.realpath(folder):
+                    raise Fail(f"{os.path.relpath(folder, ws)} has a .git that git does not accept; repair or remove it")
+                roots.append(folder)
+        dirs[:] = sorted(d for d in dirs if d not in SKIP_DIRS and not (folder == ws and d == plans)
+                         and not getattr(os.path, "isjunction", lambda p: False)(os.path.join(folder, d)))
+    if not roots:
+        raise Fail(f"no git repository at, above, or inside {ws}")
+    return [(os.path.relpath(r, ws).replace(os.sep, "/"), r) for r in roots]
+
+
+def pathspecs(ws, settings, root, repos):
+    """What one repository's snapshot leaves out: the records, and the repositories inside it."""
+    plans = settings.get("plan_folder", "dev-plans")
+    inside = os.path.relpath(ws, root).replace(os.sep, "/")
+    specs = []
+    if inside != ".." and not inside.startswith("../"):  # the workspace lies in this repository
+        base = "" if inside == "." else inside + "/"
+        specs += [f":(exclude){base}{plans}", f":(exclude){base}.howtoai", f":(exclude,glob){base}**/TESTING.md"]
+    else:
+        specs.append(":(exclude,glob)**/TESTING.md")
+    links = gitlinks(root) if len(repos) > 1 else set()
+    below = [os.path.relpath(other, root).replace(os.sep, "/") for _, other in repos]
+    below = [rel for rel in below if rel not in (".", "..") and not rel.startswith("../")]
+    for rel in below:
+        if any(rel.startswith(parent + "/") for parent in below):
+            continue  # a repository nearer to it leaves it out; git refuses a pathspec inside a submodule
+        if rel not in links:
+            specs.append(f":(exclude){rel}")
+    return specs
+
+
+def repo_tree(ws, settings, root, repos):
     fd, idx = tempfile.mkstemp(prefix="devbuild-index-")
     os.close(fd)
     os.remove(idx)
     env = dict(os.environ, GIT_INDEX_FILE=idx)
     try:
-        has_head = subprocess.run(["git", "-c", f"safe.directory={root.replace(os.sep, '/')}", "rev-parse", "--verify", "-q", "HEAD"],
-                                  cwd=root, capture_output=True).returncode == 0
-        if has_head:
+        if has_commit(root):
             git(root, "read-tree", "HEAD", env=env)
-        git(root, "add", "-A", "--", ".", *excludes, env=env)
+        wanted = pathspecs(ws, settings, root, repos)
+        unnameable = [s for s in wanted if ignored(root, s)]
+        git(root, "add", "-A", "--", ".", *[s for s in wanted if s not in unnameable], env=env)
+        if unnameable and has_commit(root):
+            # ignored but tracked: add updated them, so put them back as committed
+            git(root, "reset", "-q", "HEAD", "--", *[s[len(":(exclude)"):] for s in unnameable], env=env)
         return git(root, "write-tree", env=env).strip()
     finally:
         if os.path.exists(idx):
             os.remove(idx)
+
+
+def ignored(root, spec):
+    """git add refuses an exclude naming an ignored path, which is left out of the tree anyway."""
+    if not spec.startswith(":(exclude)"):
+        return False
+    return subprocess.run(["git", "-c", f"safe.directory={root.replace(os.sep, '/')}", "check-ignore", "-q", "--no-index", "--",
+                           spec[len(":(exclude)"):]], cwd=root, capture_output=True).returncode == 0
+
+
+def has_commit(root):
+    return subprocess.run(["git", "-c", f"safe.directory={root.replace(os.sep, '/')}", "rev-parse", "--verify", "-q", "HEAD"],
+                          cwd=root, capture_output=True).returncode == 0
+
+
+def join_trees(pairs):
+    """One ID for the workspace: the tree itself for one repository, else tree:key pairs."""
+    if len(pairs) == 1 and (pairs[0][0] == "." or pairs[0][0].startswith("..")):
+        return pairs[0][1]
+    return ";".join(f"{tree}:{urllib.parse.quote(key, safe='/. -_@+')}" for key, tree in pairs)
+
+
+def split_trees(tree_id, repos):
+    if ":" not in tree_id:
+        key = repos[0][0]
+        if key != "." and not key.startswith(".."):
+            raise Fail("the repository around the workspace is in the snapshot and is gone now")
+        return {key: tree_id}
+    return {urllib.parse.unquote(key): tree for tree, key in (pair.split(":", 1) for pair in tree_id.split(";"))}
+
+
+def empty_tree(root):
+    return git(root, "hash-object", "-w", "-t", "tree", "--stdin").strip()
+
+
+def tree_now(ws, settings):
+    """Tree ID of the working tree as `git add -A` would stage it, through a throwaway index, in every
+    repository of the workspace.
+
+    The plan folder, .howtoai/, and TESTING.md files (dev-test rewrites their Latest run section after
+    every run) are left out, so records written during the build do not change it."""
+    repos = repositories(ws, settings)
+    return join_trees([(key, repo_tree(ws, settings, root, repos)) for key, root in repos])
+
+
+def head_trees(ws, settings):
+    """The same kind of ID for what is committed."""
+    repos = repositories(ws, settings)
+    return join_trees([(key, git(root, "rev-parse", "HEAD^{tree}").strip() if has_commit(root) else empty_tree(root))
+                       for key, root in repos])
+
+
+def committed(root):
+    return git(root, "rev-parse", "HEAD^{tree}").strip() if has_commit(root) else empty_tree(root)
+
+
+def repo_moves(ws, settings, base, head):
+    """Repositories that appeared or went since base: one hunk each, because their files are not this build's lines."""
+    repos = repositories(ws, settings)
+    before, after = set(split_trees(base, repos)), set(split_trees(head, repos))
+    return sorted([(key, "repository-added") for key in after - before] + [(key, "repository-removed") for key in before - after])
+
+
+def repo_changes(ws, settings, base, head):
+    """(key, root, base tree, head tree, pathspecs) for each repository that differs."""
+    repos = repositories(ws, settings)
+    before, after = split_trees(base, repos), split_trees(head, repos)
+    changes = []
+    for key, root in repos:
+        old, new = before.get(key) or committed(root), after.get(key) or committed(root)
+        if old != new:
+            changes.append((key, root, old, new, pathspecs(ws, settings, root, repos)))
+    return changes
+
+
+def patch_text(ws, settings, base, head):
+    parts = [f"# {key}: {what.replace('-', ' ')}; its files are not in this patch\n"
+             for key, what in repo_moves(ws, settings, base, head)]
+    for key, root, old, new, specs in repo_changes(ws, settings, base, head):
+        if key == "." or key.startswith(".."):  # the workspace's own repository, or the one around it
+            scope = os.path.relpath(ws, root).replace(os.sep, "/")
+            names = [] if scope == "." else [f"--relative={scope}/"]
+        else:
+            scope = "."
+            names = [f"--src-prefix=a/{key}/", f"--dst-prefix=b/{key}/"]
+        parts.append(git(root, "diff-tree", "-r", "-p", "-U3", "--no-renames", "--no-color", "--no-ext-diff", *names,
+                         old, new, "--", scope, *specs))
+    return "".join(parts)
 
 
 def when(value):
@@ -175,7 +319,14 @@ def classify(rel, settings):
 
 
 def diff_hunks(ws, settings, base, head):
-    root = git_root(ws)
+    hunks = [{"id": f"{key}:{what}", "path": key, "class": classify(key, settings)}
+             for key, what in repo_moves(ws, settings, base, head)]
+    for key, root, old, new, _ in repo_changes(ws, settings, base, head):
+        hunks += repo_hunks(ws, settings, root, old, new)
+    return hunks
+
+
+def repo_hunks(ws, settings, root, base, head):
     text = git(root, "diff-tree", "-r", "-p", "-U0", "--no-renames", "--no-color", "--no-ext-diff", base, head)
     plan_folder = settings.get("plan_folder", "dev-plans")
     skip = (plan_folder + "/", ".howtoai/")
@@ -237,6 +388,17 @@ def cmd_start(a):
     path = os.path.join(raw_dir(cdir, a.n), "snapshot.json")
     if os.path.exists(path):
         raise Fail(f"build {a.n} already has a snapshot; use the next build number")
+    if a.route == "build":
+        checks = [r for r in state.get("test_runs") or [] if r.get("route") == "red-check"
+                  and (a.wi == "whole" or str(r.get("wi")) in ("None", "whole", a.wi))]
+        latest = {}
+        for run in checks:
+            if a.wi != "whole" or str(run.get("wi")) in ("None", "whole"):
+                latest.clear()  # one item: its newest matching check decides; whole plan: a whole-plan check replaces the items'
+            latest[str(run.get("wi"))] = run.get("result")
+        last = next((r for r in latest.values() if r != "red"), "red" if latest else "missing")
+        if last != "red":
+            raise Fail(f"the latest red check for this work is {last}, not red; dev-test's Write route runs it first")
     tree = tree_now(ws, settings)
     snap = {"n": a.n, "wi": a.wi, "route": a.route, "review": review, "tree": tree, "at": now_iso(a.now),
             "stage": state.get("stage")}

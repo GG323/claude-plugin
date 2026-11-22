@@ -4,7 +4,8 @@ Usage: py -3 -I -B setup_bed.py <new or empty folder> [--fresh]
 
 --fresh leaves the dev settings out, for the fresh-install flow.
 
-Creates <folder>/workspace (AGENTS.md, two git repositories, the dev settings)
+Creates <folder>/workspace (AGENTS.md, two git repositories, the dev settings, and
+the deny rule dev-core's Setup writes after a yes)
 and <folder>/answer-key.json, which lives outside the workspace so the skills
 and reviewers under test do not see it.
 
@@ -88,7 +89,7 @@ None apply.
     "src/Api/Program.cs": """using Shop.Api.Orders;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddSingleton<OrderStore>();
+builder.Services.AddSingleton(_ => new OrderStore());
 builder.Services.AddSingleton<OrderQueries>();
 
 var app = builder.Build();
@@ -405,6 +406,7 @@ output "replicas" {
 
 SETTINGS = {
     "tracker": {"kind": "markdown"},
+    "plan": {"publish": "html-file"},
     "environments": {
         "allow": [
             {"name": "local postgres", "kind": "local", "match": {"host": "127.0.0.1"}},
@@ -440,6 +442,11 @@ SETTINGS = {
             },
         ]
     },
+}
+
+CLAUDE_SETTINGS = {
+    "_source": "dev-core Setup: deny rules for secret env files, the approved result",
+    "permissions": {"deny": ["Read(**/.env.production)"]},
 }
 
 ANSWER_KEY = {
@@ -491,7 +498,10 @@ def build(out, fresh=False):
 
     if not fresh:
         settings = json.dumps(SETTINGS, indent=1) + "\n"
-        write_tree(workspace, {".howtoai/dev/settings.json": settings})
+        write_tree(workspace, {
+            ".howtoai/dev/settings.json": settings,
+            ".claude/settings.json": json.dumps(CLAUDE_SETTINGS, indent=1) + "\n",
+        })
     write_tree(out, {"answer-key.json": json.dumps(ANSWER_KEY, indent=1) + "\n"})
     return workspace
 

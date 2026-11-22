@@ -17,8 +17,8 @@
 
 Entered from [SKILL.md](../SKILL.md#routes) at stage `review`.
 
-1. **Check subagents.** Start one general-purpose subagent with only: "Reply with the word ready." If it cannot start or does not answer, halt: tell the user the review needs fresh subagents, which the harness did not start, and change nothing. A review by you alone would not be a goldfish review.
-2. **The round.** `DEVCORE state "<change folder>" --patch '{"increment": {"review": 1}}'`; the round `<n>` is `loops.review` in the result.
+1. **Subagents.** Start no probe. When this harness has no way to start subagents, halt here; when the first reviewer in [Pass 1](#pass-1-spec) cannot start or does not answer, halt there. Either way, tell the user the review needs fresh subagents, which the harness did not start, and change nothing: no state, no round, no receipt, no findings, no review. A review by you alone would not be a goldfish review.
+2. **The round.** `<n>` is one more than `loops.review` in state (none counts as 0). Record nothing in state yet: the round and its receipt are recorded in [Pass 1](#pass-1-spec), once the first reviewer answered, so a halt leaves the state as it was and a retry is the same round.
 3. **Re-review or first review.** Round 1 reviews the whole change. A later round reviews only the latest fix: the highest `n` in `builds` whose `route` is `fix`, built after the previous review.
 4. **Declined findings.** Write `<change folder>/raw/review-<n>/declined.md` with one line per entry of `declined` in state (its finding and reason), or "none". Every brief names it.
 5. Tell the user in one line: "Review round <n> of `<change id>`".
@@ -31,13 +31,13 @@ Entered from [SKILL.md](../SKILL.md#routes) at stage `review`.
 
 ## Consult the workbook
 
-1. `WORKBOOK resolve --workspace "<workspace>" --stage review --paths <the changed files, with their project files> --topics Pitfalls "Idioms and patterns" Security Performance Testing --markdown`, saved as `<change folder>/raw/review-<n>/workbook-statements.md`.
-2. Run it again without `--markdown` for the receipt, and record it: `DEVCORE state "<change folder>" --patch '{"append": {"receipts": <receipt>}}'`.
+1. `WORKBOOK resolve --workspace "<workspace>" --stage review --paths <the changed files, with their project files> --markdown`, saved as `<change folder>/raw/review-<n>/workbook-statements.md`.
+2. Run it again without `--markdown`, saved as `<change folder>/raw/review-<n>/workbook-resolve.json`, for the receipt that Pass 1 records.
 3. A technology in `missing` does not stop the review: brief the reviewers without its statements, and say in Test inspection which technology had no workbook.
 
 ## Pass 1: spec
 
-1. Start `goldfish-spec` with the brief [references/viewpoints.md](../references/viewpoints.md#what-each-brief-holds) gives it and the prefix `R<n>-S`. Save its reply exactly as it came to `raw/review-<n>/spec.md`.
+1. Start `goldfish-spec` with the brief [references/viewpoints.md](../references/viewpoints.md#what-each-brief-holds) gives it and the prefix `R<n>-S`. Save its reply exactly as it came to `raw/review-<n>/spec.md`, then record the round and the receipt: `DEVCORE state "<change folder>" --patch '{"increment": {"review": 1}, "append": {"receipts": <receipt>}}'`.
 2. Read its table. When it has a Critical finding (a criterion not built, or must-not-change behaviour broken), skip pass 2: the change is not complete, so quality findings would be about code that is about to change. Say so in the chat line and go to [Collect the findings](#collect-the-findings).
 
 ## Pass 2: quality
@@ -47,7 +47,7 @@ Entered from [SKILL.md](../SKILL.md#routes) at stage `review`.
 
 ## Collect the findings
 
-1. `FINDINGS collect "<change folder>/raw/review-<n>" --kind code`. It merges every reply in the round's raw folder, `process.md` included, and turns the same problem raised by two reviewers (same location and quote) into one finding that names the other. When it refuses a reply (an impact off the scale, a duplicate ID), send that reviewer the error and ask for its table again, then collect again.
+1. `FINDINGS collect "<change folder>/raw/review-<n>" --kind code`. It merges every reply in the round's raw folder, `process.md` included, and turns the same problem raised by two reviewers (same location and quote) into one finding that names the other. When it says a reviewer is blocked, or that a reply has neither a table nor "No findings", run that reviewer once more; a second time, stop and tell the user what it could not read. When it refuses a reply for another reason (an impact off the scale, a duplicate ID), send that reviewer the error and ask for its table again, then collect again.
 2. The goldfish searched wide, so the same problem can come back from two viewpoints in different words, and some findings lie outside the change. Keep them all in the round: the scorer scores repeats low, the tally sends outside findings to their own section, and you point out any remaining repeat to the user in [Human review](human-review.md#ask-for-the-choices). Never drop a finding because it is outside the change.
 
 ## Inspect the tests
@@ -55,7 +55,7 @@ Entered from [SKILL.md](../SKILL.md#routes) at stage `review`.
 You check the evidence the reviewers can only read about.
 
 1. Read the latest test-run report and its result files, and the test data the changed code is tested with. Note what ran, what passed, and which changed lines the tests reach.
-2. For a finding that a test could confirm or refute, or a gap the reviewers named, write a temporary test next to the existing tests, named `Review<n>_<what>` (or the framework's equivalent), end-to-end when the finding is about a user path. Run the tests through `dev-test`'s Run route as a progress run; its target checks and safety rules apply. A temporary test that fails as the finding predicts makes the finding **confirmed**: ask its reviewer to mark it so, or note it for the scorer.
+2. For a finding that a test could confirm or refute, or a gap the reviewers named, write a temporary test next to the existing tests, named `Review<n>_<what>` (or the framework's equivalent), end-to-end when the finding is about a user path. Run the tests through `dev-test`'s Run route as a progress run; its target checks and safety rules apply. A temporary test that fails as predicted makes the bug **confirmed**: write it to `raw/review-<n>/confirmed.md` as a row in the code reviewers' table shape, with the ID `R<n>-I<m>`, an impact on that scale, the changed line it depends on (or `outside` in Change), and the test as its Mark, also when no reviewer raised it. Then run `FINDINGS collect` again; these rows get confidence 100 and need no score or verdict.
 3. Remove every temporary test, run the tests once more to show the suite is as it was, and list each temporary test with its result. Keeping one in the suite is the user's decision: ask at the human review, and note it as a fix-now finding if they agree.
 4. Write the inspection notes as three bullets in `raw/review-<n>/inspection.md`: **Runs** (what ran and the results), **Temporary tests** (each one, what it showed, and that it was removed), **Coverage gaps** (changed lines no test reaches; "none").
 

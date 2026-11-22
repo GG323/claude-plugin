@@ -92,7 +92,7 @@ Show the values as a preview with `DEVCORE setup --workspace "<workspace>" --sco
 
 ## Look up the project
 
-Read files only, never a real `.env` or other secret store. Run the lookups in step 1 of [dev-core's Setup route](skills/dev-core/SKILL.md#setup): tracker signs, technologies, deploy entry points, environments, test entry points, and gate commands. Add:
+Read files only, never a real `.env` or other secret store. Run the lookups in step 1 of [dev-core's Setup route](skills/dev-core/SKILL.md#setup): tracker signs, technologies, deploy entry points, environments, test entry points, secret env files, and gate commands. Add:
 
 - **Code projects and versions:** for each technology, every code project with its own version (for .NET, each `*.csproj` `TargetFramework` and any `global.json`; for others, the manifest's runtime or engine field). These feed [Workbooks](#workbooks).
 - **Existing settings:** `DEVCORE settings --workspace "<workspace>"`. On a rerun, every value already set is the recommendation for its question.
@@ -126,7 +126,7 @@ When the user chose "now", run [dev-deploy's Set up a target route](skills/dev-d
 
 ## Write and record
 
-1. **Project settings:** `DEVCORE setup --workspace "<workspace>" --values '<json>'` with every project decision, including the tracker and plan format when they equal the user's defaults, because the project file is what teammates share, as a preview; after a yes, again with `--write`. A refusal (an unknown key, a value that looks like a secret, or `plan.publish` `tracker` with Markdown work items) is shown to the user and the value asked again.
+1. **Project settings:** `DEVCORE setup --workspace "<workspace>" --values '<json>'` with every project decision, including the tracker and plan format when they equal the user's defaults, because the project file is what teammates share, as a preview; after a yes, again with `--write`. A refusal (an unknown key, a value that looks like a secret, or `plan.publish` `tracker` with Markdown work items) is shown to the user and the value asked again. Then run step 5 of [dev-core's Setup route](skills/dev-core/SKILL.md#setup): the deny rules for secret env files, with their own yes.
 2. **Install record:** copy [assets/install-record.md](assets/install-record.md) to `<workspace>/.howtoai/dev/install.md` and fill every placeholder; a row with nothing to say gets "none". Read the date from the system clock (for example `Get-Date -Format yyyy-MM-dd` or `date +%F`), never from memory. On a rerun, rewrite it in full.
 3. **AGENTS.md:** show this line and add it after a yes to the workspace `AGENTS.md`'s skills and agents section: "`howtoai-dev` - the dev process (plan, tests first, build, review, deploy, learn); settings in `.howtoai/dev/settings.json`, install record in `.howtoai/dev/install.md`." Skip it when this line is already there. When another `howtoai-dev` line is there, show the old and new line and replace the old one after a yes, so the section keeps one.
 
@@ -135,7 +135,7 @@ When the user chose "now", run [dev-deploy's Set up a target route](skills/dev-d
 Run each check, and record the result in the install record's Checks table:
 
 1. `CHECK deps`: `deps_ok` is true, and no item a chosen option needs is `missing`. An item for a step that was deferred or left out (for example hooks not registered yet) is recorded under Left out, not as a failed check.
-2. `DEVCORE settings --workspace "<workspace>"`: `configured` is true and shows the approved values.
+2. `DEVCORE settings --workspace "<workspace>"`: `configured` is true and shows the approved values, and `<workspace>/.claude/settings.json` holds each approved deny rule for secret env files.
 3. `dev-workbook`'s `workbook.py validate` on each workbook written in this run is clean.
 4. Dev mode: `DEVMODE status --workspace "<workspace>"`, where every link from this run is `link-ok`; plugin mode: `claude plugin list` shows `howtoai-dev`.
 5. `CHECK index` is clean: the change index still matches the plugin's files.
@@ -176,6 +176,7 @@ Turning dev mode off, each step previewed and written only after a yes:
 - **Deliverables**, each written only after a preview and the user's yes:
   - the user's defaults in `~/.claude/howtoai/dev-settings.json` and the project's settings in `<workspace>/.howtoai/dev/settings.json`;
   - the `## Dev mode` entry in the workspace `AGENTS.md`, and one skills-and-agents line there;
+  - deny rules for secret env files in `<workspace>/.claude/settings.json`, through `update-config`;
   - workbooks and version workbooks, through `dev-workbook`; deploy targets in `.howtoai/deploy/targets.json`, through `dev-deploy`;
   - in dev mode, links in `~/.claude/skills` and `~/.claude/agents`, and the two hooks in `~/.claude/settings.json`; in plugin mode, the installed plugin;
   - the install record `<workspace>/.howtoai/dev/install.md`, from [assets/install-record.md](assets/install-record.md), with its fixed sections (Run, Decisions, Checks, Left out) and every row filled or "none".

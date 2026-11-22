@@ -20,7 +20,7 @@ Entered from [SKILL.md](../SKILL.md#routes) when the target is not in the target
 ## Get the workbooks
 
 1. List the technologies the target uses: the runtime (for example `dotnet`), the packaging (`docker`), and the platform (`kubernetes`).
-2. `WORKBOOK resolve --workspace "<workspace>" --stage deploy --technologies <every technology in the list> --paths <the deploy files> --topics "Deployment and operations" Commands Pitfalls --markdown`; naming the technologies matters, because a platform with no deploy files yet (no manifest) matches no path. A technology in `missing` has no workbook yet: list it for [Ask and write](#ask-and-write): `dev-workbook`'s Create route finds or makes it from official sources after the user's yes.
+2. `WORKBOOK resolve --workspace "<workspace>" --stage deploy --technologies <every technology in the list> --paths <the deploy files> --markdown`; naming the technologies matters, because a platform with no deploy files yet (no manifest) matches no path. A technology in `missing` has no workbook yet: list it for [Ask and write](#ask-and-write): `dev-workbook`'s Create route finds or makes it from official sources after the user's yes.
 3. Keep the statements that shape the steps: build and image rules, how the platform rolls out and rolls back, how its image store works, and how to read its failures.
 
 ## Draft the target entry

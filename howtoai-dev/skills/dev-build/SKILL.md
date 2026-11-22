@@ -42,14 +42,15 @@ Each route is one file in `routes/`. "Stage" in this skill always means a stage 
 
 | State or request | Route |
 | --- | --- |
-| Stage `build` with a red-check run in `test_runs`, or the user asks to build a work item of such a change | [Build](routes/build.md) |
+| Stage `build` whose latest red-check run in `test_runs` is `red`, or the user asks to build a work item of such a change | [Build](routes/build.md) |
 | Stage `human-review` and the latest `review-<round>.md` has findings marked fix now, or the user asks to apply them | [Fix](routes/fix.md) |
-| Stage `tests-first`, or stage `build` with no red-check run | Stop: the tests come first; hand back to `dev-test`'s Write route |
+| Stage `tests-first`, or stage `build` whose latest red-check run is missing or `red-failed` | Stop: the tests come first; hand back to `dev-test`'s Write route |
 | Stage `plan` or `accept` | Stop: the plan is not approved yet; hand back to `dev-plan` |
 | Stage `test` or `review` | Stop: the build is done; hand on to `dev-test`'s Run route or `dev-review` |
 
 ## Core rules
 
+- **Workbook rules load as `dev-workbook` says.** Before the first `WORKBOOK resolve`, read `${CLAUDE_SKILL_DIR}/../dev-workbook/references/loading.md` and follow it; every resolve prints that rule again.
 - **Smallest complete change.** Take the first rung of [the ladder](#the-ladder) that fully works, and finish every part the work item needs, because a short diff that leaves a caller broken is not done.
 - **Every changed line traces to the work item.** A hunk with no acceptance criterion, test-map row, or fix-now finding behind it is reverted, not justified. Tidying, renaming, and reformatting that the work item does not need stay out, also when asked in passing; offer them as a new work item instead.
 - **Never cut safety.** Validation at trust boundaries, error handling that prevents data loss, security, and accessibility stay, also in code you move or merge.
@@ -124,7 +125,7 @@ Send requested changes or reported problems to the `skill-builder` skill (`/skil
 ## Skills and agents
 
 - `dev-core` - settings, state, the change folder, and the build template.
-- `dev-workbook` - the Idioms and patterns, Pitfalls, and Commands statements for the touched technologies.
+- `dev-workbook` - every statement of the project's workbooks.
 - `dev-test` - the stage before (Write route) and the work item's test runs (Run route).
 - `dev-plan` - the plan and work items this skill builds; `dev-review` - the next stage after `dev-test`'s Run route, and the source of fix-now findings.
 - `skill-builder` - changes this skill.

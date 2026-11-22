@@ -24,7 +24,7 @@ Entered from [SKILL.md](../SKILL.md#routes) at stage `build`, after a red-check 
 
 ## Consult the workbook
 
-1. `WORKBOOK resolve --workspace "<workspace>" --stage build --paths <the files the work item names or the plan's scope facts list, with their project files> --topics "Idioms and patterns" Pitfalls Commands`.
+1. `WORKBOOK resolve --workspace "<workspace>" --stage build --paths <the files the work item names or the plan's scope facts list, with their project files>`.
 2. Record the receipt as returned: `DEVCORE state "<change folder>" --patch '{"append": {"receipts": <receipt>}}'`.
 3. MUST and MUST NOT statements are rules for this build; the others are weighed. Keep the IDs you apply for the record's Workbook statements applied list and for the Source column of the ladder.
 4. A technology in `missing` pauses only the part of the build that needs it, while `dev-workbook` runs its Create with the user: they choose to find a workbook or make one. Never write code for that technology from memory meanwhile.

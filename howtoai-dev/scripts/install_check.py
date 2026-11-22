@@ -148,7 +148,7 @@ def check_deps(home, no_probe, search_path):
         items.append(item(name, "connector", f"required for {choice} (Azure DevOps can use az instead)" if "Azure" in name
                           else f"required for {choice}", "unknown", "a script cannot see connectors",
                           "The agent searches its own tool list; the user connects it in the harness", choice))
-    for name, why in (("subagents", "the goldfish reviewers; without them they run one after another"),
+    for name, why in (("subagents", "the goldfish reviewers; without them dev-plan's and dev-review's reviews stop and say why"),
                       ("Artifact tool", "plan.publish auto and artifact"),
                       ("hooks", "the dev-test-first and dev-safe-target hooks")):
         items.append(item(name, "harness", "optional", "unknown", why, "The agent checks what its harness offers"))

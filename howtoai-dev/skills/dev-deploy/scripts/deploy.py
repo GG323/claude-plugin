@@ -291,8 +291,50 @@ def get_target(ws, name):
 # ---------------------------------------------------------------- gate
 
 def git(ws, *args):
-    return subprocess.run(["git", "-c", f"safe.directory={ws}", "-C", ws, *args], capture_output=True, text=True,
-                          encoding="utf-8")
+    return subprocess.run(["git", "-c", "core.quotepath=off", "-c", f"safe.directory={ws}", "-C", ws, *args],
+                          capture_output=True, text=True, encoding="utf-8")
+
+
+def repositories(ws):
+    """The repository around the workspace and each one inside it, relative to the workspace, and each .git git rejects."""
+    found, broken = [], []
+    if git(ws, "rev-parse", "--is-inside-work-tree").returncode == 0:
+        if git(ws, "check-ignore", "-q", ".").returncode != 0:  # a repository that ignores the workspace versions none of it
+            found.append(".")
+    elif os.path.isfile(os.path.join(ws, ".git")) or (os.path.isdir(os.path.join(ws, ".git")) and os.listdir(os.path.join(ws, ".git"))):
+        broken.append(".")
+    skip = {".git", ".howtoai", "node_modules", ".venv", "venv"}
+    for folder, dirs, files in os.walk(ws):
+        if folder != ws and (".git" in files or (".git" in dirs and os.listdir(os.path.join(folder, ".git")))):
+            rel = os.path.relpath(folder, ws).replace(os.sep, "/")
+            top = git(folder.replace(os.sep, "/"), "rev-parse", "--show-toplevel")
+            same = top.returncode == 0 and os.path.realpath(top.stdout.strip()) == os.path.realpath(folder)
+            (found if same else broken).append(rel)
+        dirs[:] = [d for d in dirs if d not in skip
+                   and not getattr(os.path, "isjunction", lambda p: False)(os.path.join(folder, d))]
+    return found, broken
+
+
+def unversioned(ws, repos, plan_folder):
+    """Top-most paths that lie in no repository, so no commit check can see them."""
+    if "." in repos:
+        return []
+    loose = []
+    for folder, dirs, files in os.walk(ws):
+        rel = os.path.relpath(folder, ws).replace(os.sep, "/")
+        base = "" if rel == "." else rel + "/"
+        loose += [base + f for f in files]
+        down = []
+        for d in dirs:
+            path = base + d
+            if path in repos or path in (".howtoai", plan_folder) or d == ".git":
+                continue
+            if any(r.startswith(path + "/") for r in repos):
+                down.append(d)
+            else:
+                loose.append(path + "/")
+        dirs[:] = down
+    return sorted(loose)
 
 
 def cmd_gate(a):
@@ -303,25 +345,47 @@ def cmd_gate(a):
         get_target(ws, a.target)
     except Fail as e:
         problems.append(str(e))
-    inside = git(ws, "rev-parse", "--is-inside-work-tree")
-    if inside.returncode != 0:
-        skipped.append({"check": "work committed", "reason": "not a git repository"})
-    else:
-        run.append("work committed")
-        plan_folder = "dev-plans"
-        if a.change:
-            plan_folder = os.path.relpath(os.path.dirname(os.path.abspath(a.change)), ws).replace("\\", "/")
-        dirty = []
-        new_files = [n.replace("\\", "/").strip("/") for n in (a.new_file or [])]
-        for line in git(ws, "status", "--porcelain", "--untracked-files=all").stdout.splitlines():
+    run.append("work committed")
+    repos, broken = repositories(ws)
+    for repo in broken:
+        problems.append(f"work committed: {repo} has a .git that git does not accept")
+    if not repos:
+        problems.append("work committed: no git repository at, above, or inside the workspace")
+    plan_folder = "dev-plans"
+    if a.change:
+        plan_folder = os.path.relpath(os.path.dirname(os.path.abspath(a.change)), ws).replace("\\", "/")
+    new_files = [n.replace("\\", "/").strip("/") for n in (a.new_file or [])]
+    dirty = []
+    for repo in repos:
+        root = ws if repo == "." else os.path.join(ws, repo).replace("\\", "/")
+        status = git(root, "status", "--porcelain", "--untracked-files=all")
+        if status.returncode != 0:
+            problems.append(f"work committed: git status failed in {repo}: {status.stderr.strip()[:200]}")
+            continue
+        prefix = git(root, "rev-parse", "--show-prefix").stdout.strip() if repo == "." else ""
+        for line in status.stdout.splitlines():
             path = line[3:].strip().strip('"')
+            if repo != ".":
+                path = f"{repo}/{path}"
+            else:
+                if prefix and path.startswith(prefix):
+                    path = path[len(prefix):]
+                elif prefix:
+                    path = f"(outside the workspace) {path}"
+                if line.startswith("??") and path.rstrip("/") in repos:
+                    continue  # an untracked repository inside, checked on its own; a submodule's pointer still counts
             if path.startswith((".howtoai/", plan_folder + "/")) or path in (".howtoai", plan_folder):
                 continue
             if any(path == n or path.startswith(n.rstrip("/") + "/") for n in new_files):
                 continue
-            dirty.append(line)
-        if dirty:
-            problems.append("uncommitted changes: " + "; ".join(dirty[:10]))
+            dirty.append(line[:3] + path)
+    if dirty:
+        problems.append("uncommitted changes: " + "; ".join(dirty[:10]))
+    loose = unversioned(ws, repos, plan_folder) if repos else []
+    if loose:
+        more = f" and {len(loose) - 10} more" if len(loose) > 10 else ""
+        skipped.append({"check": "work committed for files outside every repository",
+                        "reason": "not versioned, so not checked: " + "; ".join(loose[:10]) + more})
     if not a.change:
         skipped.append({"check": "dev process gate (stage, human review, test run)",
                         "reason": "no --change: a deploy outside the dev process"})

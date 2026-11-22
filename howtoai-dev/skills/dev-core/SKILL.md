@@ -55,6 +55,7 @@ Runs once per workspace, the first time `dev-plan` starts there, or when the use
    - **Deploy entry points:** CI files (`.github/workflows/`, `azure-pipelines.yml`) and `Makefile` targets. A command the CI calls but the workspace does not contain (for example, a missing script) is recorded as found, with a note that it is missing.
    - **Environments:** `.env.example`, compose files, and comments in them that name production or test hosts.
    - **Test entry points:** the test steps of the CI files, `Makefile` test targets, and `test` scripts in package files; recorded in `testing.entry_points` as found, for `dev-test` to confirm on its first run.
+   - **Secret env files:** files named `.env` or `.env.*`, apart from test settings (`.env.test`, `.env.testing`) and templates (`.env.example`, `.env.sample`, `.env.template`), found by listing file names, hidden and ignored files included. Never search their content, and never open them.
    - **Gate commands:** the lint, format-check, and build or type-check steps of the CI files, in check mode only; recorded in `build.gate` as found, each with its `source`, for `dev-build` to confirm on its first run.
 2. Say what the lookups found as "From `<file>`: …", for the user to correct, and ask only what is still open with the `grilling` skill's method, in one round of at most four questions. These items are:
    - **Crucial** (asked unless a file answers them): the production markers to deny (hosts, connection-string fragments, cloud profiles, account names), the allowed test targets, and the deploy entry points when the CI deploys anything.
@@ -62,6 +63,7 @@ Runs once per workspace, the first time `dev-plan` starts there, or when the use
    - Name accounts and profiles only, never credentials. Safest choices when the user will not decide: Markdown work items; deny every production marker the files name; allow only local targets, because any target not on the allow list counts as production anyway; record no deploy entry points. Technologies found in manifests go into `workbooks.technologies` as found.
 3. After the answers, show the settings as a preview in its own message: `DEVCORE setup --workspace "<workspace>" --values '<json>'`. It validates every key, refuses values that look like secrets, and refuses `plan.publish` `tracker` without a tracker other than Markdown. `--scope user` writes the user's defaults file instead of the project's, for choices the user wants in every workspace.
 4. After the user approves the preview, write it: the same command with `--write`. A later run merges new values into the file. The plan folder itself is created by [Start a change](#start-a-change), not by setup.
+5. **Deny rules for secret env files.** Only when step 1 found some that the workspace's `.claude/settings.json` does not deny yet. Propose one rule per file name, for example `Read(**/.env.production)`, as its own question, and show the rules. Say what they cover: Claude's Read and Grep tools, in subagents too, but not a shell command such as `grep -r`, which can still print those files; and they hold only in sessions that load that settings file, which one started in a nested folder may not. When the workspace is a git repository, say to commit the file by itself before a change starts, so it stays out of that change's diff. Only after the user's yes, have `update-config` merge them into `permissions.deny` of the workspace's `.claude/settings.json`, never user-level settings. Without `update-config`, give the user the rules to add.
 
 ### Start a change
 
@@ -81,7 +83,7 @@ Runs once per workspace, the first time `dev-plan` starts there, or when the use
 | `append.receipts` | `{"stage", "statements": [IDs], "workbooks": {name: version}}` | every step that consulted `dev-workbook` |
 | `append.wi` | `{"n", "title", "tracker_key", "depends_on"}` | `dev-plan` split |
 | `append.declined` | `{"finding", "reason"}` | human review |
-| `append.test_runs` | `{"n", "route": "red-check"\|"run", "wi", "result": "red"\|"green"\|"refused", "passed", "failed", "flaky", "commit", "report"}` | `dev-test`, after every run |
+| `append.test_runs` | `{"n", "route": "red-check"\|"run", "wi", "result": "red"\|"red-failed"\|"green"\|"refused", "passed", "failed", "flaky", "commit", "report"}` | `dev-test`, after every run |
 | `append.ephemeral` | `{"run_id", "name", "label", "state": "created"\|"removed"\|"left"}` | `dev-test`, for each throwaway target |
 | `append.builds` | `{"n", "wi", "route": "build"\|"fix", "result": "passed"\|"stopped", "hunks", "fix_rounds", "report"}` | `dev-build`, after every build or fix run |
 | `increment` | `{"<loop name>": 1}`, for example `{"plan-review": 1}` | every loop with a stop rule |
@@ -136,12 +138,12 @@ The templates are Markdown because agents read them and git diffs them. They fol
 
 - **Deliverables:** the settings file, change folders with `state.json`, and `INDEX.md`, all written by `devcore.py`; review rounds, written by `findings.py`; the templates, copied by the calling skill.
 - **Report:** the script's JSON is returned to the calling skill, never shown to the user raw. The calling skill tells the user in one line what changed, for example "Started change `2026-11-18-login-rate-limit`".
-- **Writes:** only `<workspace>/<plan_folder>/` and `<workspace>/.howtoai/dev/`. Settings are written only after the user approves the preview.
+- **Writes:** only `<workspace>/<plan_folder>/` and `<workspace>/.howtoai/dev/`, plus the deny rules that [Setup](#setup) has `update-config` merge into `<workspace>/.claude/settings.json` after their own yes. Settings are written only after the user approves the preview.
 
 ## Verify the output
 
 - Each command returned `"ok": true`; on `false`, the error is reported and the step stopped.
-- After setup, `DEVCORE settings` shows `"configured": true` and the approved values.
+- After setup, `DEVCORE settings` shows `"configured": true` and the approved values, and the workspace's `.claude/settings.json` holds each deny rule the user said yes to.
 - After a state change, the change's row in `INDEX.md` shows the new stage.
 - After any change to a script, run its tests: `py -3 -I -B "${CLAUDE_SKILL_DIR}/evals/test_devcore.py"` and `py -3 -I -B "${CLAUDE_SKILL_DIR}/evals/test_findings.py"`. They work in temporary folders and touch no real settings.
 
@@ -168,6 +170,7 @@ Send requested changes or reported problems to the `skill-builder` skill (`/skil
 
 - `dev-plan`, `dev-test`, `dev-build`, `dev-review`, `dev-deploy`, `dev-learn`, `dev-workbook` - the dev skills that call this one.
 - `grilling` - the question method used in [Setup](#setup).
+- `update-config` - writes [Setup](#setup)'s deny rules for secret env files, after the user's yes.
 - [references/self-edit.md](references/self-edit.md) - the shared self-edit and root-cause method: `dev-review` and `dev-deploy` follow it to correct their own instructions, and `dev-learn` for each collected finding; it sets the fix levels (workbook or reference file, then goldfish, then skill file).
 - `skill-builder` - changes this skill.
 - No agents are used.

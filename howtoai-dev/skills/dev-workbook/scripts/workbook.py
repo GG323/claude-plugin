@@ -15,6 +15,8 @@ over base. Every command takes --base-dir and --user-dir to replace the default 
             folder holds it) and gets that line's workbook: a version workbook such as dotnet@8, or the
             general one. Results are keyed by workbook, each with its code_projects (version, support
             date, support_ended) and unrecorded_paths. [--today YYYY-MM-DD] replaces the system date.
+            Every result carries the rule from references/loading.md: at the top of the Markdown, as
+            loading_rule in the JSON, and on stderr, which still shows when stdout goes to a file.
   validate  FILE [--overlay]
             Checks a workbook against the format. --overlay allows a user or project file that holds
             only some sections. Infers the layer from the Header when not given.
@@ -416,7 +418,27 @@ def project_technologies(ws):
 
 # commands ---------------------------------------------------------------------------------
 
+def loading_rule():
+    try:
+        with open(os.path.join(SKILL_DIR, "references", "loading.md"), encoding="utf-8") as f:
+            body = f.read().split("\n## The rule\n", 1)[1].split("\n## ", 1)[0]
+    except (OSError, IndexError):
+        body = ""
+    items = [line[2:].strip() for line in body.splitlines() if line.startswith("- ")]
+    if not items:
+        raise Fail("dev-workbook's references/loading.md has no rule under '## The rule'; restore it")
+    return items
+
+
+def stderr_is_separate():
+    try:  # with 2>&1 a second copy would land inside what the caller saves or parses
+        return not os.path.samestat(os.fstat(1), os.fstat(2))
+    except OSError:
+        return False
+
+
 def cmd_resolve(a):
+    rule = loading_rule()
     ws = os.path.abspath(a.workspace) if a.workspace else None
     dirs = layer_dirs(ws, a.base_dir, a.user_dir)
     have = [t for t in available(dirs) if "@" not in t]
@@ -443,7 +465,7 @@ def cmd_resolve(a):
             if slug not in SLUGS:
                 raise Fail(f"unknown topic {tp!r}; use one of {SLUGS} or their headings")
             topics.append(slug)
-    result = {"ok": True, "workspace": ws, "technologies": {}, "sections": {}, "overrides": [], "conflicts": [],
+    result = {"ok": True, "loading_rule": rule, "workspace": ws, "technologies": {}, "sections": {}, "overrides": [], "conflicts": [],
               "missing": sorted(missing)}
     receipt = {"stage": a.stage or "", "statements": [], "workbooks": {}}
     now = datetime.date.fromisoformat(today(a.today))
@@ -501,8 +523,11 @@ def cmd_resolve(a):
             receipt["workbooks"][stem] = " + ".join(f"{l} {wb['header'].get('Updated', '?')}" for l, wb in layers)
     result["missing"] = sorted(result["missing"])
     result["receipt"] = receipt
+    block = ["Loading rule (dev-workbook):"] + [f"- {item}" for item in rule]
+    if stderr_is_separate():
+        sys.stderr.write("\n".join(block) + "\n")  # still seen when stdout is saved to a file
     if a.markdown:
-        lines = []
+        lines = ["# Workbook statements", ""] + [f"> {line}" for line in block] + [""]
         for t, info in result["technologies"].items():
             ended = f", support ended {info['supported_until']}" if info["support_ended"] else ""
             lines.append(f"## {info['title']} ({info['versions']}{ended})")
@@ -849,29 +874,45 @@ def cmd_audit(a):
     out(report)
 
 
+CONSULT_FILES = {  # the files whose stage records a workbook receipt
+    "dev-plan": ("stages/scope.md",),
+    "dev-test": ("routes/write.md", "routes/run.md"),
+    "dev-build": ("routes/build.md",),
+    "dev-review": ("routes/review.md",),
+    "dev-learn": ("routes/learn.md",),
+    "dev-deploy": ("routes/deploy.md",),
+}
+
+
 def cmd_check_skills(a):
     results = []
     for d in sorted(globmod.glob(os.path.join(a.skills_dir, "dev-*"))):
         name = os.path.basename(d)
         if name in ("dev-core", "dev-workbook") or not os.path.isdir(d):
             continue
-        stage_files = sorted(globmod.glob(os.path.join(d, "stages", "*.md"))) or [os.path.join(d, "SKILL.md")]
+        named = [os.path.join(d, *rel.split("/")) for rel in CONSULT_FILES.get(name, ())]
+        if named and any(os.path.isfile(f) for f in named):
+            stage_files = named
+        else:
+            stage_files = sorted(globmod.glob(os.path.join(d, "stages", "*.md")) + globmod.glob(os.path.join(d, "routes", "*.md"))) \
+                or [os.path.join(d, "SKILL.md")]
         for f in stage_files:
             try:
                 text = open(f, encoding="utf-8").read()
             except FileNotFoundError:
                 results.append({"file": f, "ok": False, "reason": "missing"})
                 continue
-            ok = "workbook.py" in text and "resolve" in text
+            ok = "WORKBOOK resolve" in text or ("workbook.py" in text and "resolve" in text)
             results.append({"file": os.path.relpath(f, a.skills_dir), "ok": ok,
                             "reason": "" if ok else "no Consult step calling workbook.py resolve"})
-    out({"ok": all(r["ok"] for r in results), "files": results,
-         "note": "" if results else "no dev stage skills found yet"})
+    passed = all(r["ok"] for r in results)
+    out({"ok": passed, "files": results, "note": "" if results else "no dev stage skills found yet"}, 0 if passed else 1)
 
 
 def main(argv=None):
     try:
         sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
     except AttributeError:
         pass
     ap = argparse.ArgumentParser(prog="workbook")

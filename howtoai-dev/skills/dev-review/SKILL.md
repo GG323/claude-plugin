@@ -50,6 +50,7 @@ Each route is one file in `routes/`. "Stage" always means a stage of the `howtoa
 
 ## Core rules
 
+- **Workbook rules load as `dev-workbook` says.** Before the first `WORKBOOK resolve`, read `${CLAUDE_SKILL_DIR}/../dev-workbook/references/loading.md` and follow it; every resolve prints that rule again.
 - **Goldfish stay goldfish.** A reviewer brief holds only what the agent's Input section lists. When no fresh subagent can start, halt and say why: a review by the agent that holds the conversation is not a goldfish review.
 - **Findings, not fixes.** This skill never changes product code; `dev-build` applies the fixes the user chooses. Reviewers never run or change code; only you run tests, through `dev-test`.
 - **Numbers from scripts.** Findings are counted, scored, filtered, and ranked by `FINDINGS`; the diff and missing receipts come from `REVIEW`. Never count, relabel, or drop a finding yourself; a reply off the agent's scale goes back to that agent.
@@ -67,7 +68,7 @@ Each route is one file in `routes/`. "Stage" always means a stage of the `howtoa
   - Fix-later work items: `wi/<n>.md` from the [work-item template](../dev-core/assets/templates/wi.md), and the tracker item when the tracker is Jira, GitHub, or Azure DevOps.
 - **State:** each round as `increment.review`, each workbook use as `append.receipts`, each declined finding as `append.declined`, each new work item as `append.wi`, the acceptance as `append.approvals`, and the stage, all through `DEVCORE`.
 - **Chat:** one line per step ("Pass 1: spec clean; pass 2: 3 reviewers"), the human-review question as its own message, and a short closing report: the counts, the kept findings in one line each, what was held back and why, and the next stage. No raw JSON.
-- **Writes outside the change folder:** temporary test files (removed at the end of the round), and tracker items after approval.
+- **Writes outside the change folder:** temporary test files (removed at the end of the round), a new `TESTING.md` after the user's yes, and tracker items after approval.
 
 ## Verify the output
 
@@ -105,7 +106,7 @@ Send requested changes or reported problems to the `skill-builder` skill (`/skil
 ## Skills and agents
 
 - `dev-core` - state, settings, `findings.py`, the review and work-item templates, and the [self-edit method](../dev-core/references/self-edit.md).
-- `dev-workbook` - the Pitfalls, Idioms and patterns, Security, and Performance statements, and proposals after a correction.
+- `dev-workbook` - every statement of the project's workbooks, and proposals after a correction.
 - `dev-test` - reruns the tests for the inspection; `dev-build` - applies the fix-now findings.
 - `dev-plan` - creates tracker items for fix-later work items; `dev-learn` - the learn step after each human review.
 - `grilling` - the question method for the human review.

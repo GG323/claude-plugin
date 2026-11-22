@@ -93,7 +93,8 @@ class BuildTests(unittest.TestCase):
         git(ws, "init", "-q")
         git(ws, "add", "-A")
         git(ws, "-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "-q", "-m", "init")
-        core("state", self.cdir, "--patch", json.dumps({"stage": "build"}))
+        core("state", self.cdir, "--patch", json.dumps({"stage": "build", "append": {"test_runs": {
+            "n": 1, "route": "red-check", "wi": None, "result": "red", "passed": 0, "failed": 1, "flaky": 0}}}))
 
     def tearDown(self):
         self.tmp.cleanup()

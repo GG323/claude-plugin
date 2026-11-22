@@ -37,7 +37,7 @@ Every hunk `build.py hunks` lists has exactly one row. Traces to: `T<n>` or `C<n
 | Step | Source | Baseline | After | Result |
 | --- | --- | --- | --- | --- |
 | {gate name}: `{command}` | {CI file and step / workbook statement ID} | {passed / failed} | {passed / failed} | {pass / pre-existing failure, continued with approval / fail} |
-| WI tests | `test-run-{test run number}.md` (dev-test Run route) | {red check: red} | {green / red} | {pass / fail} |
+| WI tests | `test-run-{test run number}.md` (dev-test Run route: the work item run inside this build; the later suite run is not cited here) | {red check: red} | {green / red} | {pass / fail} |
 
 Fix rounds used: {n} of {max_fix_rounds}.
 

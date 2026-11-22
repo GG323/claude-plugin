@@ -48,7 +48,7 @@ Each route is one file in `routes/`. "Stage" in this skill always means a stage 
 | Stage `test` (the build is done), a rerun asked by `dev-review` or the user, or "which environments would the tests hit" | [Run](routes/run.md) |
 | Stage `build` and the user asks to run the tests | [Run](routes/run.md), reported as a progress run; the stage stays `build` |
 | Stage `plan` or `accept` | Stop: the plan is not approved yet; hand back to `dev-plan` |
-| "Refresh TESTING.md" with no test run | [Run](routes/run.md) from its [Run and read](routes/run.md#run-and-read) section: the Latest run section only ever describes a real run |
+| "Refresh TESTING.md" with no test run | [Run](routes/run.md) from [Start the run](routes/run.md#start-the-run), so the targets are classified and refused as in every run: the Latest run section only ever describes a real run |
 
 The Write route calls the Run route for its red check; the Run route never calls the Write route.
 
@@ -56,6 +56,7 @@ The Write route calls the Run route for its red check; the Run route never calls
 
 The full list, with the layer that enforces each rule, is in [references/safety-rules.md](references/safety-rules.md).
 
+- **Workbook rules load as `dev-workbook` says.** Before the first `WORKBOOK resolve`, read `${CLAUDE_SKILL_DIR}/../dev-workbook/references/loading.md` and follow it; every resolve prints that rule again.
 - **Unknown is production.** Only targets the allow list matches by evidence (host, database, profile, environment variable), in-memory or file databases, and containers this run created are used. An unknown target stops the run and asks; a production target or marker refuses it.
 - **Never read real secrets.** Read config files and `.env.test`, never `.env`, `.env.production`, a secret store, or a key vault. Never print, log, or write a secret, including into `TESTING.md` and the reports.
 - **The project's own entry points.** Run the commands CI runs (`testing.entry_points`), never ad-hoc ones, and never edit CI configuration, test settings, or thresholds to make tests pass.

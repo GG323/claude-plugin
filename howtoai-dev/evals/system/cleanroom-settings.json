@@ -1,0 +1,11 @@
+{
+ "enabledPlugins": {
+  "input-router@token-saving-mods": false,
+  "effort-optimizer@token-saving-mods": false,
+  "model-router@token-saving-mods": false,
+  "research-router@token-saving-mods": false,
+  "efficient-browser-use@token-saving-mods": false,
+  "mods@token-saving-mods": false,
+  "savings-proof@token-saving-mods": false
+ }
+}

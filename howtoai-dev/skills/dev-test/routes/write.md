@@ -17,7 +17,7 @@
 ## Read the inputs
 
 1. From `plan.md`: the Verification section (criteria, end-to-end path, side effects, behaviour that must not change, cannot be verified here), the Scope and size facts marked `test` or `untested`, and the Design details for the files and interfaces. From `wi/<n>.md`: its acceptance criteria and end-to-end check.
-2. Resolve the workbook statements: `WORKBOOK resolve --workspace "<workspace>" --stage tests-first --paths <the files the plan names, with their project files> --topics testing commands situation`. Record the receipt as `WORKBOOK` returned it: `DEVCORE state "<change folder>" --patch '{"append": {"receipts": <receipt>}}'`. A technology in `missing` pauses only the tests that need it while `dev-workbook` runs its Create with the user.
+2. Resolve the workbook statements: `WORKBOOK resolve --workspace "<workspace>" --stage tests-first --paths <the files the plan names, with their project files>`. Record the receipt as `WORKBOOK` returned it: `DEVCORE state "<change folder>" --patch '{"append": {"receipts": <receipt>}}'`. A technology in `missing` pauses only the tests that need it while `dev-workbook` runs its Create with the user.
 3. Look at the existing tests next to the touched code: framework, project layout, naming, fixtures, helpers, how they reach databases and services. New tests follow what is there; a pattern the workbook names as MUST wins over the local habit, and you say so.
 
 ## Map criteria to tests
