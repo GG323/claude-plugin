@@ -26,7 +26,7 @@
 | Supported until | 2028-11-14 |
 | Version command | `dotnet --version` |
 | Layer | base |
-| Updated | 2026-11-20 |
+| Updated | 2026-11-22 |
 
 Sources:
 
@@ -35,7 +35,7 @@ Sources:
 - [Central Package Management](https://learn.microsoft.com/en-us/nuget/consume-packages/central-package-management) · checked 2026-11-18
 - [HttpClientFactory in .NET](https://learn.microsoft.com/en-us/dotnet/core/extensions/httpclient-factory) · checked 2026-11-18
 - [Safe storage of app secrets in development](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets) · checked 2026-11-18
-- [Run selected unit tests](https://learn.microsoft.com/en-us/dotnet/core/testing/selective-unit-tests) · checked 2026-11-18
+- [Run selected unit tests](https://learn.microsoft.com/en-us/dotnet/core/testing/selective-unit-tests) · checked 2026-11-22
 - [Containerize a .NET app with dotnet publish](https://learn.microsoft.com/en-us/dotnet/core/containers/sdk-publish) · checked 2026-11-18
 - [Dependency injection guidelines](https://learn.microsoft.com/en-us/dotnet/core/extensions/dependency-injection/guidelines) · checked 2026-11-18
 - [Health checks in ASP.NET Core](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/health-checks) · checked 2026-11-18
@@ -43,10 +43,15 @@ Sources:
 - [Integration tests in ASP.NET Core](https://learn.microsoft.com/en-us/aspnet/core/test/integration-tests) · checked 2026-11-18
 - [Options pattern in .NET](https://learn.microsoft.com/en-us/dotnet/core/extensions/options) · checked 2026-11-18
 - [dotnet format](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-format) · checked 2026-11-18
-- [dotnet test](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-test) · checked 2026-11-18
+- [dotnet test](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-test) · checked 2026-11-22
 - [ASP.NET Core middleware](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/middleware/) · checked 2026-11-18
 - [Logging in .NET](https://learn.microsoft.com/en-us/dotnet/core/extensions/logging) · checked 2026-11-18
 - [C# compiler options for errors and warnings](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-options/errors-warnings) · checked 2026-11-18
+- [Configuration in ASP.NET Core](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/configuration/) · checked 2026-11-22
+- [xunit on NuGet](https://www.nuget.org/packages/xunit) · checked 2026-11-22
+- [SmtpClient class](https://learn.microsoft.com/en-us/dotnet/api/system.net.mail.smtpclient) · checked 2026-11-22
+- [EnableSsl property](https://learn.microsoft.com/en-us/dotnet/api/system.net.mail.smtpclient.enablessl) · checked 2026-11-22
+- [Containerize a .NET app reference](https://learn.microsoft.com/en-us/dotnet/core/containers/publish-configuration) · checked 2026-11-22
 
 ## Load when
 
@@ -77,7 +82,7 @@ Sources:
 - **dotnet.setup.004** · A nested `Directory.Build.props` must import its parent with `GetPathOfFileAbove`, or the parent's settings are silently skipped; the file name is case-sensitive on Linux. · source: [Customize your build by folder](https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-by-directory) · confirmed: base, 2026-11-18
 - **dotnet.setup.005** · Enable central package management with a root `Directory.Packages.props` that sets `ManagePackageVersionsCentrally` to `true` and lists `PackageVersion` items; project `PackageReference` items then carry no `Version`. · source: [Central Package Management](https://learn.microsoft.com/en-us/nuget/consume-packages/central-package-management) · confirmed: base, 2026-11-18
 - **dotnet.setup.006** · Set `TreatWarningsAsErrors` (or a targeted `WarningsAsErrors`, which accepts the value `nullable`) and `Nullable` in the shared props so every project fails on new warnings. · source: [C# compiler options for errors and warnings](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-options/errors-warnings) · confirmed: base, 2026-11-18
-- **dotnet.setup.007** · Read configuration in layers: `appsettings.json`, then `appsettings.{Environment}.json`, user secrets in Development, and environment variables, where later sources override earlier ones and `__` stands for the hierarchy separator. · source: [Safe storage of app secrets in development](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets) · confirmed: base, 2026-11-18
+- **dotnet.setup.007** · Read configuration in layers: `appsettings.json`, then `appsettings.{Environment}.json`, user secrets in Development, environment variables, and command-line arguments, where later sources override earlier ones and `__` stands for the hierarchy separator. `WebApplication.CreateBuilder` takes the environment from `DOTNET_ENVIRONMENT` ahead of `ASPNETCORE_ENVIRONMENT`. · source: [Configuration in ASP.NET Core](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/configuration/) · confirmed: base, 2026-11-22
 
 ## Idioms and patterns
 
@@ -99,6 +104,7 @@ Sources:
 - **dotnet.pitfalls.005** · Without `TreatWarningsAsErrors` the build keeps producing output despite warnings, so nullable and analyzer warnings pile up unnoticed. · source: [C# compiler options for errors and warnings](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-options/errors-warnings) · confirmed: base, 2026-11-18
 - **dotnet.pitfalls.006** · MSBuild uses only the first `Directory.Build.props` found searching upward from the project, so a nested one hides the root file's settings unless it imports the parent. · source: [Customize your build by folder](https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-by-directory) · confirmed: base, 2026-11-18
 - **dotnet.pitfalls.007** · A `Version` attribute left on a `PackageReference` under central package management, or several package sources without source mapping, produces restore errors or warning `NU1507`. · source: [Central Package Management](https://learn.microsoft.com/en-us/nuget/consume-packages/central-package-management) · confirmed: base, 2026-11-18
+- **dotnet.pitfalls.008** · SHOULD · Use a maintained mail library such as MailKit for new code instead of `System.Net.Mail.SmtpClient`, which is not recommended for new development. Where it stays, set `EnableSsl`, which is false by default, outside local runs. · source: [SmtpClient class](https://learn.microsoft.com/en-us/dotnet/api/system.net.mail.smtpclient), [EnableSsl property](https://learn.microsoft.com/en-us/dotnet/api/system.net.mail.smtpclient.enablessl) · confirmed: base, 2026-11-22
 
 ## Commands
 
@@ -112,12 +118,13 @@ Sources:
 
 ## Testing
 
-- **dotnet.testing.001** · The filter properties differ by framework: MSTest has `TestCategory`, `Priority`, `ClassName`, and `Name`; NUnit has `Category` and `Property`; xUnit has `DisplayName` and `Traits`. · source: [Run selected unit tests](https://learn.microsoft.com/en-us/dotnet/core/testing/selective-unit-tests) · confirmed: base, 2026-11-18
+- **dotnet.testing.001** · The filter properties differ by framework: MSTest has `TestCategory`, `Priority`, `ClassName`, `Name`, and `Id` (MSTest.TestAdapter 3.6 or later); NUnit has `Category`, `TestCategory`, `Priority`, `Name`, and `Property`; xUnit has `DisplayName` and `Traits`. · source: [Run selected unit tests](https://learn.microsoft.com/en-us/dotnet/core/testing/selective-unit-tests) · confirmed: base, 2026-11-22
 - **dotnet.testing.002** · An MSTest `ClassName` filter needs the full namespace-qualified class name; the short class name matches nothing. · source: [Run selected unit tests](https://learn.microsoft.com/en-us/dotnet/core/testing/selective-unit-tests) · confirmed: base, 2026-11-18
-- **dotnet.testing.003** · With the .NET 10 SDK and later, `dotnet test` can use Microsoft.Testing.Platform through a `test.runner` entry in `global.json`; VSTest stays the default, and MTP-only options such as `--treenode-filter` fail under VSTest. · source: [dotnet test](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-test) · confirmed: base, 2026-11-18
+- **dotnet.testing.003** · With the .NET 10 SDK and later, `dotnet test` can use Microsoft.Testing.Platform through a `test.runner` entry in `global.json`, which `DOTNET_TEST_RUNNER` overrides from .NET 11; VSTest stays the default, and MTP-only options such as `--treenode-filter` fail under VSTest. · source: [dotnet test](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-test) · confirmed: base, 2026-11-22
 - **dotnet.testing.004** · ASP.NET Core integration tests use `WebApplicationFactory<TEntryPoint>` from `Microsoft.AspNetCore.Mvc.Testing`; keep them in a project separate from unit tests and do not reference `TestServer` packages directly. · source: [Integration tests in ASP.NET Core](https://learn.microsoft.com/en-us/aspnet/core/test/integration-tests) · confirmed: base, 2026-11-18
 - **dotnet.testing.005** · In integration tests, replace services with `ConfigureTestServices` inside `WithWebHostBuilder`; the app's own `DbContext` registration must be removed first, and SQLite in-memory is preferred over the EF in-memory provider. · source: [Integration tests in ASP.NET Core](https://learn.microsoft.com/en-us/aspnet/core/test/integration-tests) · confirmed: base, 2026-11-18
 - **dotnet.testing.006** · The test client follows redirects by default; set `AllowAutoRedirect = false` to assert a 302 and its `Location` header, and note that POST requests need an antiforgery cookie and token. · source: [Integration tests in ASP.NET Core](https://learn.microsoft.com/en-us/aspnet/core/test/integration-tests) · confirmed: base, 2026-11-18
+- **dotnet.testing.007** · The `xunit` v2 package is deprecated and gets security fixes only; `xunit.v3` replaces it and is the package for new test projects. · source: [xunit on NuGet](https://www.nuget.org/packages/xunit) · confirmed: base, 2026-11-22
 
 ## Security
 
@@ -137,7 +144,7 @@ Sources:
 
 ## Deployment and operations
 
-- **dotnet.deploy.001** · The SDK builds container images without Docker; Docker or Podman is needed only to run the image locally or to publish into a local daemon. · source: [Containerize a .NET app with dotnet publish](https://learn.microsoft.com/en-us/dotnet/core/containers/sdk-publish) · confirmed: base, 2026-11-18
+- **dotnet.deploy.001** · The SDK builds container images without Docker; a local runtime is needed only to run the image or to publish into a local store. That is Docker or Podman, and from .NET 11 also `wslc` on Windows and Apple's `container` on macOS, which the SDK prefers when they are installed and running; `LocalRegistry` overrides the choice. · source: [Containerize a .NET app reference](https://learn.microsoft.com/en-us/dotnet/core/containers/publish-configuration) · confirmed: base, 2026-11-22
 - **dotnet.deploy.002** · The container image name defaults to the `AssemblyName`; set `ContainerRepository` in the project when that name is not a valid image name. · source: [Containerize a .NET app with dotnet publish](https://learn.microsoft.com/en-us/dotnet/core/containers/sdk-publish) · confirmed: base, 2026-11-18
 - **dotnet.deploy.003** · Exporting to a tarball with `ContainerArchiveOutputPath` needs no container daemon, which suits scanning pipelines. · source: [Containerize a .NET app with dotnet publish](https://learn.microsoft.com/en-us/dotnet/core/containers/sdk-publish) · confirmed: base, 2026-11-18
 - **dotnet.deploy.004** · In containers, set configuration through environment variables with `__` separators (for example `Logging__LogLevel__Default`), and set `DOTNET_USE_POLLING_FILE_WATCHER` to `1` when file-based reload must work on network shares or in Docker. · source: [Options pattern in .NET](https://learn.microsoft.com/en-us/dotnet/core/extensions/options) · confirmed: base, 2026-11-18

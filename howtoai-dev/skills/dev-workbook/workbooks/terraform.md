@@ -25,7 +25,7 @@
 | Versions | Terraform 1.x |
 | Version command | `terraform version` |
 | Layer | base |
-| Updated | 2026-11-18 |
+| Updated | 2026-11-22 |
 
 Sources:
 
@@ -46,6 +46,8 @@ Sources:
 - [terraform fmt](https://developer.hashicorp.com/terraform/cli/commands/fmt) · checked 2026-11-18
 - [terraform validate](https://developer.hashicorp.com/terraform/cli/commands/validate) · checked 2026-11-18
 - [terraform-skill](https://github.com/antonbabenko/terraform-skill) · checked 2026-11-18 · Apache 2.0, secondary source
+- [Output block reference](https://developer.hashicorp.com/terraform/language/block/output) · checked 2026-11-22
+- [Terraform 1.15 changelog](https://raw.githubusercontent.com/hashicorp/terraform/v1.15/CHANGELOG.md) · checked 2026-11-22
 
 ## Load when
 
@@ -78,7 +80,7 @@ Sources:
 - **terraform.patterns.001** · MUST · Use `for_each` over a map or a set of strings for collections of resources; instances are addressed by stable keys, and lists need `toset()`. · source: [for_each](https://developer.hashicorp.com/terraform/language/meta-arguments/for_each) · confirmed: base, 2026-11-18
 - **terraform.patterns.002** · MUST NOT · Use `count` for a collection whose items may be added or removed in the middle: instances are identified by index, so the mapping to real objects can shift. · source: [count](https://developer.hashicorp.com/terraform/language/meta-arguments/count) · confirmed: base, 2026-11-18
 - **terraform.patterns.003** · SHOULD · Use `count` for near-identical instances or an on/off toggle such as `count = var.enabled ? 1 : 0`. · source: [count](https://developer.hashicorp.com/terraform/language/meta-arguments/count) · confirmed: base, 2026-11-18
-- **terraform.patterns.004** · MUST · Give every variable and output a `type` and `description`, and mark secrets and outputs derived from them `sensitive = true`. · source: [Terraform style guide](https://developer.hashicorp.com/terraform/language/style) · confirmed: base, 2026-11-18
+- **terraform.patterns.004** · MUST · Give every variable a `type` and `description` and every output a `description`, and mark secrets and outputs derived from them `sensitive = true`. Give an output a `type` too where `required_version` is 1.15 or later, the first version that takes one. · source: [Terraform style guide](https://developer.hashicorp.com/terraform/language/style), [Terraform 1.15 changelog](https://raw.githubusercontent.com/hashicorp/terraform/v1.15/CHANGELOG.md) · confirmed: base, 2026-11-22
 - **terraform.patterns.005** · SHOULD · Follow the standard module layout: root `main.tf`, `variables.tf`, `outputs.tf`, a `README.md`, nested modules under `modules/`, and samples under `examples/`. · source: [Standard module structure](https://developer.hashicorp.com/terraform/language/modules/develop/structure) · confirmed: base, 2026-11-18
 - **terraform.patterns.006** · SHOULD · Keep modules composable: callers combine them instead of modules calling each other in deep trees. · source: [Standard module structure](https://developer.hashicorp.com/terraform/language/modules/develop/structure) · confirmed: base, 2026-11-18
 - **terraform.patterns.007** · MUST · Pin registry module versions and provider versions. · source: [Terraform style guide](https://developer.hashicorp.com/terraform/language/style) · confirmed: base, 2026-11-18

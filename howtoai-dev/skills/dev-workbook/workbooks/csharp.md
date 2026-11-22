@@ -26,7 +26,7 @@
 | Supported until | 2028-11-14 |
 | Version command | `dotnet --version` |
 | Layer | base |
-| Updated | 2026-11-20 |
+| Updated | 2026-11-22 |
 
 Sources:
 
@@ -46,6 +46,7 @@ Sources:
 - [dotnet format](https://learn.microsoft.com/dotnet/core/tools/dotnet-format) · checked 2026-11-18
 - [Introduction to LINQ queries](https://learn.microsoft.com/dotnet/csharp/linq/get-started/introduction-to-linq-queries) · checked 2026-11-18
 - [dotnet/skills](https://github.com/dotnet/skills) · checked 2026-11-18 · MIT, secondary source
+- [Checked and unchecked statements](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/checked-and-unchecked) · checked 2026-11-22
 
 ## Load when
 
@@ -94,6 +95,7 @@ Sources:
 - **csharp.pitfalls.006** · MUST NOT · Do not write `throw e;` to rethrow, since it resets the stack trace; use a bare `throw;`. Analyzer CA2200 flags this. · source: [Best practices for exceptions](https://learn.microsoft.com/dotnet/standard/exceptions/best-practices-for-exceptions) · confirmed: base, 2026-11-18
 - **csharp.pitfalls.007** · MUST NOT · Do not enumerate a deferred LINQ query more than once: each enumeration re-reads the source and can give different results. Materialize with `ToList` or `ToArray` when the result is reused. · source: [Introduction to LINQ queries](https://learn.microsoft.com/dotnet/csharp/linq/get-started/introduction-to-linq-queries) · confirmed: base, 2026-11-18
 - **csharp.pitfalls.008** · SHOULD · Pass an explicit `StringComparison` to string methods. `StartsWith(string)`, `IndexOf(string)`, `Compare`, and `ToUpper` are culture-sensitive by default, while `==`, `Equals`, and `Contains` are ordinal. · source: [Best practices for comparing strings in .NET](https://learn.microsoft.com/dotnet/standard/base-types/best-practices-strings) · confirmed: base, 2026-11-18
+- **csharp.pitfalls.009** · SHOULD · Widen to `long` or bound the input before multiplying caller-supplied integers, and test at the type's limits. Non-constant integer arithmetic is unchecked by default and wraps silently. · source: [Checked and unchecked statements](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/checked-and-unchecked) · confirmed: base, 2026-11-22
 
 ## Commands
 
