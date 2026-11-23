@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: includes-requested-context
+expected_outcome: |
+  The rejected libraries with reasons and the git state are in the handover, added to the normal handover.
+context:
+  scaffold_script: place-files.sh

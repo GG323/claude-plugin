@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: default-hands-over-latest-work
+expected_outcome: |
+  Five parts; the export bug is the focus, the typo task gets at most one line, untouched git state is left out; proposed fresh in the same folder with the detach line first.
+context:
+  scaffold_script: place-files.sh
