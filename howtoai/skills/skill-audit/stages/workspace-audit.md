@@ -50,11 +50,11 @@ Read the whole `AGENTS.md` and apply W5 and W6 from [Workspace audit checks](../
 2. Give each one its type, proposed fix, and suggested action from [Suggested actions](../references/checks.md#suggested-actions). A W1 difference is "Needs your decision" (which copy wins); a project fact is "Needs your decision"; layout, list, structure, and wording fixes are "Fix in the audit".
 3. Add them to the run file with domain `workspace` and status `open`.
 
-Pass the run folder to the Skill index stage: read [stages/skill-index.md](skill-index.md).
+Pass the run folder to the Plugin audit stage: read [stages/plugin-audit.md](plugin-audit.md).
 
 ## Skills and agents
 
-- [environment-audit](../SKILL.md) — the overview and rules for every stage.
+- [skill-audit](../SKILL.md) — the overview and rules for every stage.
 - [references/checks.md](../references/checks.md) — checks W1 to W7; [references/markdown-conventions.md](../references/markdown-conventions.md) — the section W1 compares.
 - [scripts/check_agents.py](../scripts/check_agents.py) — the scripted checks.
-- Previous stage: [Instruction audit](instruction-audit.md); next stage: [Skill index](skill-index.md).
+- Previous stage: [Instruction audit](instruction-audit.md); next stage: [Plugin audit](plugin-audit.md).

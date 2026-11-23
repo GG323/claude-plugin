@@ -1,14 +1,14 @@
 {
-  "built": "2026-11-06T11:00:20+00:00",
+  "built": "2026-11-22T20:27:40+00:00",
   "model": "chromadb DefaultEmbeddingFunction (all-MiniLM-L6-v2, ONNX)",
-  "entries": 6543,
-  "rows": 14968,
-  "expanded_entries": 892,
+  "entries": 6727,
+  "rows": 17275,
+  "expanded_entries": 1254,
   "sources": {
     "agenticskills": {
       "ok": true,
-      "entries": 334,
-      "seconds": 15
+      "entries": 343,
+      "seconds": 20
     },
     "claude-plugins-official": {
       "ok": true,
@@ -22,8 +22,8 @@
     },
     "claude-directory": {
       "ok": true,
-      "entries": 3604,
-      "seconds": 0
+      "entries": 3779,
+      "seconds": 1
     },
     "claude-community": {
       "ok": true,
@@ -32,9 +32,9 @@
     }
   },
   "expansion": {
-    "repos_total": 5490,
-    "repos_done": 287,
-    "repos_failed": 13,
-    "left": 5190
+    "repos_total": 5430,
+    "repos_done": 285,
+    "repos_failed": 15,
+    "left": 5130
   }
 }

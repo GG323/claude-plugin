@@ -705,7 +705,7 @@ def load_index(args) -> tuple[list[dict], list[dict], "object", dict]:
 
     d = index_dir(args)
     if not (d / "meta.json").exists():
-        sys.exit(f"No index in {d}. Run 'finder.py index' first (environment-audit does this weekly).")
+        sys.exit(f"No index in {d}. Run 'finder.py index' first (skill-audit does this weekly).")
     meta = json.loads((d / "meta.json").read_text(encoding="utf-8"))
     entries = read_catalog(d)
     rows = json.loads((d / "rows.json").read_text(encoding="utf-8"))

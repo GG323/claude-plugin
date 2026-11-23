@@ -27,7 +27,7 @@ This stage rebuilds the search index that `skill-finder` ships with, so searches
 
 ## Skills and agents
 
-- [environment-audit](../SKILL.md) — the rules this stage follows.
-- [Workspace audit](workspace-audit.md) — the stage before this one; [Report](report.md) — the next stage.
+- [skill-audit](../SKILL.md) — the rules this stage follows.
+- [Plugin audit](plugin-audit.md) — the stage before this one; [Report](report.md) — the next stage.
 - `skill-finder` — owns the index and the script this stage runs.
 - No agents are required.

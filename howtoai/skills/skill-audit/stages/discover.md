@@ -29,7 +29,7 @@ In a candidate run, the one target is the candidate folder `skill-finder` named.
 
 ## Start the run file
 
-1. Create the run folder: in this session's scratchpad folder when the harness gives one, otherwise a new temporary folder (`py -3 -c "import tempfile; print(tempfile.mkdtemp(prefix='environment-audit-'))"`). Never put it inside a target, because the audit would then find its own files.
+1. Create the run folder: in this session's scratchpad folder when the harness gives one, otherwise a new temporary folder (`py -3 -c "import tempfile; print(tempfile.mkdtemp(prefix='skill-audit-'))"`). Never put it inside a target, because the audit would then find its own files.
 2. Save the script's JSON from [Find the targets](#find-the-targets) step 1 as `discover.json` in the run folder, edited to the chosen targets: set `"global"` to `null` when the global folder is not a target, keep only the chosen workspaces, and add a named folder the script did not find as `{"name": "<folder name>", "path": "<full path with forward slashes>"}`. In a candidate run, write `{"global": null, "workspaces": [], "candidates": [{"name": "<candidate name>", "path": "<full path with forward slashes>"}]}` instead. Then create the run file:
 
    ```bash
@@ -42,6 +42,6 @@ Pass the run folder to the Tool audit stage: read [stages/tool-audit.md](tool-au
 
 ## Skills and agents
 
-- [environment-audit](../SKILL.md) — the overview and rules for every stage.
+- [skill-audit](../SKILL.md) — the overview and rules for every stage.
 - [scripts/find_workspaces.py](../scripts/find_workspaces.py) and [scripts/render_report.py](../scripts/render_report.py) — find the targets and start the run file.
 - Next stage: [Tool audit](tool-audit.md).

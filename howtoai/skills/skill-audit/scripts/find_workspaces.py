@@ -1,4 +1,4 @@
-"""Finds the Claude workspaces on this computer for environment-audit.
+"""Finds the Claude workspaces on this computer for skill-audit.
 
 Claude Code keeps one session-history folder per working folder under
 <global folder>/projects/. Each session file (*.jsonl) records the working

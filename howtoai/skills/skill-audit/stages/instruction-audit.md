@@ -49,7 +49,7 @@ Pass the run folder to the Workspace audit stage: read [stages/workspace-audit.m
 
 ## Skills and agents
 
-- [environment-audit](../SKILL.md) — the overview and rules for every stage.
+- [skill-audit](../SKILL.md) — the overview and rules for every stage.
 - [references/checks.md](../references/checks.md) — checks I1 to I9.
 - [scripts/check_config.py](../scripts/check_config.py) — the scripted checks I5 to I9.
 - `/doctor` — the Claude Code command whose instruction checks this stage covers.

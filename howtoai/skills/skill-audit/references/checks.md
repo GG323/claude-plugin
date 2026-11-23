@@ -11,6 +11,7 @@
   - [Skill and agent definitions](#skill-and-agent-definitions)
 - [Instruction audit checks](#instruction-audit-checks)
 - [Workspace audit checks](#workspace-audit-checks)
+- [Plugin audit checks](#plugin-audit-checks)
 - [Suggested actions](#suggested-actions)
 - [Skills and agents](#skills-and-agents)
 
@@ -110,8 +111,17 @@ These apply to a workspace's `AGENTS.md`.
 | W3 | The structure and link rules: the `#` title first, then `## Contents`; every `##` section in the contents list and every entry resolving; `Skills and agents` listed and last; one `#` heading and no skipped levels; relative links resolving, with forward slashes, inside the workspace; web links responding. | Scripted |
 | W4 | The `Skills and agents` section lists every skill and agent installed in the global folder and in the workspace's `.claude` folder, named as code, and nothing that is not installed. | Scripted |
 | W5 | A `Project` section gives the purpose, who the work is for, the deliverables, and the target environments, followed by a `Best-practice references` list of live links. Missing facts get `[TO FILL: …]` placeholders. | Review |
-| W6 | Lean and consistent: always-needed project facts and conventions only; no rule stated twice; detailed procedures left to tools; rules written as plain statements; one name per thing. | Review |
+| W6 | Lean and consistent: always-needed project facts and conventions only (a section a tool's `AUDIT.md` installs counts as one); no rule stated twice; detailed procedures left to tools; rules written as plain statements; one name per thing. | Review |
 | W7 | A `## Workspace layout` section lists every top-level folder and root Markdown file (except `AGENTS.md` and names starting with `.` or `_`), each with a relative link and a one-line purpose, and nothing that is no longer on disk. | Scripted (sync) and review (purposes) |
+
+## Plugin audit checks
+
+These apply to each target, for every tool that ships an [audit file](plugin-audit-format.md).
+
+| ID | Check | How |
+| --- | --- | --- |
+| P1 | Every check the tool's `AUDIT.md` declares for this target passes. The finding names the tool and its check ID. | Scripted; commands after a yes, questions by review |
+| P2 | The `AUDIT.md` follows the format and its paths stay inside their roots. | Scripted |
 
 ## Suggested actions
 
@@ -125,5 +135,5 @@ Every finding carries one suggested action, so the user knows who acts on it:
 
 ## Skills and agents
 
-- [environment-audit](../SKILL.md) runs these checks; its scripts run the scripted ones.
+- [skill-audit](../SKILL.md) runs these checks; its scripts run the scripted ones.
 - `skill-builder` — recommended in the report for findings with the action "Use `skill-builder`".

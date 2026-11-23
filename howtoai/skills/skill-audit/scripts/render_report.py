@@ -1,4 +1,4 @@
-"""Run file, report page, and run log for environment-audit.
+"""Run file, report page, and run log for skill-audit.
 
 Commands:
   init   <report.json> --discover <discover.json> --mode <scheduled|on request|candidate> --date YYYY-MM-DD
@@ -32,7 +32,7 @@ The run file (report.json):
     "skipped_targets": [{"path": "...", "reason": "..."}],
     "findings": [{
       "target": "<target id>",
-      "domain": "tool" | "instruction" | "workspace",
+      "domain": "tool" | "instruction" | "workspace" | "plugin",
       "check": "S3",
       "type": "defect" | "suggestion",
       "file": "~/.claude/skills/x/SKILL.md",
@@ -61,7 +61,7 @@ TEMPLATE = os.path.join(SKILL_DIR, "assets", "report-template.html")
 LOG_KEEP = 26  # about six months of weekly runs
 LOG_SHOWN = 10
 
-DOMAINS = [("tool", "Tool audit"), ("instruction", "Instruction audit"), ("workspace", "Workspace audit")]
+DOMAINS = [("tool", "Tool audit"), ("instruction", "Instruction audit"), ("workspace", "Workspace audit"), ("plugin", "Plugin audit")]
 ACTIONS = {"fix": "Fix in the audit", "skill-builder": "Use skill-builder", "decision": "Needs your decision"}
 TYPES = {"defect", "suggestion"}
 STATUSES = {"open", "fixed", "deferred", "accepted"}
@@ -135,7 +135,7 @@ def validate(data):
         if f.get("target") not in ids:
             errors.append("%s: unknown target %r" % (where, f.get("target")))
         if f.get("domain") not in dict(DOMAINS):
-            errors.append("%s: domain must be tool, instruction, or workspace" % where)
+            errors.append("%s: domain must be tool, instruction, workspace, or plugin" % where)
         if not re.match(r"^[A-Z]\d+$", str(f.get("check", ""))):
             errors.append("%s: check must be an ID such as S3" % where)
         if f.get("type") not in TYPES:
@@ -218,9 +218,9 @@ def tool_of(f):
 
 # rendering -----------------------------------------------------------------
 
-def text(value):
-    """Escaped text with `code` spans (any number of backticks) and [text](https://...) links."""
-    out = html.escape(str(value), quote=False)
+def text(value, links=True):
+    """Escaped text with `code` spans (any number of backticks) and, unless links is off, [text](https://...) links."""
+    out = html.escape(str(value).replace("\x00", ""), quote=True)
     codes = []
 
     def keep(m):
@@ -228,7 +228,8 @@ def text(value):
         return "\x00%d\x00" % (len(codes) - 1)
 
     out = re.sub(r"(`+)(.+?)\1", keep, out)  # code first, so links inside code stay literal
-    out = re.sub(r"\[([^\]]+)\]\((https?://[^)\s]+)\)", lambda m: "<a href=\"%s\">%s</a>" % (m.group(2), m.group(1)), out)
+    if links:
+        out = re.sub(r"\[([^\]]+)\]\((https?://[^)\s\x00]+)\)", lambda m: "<a href=\"%s\">%s</a>" % (m.group(2), m.group(1)), out)
     return re.sub(r"\x00(\d+)\x00", lambda m: codes[int(m.group(1))], out)
 
 
@@ -249,7 +250,7 @@ def finding_cards(findings):
             "<div><p class=\"label\">Evidence</p><blockquote>%s</blockquote></div>"
             "<div><p class=\"label\">Proposed fix</p><p>%s</p></div></div></li>"
             % (f["n"], f["n"], html.escape(f["check"]), f["type"], f["type"].capitalize(), where_of(f),
-               ACTIONS[f["action"]], f["status"], f["status"].capitalize(), text(f["evidence"]), text(f["fix"])))
+               ACTIONS[f["action"]], f["status"], f["status"].capitalize(), text(f["evidence"], f["domain"] != "plugin"), text(f["fix"], f["domain"] != "plugin")))
     return "<ol class=\"findings\">%s</ol>" % "".join(cards)
 
 
@@ -325,7 +326,7 @@ def render(data, log_path):
     audited = sum(t["files"].get("audited", 0) for t in data["targets"])
     parts = []
     nav = "".join("<li><a href=\"#%s\">%s</a></li>" % (t["id"], html.escape(t["name"])) for t in data["targets"])
-    parts.append("<header><h1>Environment audit</h1><p class=\"meta\">%s · %s run · %d targets</p>"
+    parts.append("<header><h1>Skill audit</h1><p class=\"meta\">%s · %s run · %d targets</p>"
                  "<ul class=\"targets\">%s</ul></header>" % (data["date"], data["mode"], len(data["targets"]), nav))
     parts.append("<section aria-label=\"Key figures\"><div class=\"figures\">%s</div></section>" % "".join([
         figure(len(data["targets"]), "Targets"), figure(audited, "Files audited"),
@@ -347,7 +348,7 @@ def render(data, log_path):
         for note in t.get("notes", []):
             blocks.append("<p>%s</p>" % text(note))
         for dom, label in DOMAINS:
-            if dom == "workspace" and t["kind"] != "workspace":
+            if (dom == "workspace" and t["kind"] != "workspace") or (dom == "plugin" and t["kind"] == "candidate"):
                 continue
             dfs = [f for f in fs if f["domain"] == dom]
             content = finding_cards(dfs) if dfs else "<p class=\"empty\">No findings.</p>"
@@ -371,7 +372,7 @@ def render(data, log_path):
             for s in data["skipped_targets"]))
 
     if data["mode"] == "candidate":
-        parts.append("<footer>Generated by <code>environment-audit</code> in candidate mode for "
+        parts.append("<footer>Generated by <code>skill-audit</code> in candidate mode for "
                      "<code>skill-finder</code>'s vetting. Nothing in the candidate was run or changed.</footer>")
         return "\n".join(parts)
 
@@ -396,7 +397,7 @@ def render(data, log_path):
     trs = "".join("<tr>%s</tr>" % "".join("<td>%s</td>" % cell_html(c) for c in (r + [""] * len(cols))[:len(cols)]) for r in shown)
     parts.append("<section><h2 id=\"run-log\">Run log</h2><div class=\"scroll\" role=\"region\" aria-labelledby=\"run-log\" tabindex=\"0\"><table><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div></section>"
                  % ("".join("<th>%s</th>" % c for c in cols), trs))
-    parts.append("<footer>Generated by <code>environment-audit</code>. Finding numbers match the chat summary.</footer>")
+    parts.append("<footer>Generated by <code>skill-audit</code>. Finding numbers match the chat summary.</footer>")
     return "\n".join(parts)
 
 
@@ -410,7 +411,7 @@ def cmd_render(args):
     save(args.report, data)
     with open(TEMPLATE, encoding="utf-8") as f:
         template = f.read()
-    title = "Environment audit %s" % data["date"]
+    title = "Skill audit %s" % data["date"]
     page = template.replace("{{TITLE}}", html.escape(title)).replace("{{CONTENT}}", render(data, args.log))
     if args.standalone:
         head, _, body = page.partition("<!-- body -->")
@@ -458,7 +459,7 @@ def cmd_log(args):
 
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
-    parser = argparse.ArgumentParser(description="Run file, report page, and run log for environment-audit.")
+    parser = argparse.ArgumentParser(description="Run file, report page, and run log for skill-audit.")
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("init")
     p.add_argument("report")

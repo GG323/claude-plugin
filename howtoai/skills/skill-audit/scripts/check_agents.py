@@ -1,4 +1,4 @@
-"""Scripted checks for environment-audit's Workspace audit stage.
+"""Scripted checks for skill-audit's Workspace audit stage.
 
 Checks a workspace's AGENTS.md against the Markdown conventions in this
 skill's references/markdown-conventions.md, against the installed skills and agents, and against the
@@ -343,7 +343,7 @@ def description(path):
 
 
 def probe(url):
-    headers = {"User-Agent": "environment-audit link check"}
+    headers = {"User-Agent": "skill-audit link check"}
     for method in ("HEAD", "GET"):
         try:
             req = urllib.request.Request(url, method=method, headers=headers)
@@ -365,7 +365,7 @@ def fail(message):
 
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
-    parser = argparse.ArgumentParser(description="Scripted checks for environment-audit's Workspace audit stage.")
+    parser = argparse.ArgumentParser(description="Scripted checks for skill-audit's Workspace audit stage.")
     parser.add_argument("--workspace", required=True, help="folder that holds (or should hold) AGENTS.md")
     parser.add_argument("--global-dir", default="~/.claude", help="global Claude folder")
     parser.add_argument("--no-web", action="store_true", help="skip web link checks")

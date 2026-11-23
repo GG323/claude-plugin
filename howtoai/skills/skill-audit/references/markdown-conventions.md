@@ -90,4 +90,4 @@ Instruction files that describe a procedure use these words, one meaning each:
 
 ## Skills and agents
 
-- [environment-audit](../SKILL.md) owns this file and checks files against it; [checks.md](checks.md) says how. Its workspace audit copies the `Markdown conventions` section into `AGENTS.md`.
+- [skill-audit](../SKILL.md) owns this file and checks files against it; [checks.md](checks.md) says how. Its workspace audit copies the `Markdown conventions` section into `AGENTS.md`.

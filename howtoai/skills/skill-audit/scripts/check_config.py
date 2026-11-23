@@ -1,4 +1,4 @@
-"""Scripted checks of non-Markdown configuration for environment-audit.
+"""Scripted checks of non-Markdown configuration for skill-audit.
 
 Checks I5 to I9 from references/checks.md and prints the result as JSON:
 

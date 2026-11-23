@@ -48,7 +48,7 @@ Pass the run folder to the Instruction audit stage: read [stages/instruction-aud
 
 ## Skills and agents
 
-- [environment-audit](../SKILL.md) — the overview and rules for every stage.
+- [skill-audit](../SKILL.md) — the overview and rules for every stage.
 - [references/checks.md](../references/checks.md) — the S, L, F, G, and D checks.
 - [scripts/check_md.py](../scripts/check_md.py) — the scripted checks.
 - Previous stage: [Discover](discover.md); next stage: [Instruction audit](instruction-audit.md).

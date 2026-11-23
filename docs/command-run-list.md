@@ -119,7 +119,7 @@ What `$.command.list()` returned to the `command-pane` mod at `session.start` on
 | `client-follow-up` | Drafts the follow-up email to a client in the user's own voice, after an AI training session (from session notes - thanks, recap, material links, next steps, workshop offer) or after a client meeting (from the Google... |
 | `course-clip-prep` | Prepares short course or training video clips for upload. |
 | `downloads-organizer` | Tidies a Windows Downloads folder (including one inside OneDrive) by sorting loose files into subfolders by type and month (or year), giving them consistent clean names, and setting exact duplicates aside for review. |
-| `environment-audit` | Audits the user's whole Claude environment on this computer in one run - the global ~/.claude folder and every Claude workspace found in Claude Code's session history. |
+| `skill-audit` | Audits the user's whole Claude environment on this computer in one run - the global ~/.claude folder and every Claude workspace found in Claude Code's session history. |
 | `invoice-summary` | Turns a monthly invoice CSV export from an accounting tool (semicolon-separated, decimal commas, amounts in EUR) into an Excel summary with totals per client, paid vs unpaid (partly paid invoices split into paid and o... |
 | `python-script-review` | Reviews a single Python script for bugs and style problems and suggests concrete, copy-ready fixes, without modifying the file. |
 | `skill-builder` | Create, improve, or repair a focused agent skill (SKILL.md plus optional supporting files) for a repeatable technical or nontechnical task. |

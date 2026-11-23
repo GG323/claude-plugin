@@ -1,5 +1,5 @@
 """Regression tests for the scripted vetting path: skill-finder's vet.py and
-environment-audit's check_md.py and check_config.py in candidate mode.
+skill-audit's check_md.py and check_config.py in candidate mode.
 
 Run:  py -3 -I test_vetting_scripts.py [--tmp <folder>]
 
@@ -23,8 +23,8 @@ import threading
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILLS = os.path.dirname(os.path.dirname(HERE))
 VET = os.path.join(SKILLS, "skill-finder", "scripts", "vet.py")
-CHECK_MD = os.path.join(SKILLS, "environment-audit", "scripts", "check_md.py")
-CHECK_CONFIG = os.path.join(SKILLS, "environment-audit", "scripts", "check_config.py")
+CHECK_MD = os.path.join(SKILLS, "skill-audit", "scripts", "check_md.py")
+CHECK_CONFIG = os.path.join(SKILLS, "skill-audit", "scripts", "check_config.py")
 
 results = []
 

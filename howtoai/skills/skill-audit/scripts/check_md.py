@@ -1,4 +1,4 @@
-"""Scripted checks for environment-audit's Tool audit stage.
+"""Scripted checks for skill-audit's Tool audit stage.
 
 Finds the user-made Markdown instruction files in a .claude folder (the global
 ~/.claude by default, or a workspace's .claude, together with the workspace's
@@ -222,7 +222,8 @@ class Audit:
                 if not self.candidate and os.path.basename(root) == "skills" and dirpath == root:
                     # skills/synced/ holds the official skills the Claude app syncs; never audited
                     dirnames[:] = [d for d in dirnames if d != "synced"]
-                candidates += [os.path.join(dirpath, f) for f in sorted(filenames) if f.endswith(".md")]
+                candidates += [os.path.join(dirpath, f) for f in sorted(filenames)
+                               if f.endswith(".md") and not f.lower().endswith(".audit.md")]  # audit files are not tools
         loose = [] if self.candidate else [os.path.join(self.global_dir, "CLAUDE.md")]
         if self.workspace_root:
             # A workspace's own CLAUDE.md files sit next to its .claude folder.
@@ -473,7 +474,7 @@ def is_fixture(path):
 
 
 def probe(url):
-    headers = {"User-Agent": "environment-audit link check"}
+    headers = {"User-Agent": "skill-audit link check"}
     for method in ("HEAD", "GET"):
         try:
             req = urllib.request.Request(url, method=method, headers=headers)
@@ -520,7 +521,7 @@ def fail(message):
 
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
-    parser = argparse.ArgumentParser(description="Scripted checks for environment-audit's Tool audit stage.")
+    parser = argparse.ArgumentParser(description="Scripted checks for skill-audit's Tool audit stage.")
     target = parser.add_mutually_exclusive_group()
     target.add_argument("--root", "--global-dir", dest="global_dir", default="~/.claude",
                         help=".claude folder to audit (default: the global ~/.claude)")
