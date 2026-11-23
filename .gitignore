@@ -2,3 +2,6 @@
 howtoai/skills/*/state/
 
 __pycache__/
+
+# .NET build output (test fixtures build it on every run)
+obj/
