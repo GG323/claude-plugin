@@ -5,6 +5,8 @@ Run it as:  py -3 -I -B devmode.py [--claude-dir <dir>] <command> [options]
 Exit codes: 0 done or previewed, 1 refused or failed (JSON has "error"), 2 bad arguments.
 
 The setting lives in the workspace's AGENTS.md, in its "## Dev mode" section (the entry).
+Git version control and Dev mode must each be on or off: a missing one is an error, never a
+default. Dev mode on needs Git version control on.
 ~/.claude/howtoai/install.json is only a pointer: which workspace holds the entry, and where
 this plugin is (howtoai_root).
 
@@ -12,11 +14,14 @@ Commands
   status [--workspace <path>]
       The entry (read from <workspace>/AGENTS.md; the workspace defaults to the pointer's), the
       pointer, the resolved folders, and the health of every entry in <claude-dir>/skills and
-      <claude-dir>/agents.
-  set --dev-mode on|off --workspace <path> [--source-folder <f>] [--plugins-folder <f>] [--write]
+      <claude-dir>/agents. With Git version control on, also whether Git really covers the files.
+      Exit 1 with needs_setting when a setting is missing or invalid.
+  set --dev-mode on|off --workspace <path> [--source-folder <f>] [--plugins-folder <f>]
+      [--git-version-control on|off] [--write]
       Previews the Dev mode entry in <workspace>/AGENTS.md and the pointer; writes both only
       with --write. Folders are relative to the workspace: source default AGENTS, plugins
-      default <source>/plugins; a folder left out keeps the entry's current value.
+      default <source>/plugins. An option left out keeps the entry's current value; without
+      one, --git-version-control is required. Never runs git init, add, or commit.
   link --source <skill folder or agent .md file> [--replace-link] [--write]
       Previews the global link for one skill (<claude-dir>/skills/<name>) or agent
       (<claude-dir>/agents/<name>.md); creates it only with --write. Never replaces a real
@@ -28,7 +33,7 @@ Commands
   check-deps
       Whether the tools and skills the howtoai plugin needs are present.
   agents-md --workspace <path> [--replace-baseline] [--write]
-      Previews adding the Markdown conventions block (read from environment-audit's reference)
+      Previews adding the Markdown conventions block (read from skill-audit's reference)
       to the workspace's AGENTS.md. A block that differs is kept unless --replace-baseline.
 
 --claude-dir replaces ~/.claude, for tests.
@@ -46,8 +51,8 @@ import sys
 import tempfile
 
 HOWTOAI_ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-REFERENCE = os.path.join(HOWTOAI_ROOT, "skills", "environment-audit", "references", "markdown-conventions.md")
-HOWTOAI_SKILLS = ["skill-builder", "skill-finder", "environment-audit", "skill-design", "brain-dump", "grilling"]
+REFERENCE = os.path.join(HOWTOAI_ROOT, "skills", "skill-audit", "references", "markdown-conventions.md")
+HOWTOAI_SKILLS = ["skill-builder", "skill-finder", "skill-audit", "skill-design", "brain-dump", "grilling", "handover"]
 HARNESS_SKILLS = [
     ("update-config", "required", "skill-builder hands hook and settings changes to it"),
     ("plugin-authoring", "required", "skill-builder hands mods to it"),
@@ -60,11 +65,14 @@ IS_WINDOWS = os.name == "nt"
 REPARSE_MOUNT_POINT = 0xA0000003
 BASELINE_HEADING = "Markdown conventions"
 DEVMODE_HEADING = "Dev mode"
-LABEL = re.compile(r"^- \*\*(Dev mode|Source folder|Plugins folder):\*\*\s*(.+?)\s*$")
+SETTINGS = (("git_version_control", "Git version control"), ("dev_mode", "Dev mode"))
+LABEL = re.compile(r"^- \*\*(Git version control|Dev mode|Source folder|Plugins folder):\*\*\s*(.+?)\s*$")
 
 
 class Refused(Exception):
-    pass
+    def __init__(self, message, **extra):
+        super().__init__(message)
+        self.extra = extra
 
 
 class BadArgs(Exception):
@@ -202,7 +210,7 @@ def label_value(raw):
 
 
 def parse_entry(lines):
-    """Return the setting in the Dev mode section, None when there is none."""
+    """Return what the Dev mode section says, valid or not; None when there is no section."""
     s = find(sections(lines), DEVMODE_HEADING)
     if not s:
         return None
@@ -211,13 +219,44 @@ def parse_entry(lines):
         m = LABEL.match(lines[i])
         if m:
             found[m.group(1)] = (label_value(m.group(2)), i + 1)
-    if "Dev mode" not in found or found["Dev mode"][0].lower() not in ("on", "off"):
-        raise Refused("The Dev mode section of AGENTS.md (line %d) has no '- **Dev mode:** on' or '- **Dev mode:** off' "
-                      "line. Fix it, or rerun set." % (s[1] + 1))
+    entry = {"line": s[1] + 1, "bad": {}}
+    for key, label in SETTINGS:
+        raw, line = found.get(label, (None, None))
+        entry[key] = {"on": True, "off": False}.get(raw.lower()) if raw is not None else None
+        if raw is not None and entry[key] is None:
+            entry["bad"][key] = (raw, line)
     src = found.get("Source folder", ("AGENTS", None))[0] or "AGENTS"
-    plugins = found.get("Plugins folder", (src + "/plugins", None))[0] or src + "/plugins"
-    return {"dev_mode": found["Dev mode"][0].lower() == "on", "source_folder": src, "plugins_folder": plugins,
-            "line": s[1] + 1}
+    entry["source_folder"] = src
+    entry["plugins_folder"] = found.get("Plugins folder", (src + "/plugins", None))[0] or src + "/plugins"
+    return entry
+
+
+def setting_needs(entry):
+    """What stops the entry from being a valid setting; an empty list when it is valid."""
+    entry = entry or {}
+    needs = []
+    for key, label in SETTINGS:
+        if entry.get(key) is not None:
+            continue
+        if key in entry.get("bad", {}):
+            raw, line = entry["bad"][key]
+            problem = "%s is '%s' on line %d of AGENTS.md; it must be on or off." % (label, raw, line)
+        else:
+            problem = "%s is not set; it must be made on or off." % label
+        needs.append({"setting": label, "problem": problem})
+    if entry.get("dev_mode") and entry.get("git_version_control") is False:
+        needs.append({"setting": "Git version control",
+                      "problem": "Dev mode needs Git version control on: turn Git version control on, or dev mode off."})
+    return needs
+
+
+def needs_error(needs):
+    return (" ".join(n["problem"] for n in needs) + " Ask the user, then record the answer: devmode.py set "
+            "--workspace <path> --dev-mode on|off --git-version-control on|off.")
+
+
+def public(entry):
+    return {k: v for k, v in entry.items() if k != "bad"} if entry else None
 
 
 def resolved_paths(ws, setting):
@@ -229,22 +268,62 @@ def resolved_paths(ws, setting):
             "docs": os.path.join(src, "docs"), "plugins": plugins}
 
 
+def repo_root(path):
+    """The nearest folder at or above path that holds .git; found without running git."""
+    d = os.path.realpath(path)
+    while True:
+        if os.path.exists(os.path.join(d, ".git")):
+            return d
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+
+
+def git_health(ws, setting):
+    """What keeps Git from covering the files; None when the setting is off. Read-only."""
+    if not ws or not setting or not setting["git_version_control"]:
+        return None
+    git = shutil.which("git")
+    problems = [] if git else ["Git is not installed (Windows: winget install Git.Git)."]
+    targets = [("AGENTS.md", os.path.join(ws, "AGENTS.md"), False)]
+    if setting["dev_mode"]:
+        paths = resolved_paths(ws, setting)
+        targets += [(key, paths[key], True) for key in ("skills", "agents", "docs", "plugins")]
+    repos = {}
+    for key, path, is_folder in targets:
+        root = repo_root(path)
+        repos[key] = root
+        if not root:
+            problems.append("%s is not in a Git repository: %s" % (key, path))
+        elif git and not same(path, root):
+            probe = os.path.join(os.path.realpath(path), ".devmode-probe") if is_folder else os.path.realpath(path)
+            r = subprocess.run([git, "-c", "core.fsmonitor=false", "-C", root, "check-ignore", "-q", "--",
+                                os.path.relpath(probe, root)], capture_output=True, text=True, errors="replace")
+            if r.returncode == 0:
+                problems.append("%s is ignored by the repository %s: %s" % (key, root, path))
+            elif r.returncode != 1:
+                problems.append("%s could not be checked in %s: %s" % (key, root, r.stderr.strip()))
+    return {"ok": not problems, "problems": problems, "repos": repos}
+
+
 def load_setting(a, workspace=None):
-    """Return (workspace, agents_md_path, setting or None, pointer)."""
+    """Return (workspace, agents_md_path, valid setting or None, pointer, needs)."""
     pointer = read_pointer(a.claude_dir)
     ws = workspace or (pointer or {}).get("workspace")
-    if not ws:
-        return None, None, None, pointer
-    ws = os.path.abspath(os.path.expanduser(ws))
-    path, text = read_agents(ws)
-    setting = parse_entry(text.splitlines()) if text is not None else None
-    return ws, path, setting, pointer
+    path, entry = None, None
+    if ws:
+        ws = os.path.abspath(os.path.expanduser(ws))
+        path, text = read_agents(ws)
+        entry = parse_entry(text.splitlines()) if text is not None else None
+    needs = setting_needs(entry)
+    return ws or None, path, None if needs else public(entry), pointer, needs
 
 
 # ---- commands -----------------------------------------------------------------------------
 
 def cmd_status(a):
-    ws, path, setting, pointer = load_setting(a, a.workspace)
+    ws, path, setting, pointer, needs = load_setting(a, a.workspace)
     paths = resolved_paths(ws, setting)
     links = []
     for kind, folder in (("skill", "skills"), ("agent", "agents")):
@@ -258,14 +337,16 @@ def cmd_status(a):
     counts = {}
     for item in links:
         counts[item["state"]] = counts.get(item["state"], 0) + 1
-    res = {"ok": True, "workspace": ws, "agents_md": path,
+    res = {"ok": not needs, "workspace": ws, "agents_md": path,
            "agents_md_exists": bool(path and os.path.isfile(path)),
-           "setting": setting, "dev_mode": bool(setting and setting["dev_mode"]),
+           "setting": setting, "dev_mode": setting["dev_mode"] if setting else None,
            "pointer_path": pointer_path(a.claude_dir), "pointer": pointer,
-           "howtoai_root": HOWTOAI_ROOT, "paths": paths, "links": links, "counts": counts}
+           "howtoai_root": HOWTOAI_ROOT, "git": git_health(ws, setting), "paths": paths, "links": links, "counts": counts}
     if paths:
         res["exists"] = {k: os.path.isdir(v) for k, v in paths.items()}
-    out(res)
+    if needs:
+        res.update(error=needs_error(needs), needs_setting=needs)
+    out(res, 1 if needs else 0)
 
 
 def md_link(rel):
@@ -273,16 +354,29 @@ def md_link(rel):
     return "[%s](%s)" % (rel, "<%s>" % rel if " " in rel else rel)
 
 
-def devmode_block(on, src, plugins):
+def devmode_block(on, src, plugins, git):
+    git_text = " Git version control should be enabled." if git else ""
+    git_line = "- **Git version control:** " + ("on" if git else "off")
     if on:
         text = ("Dev mode is on: the installed and created skills, agents, and tools are kept in this workspace's "
                 "files, under version control, and the global folders `~/.claude/skills/` and `~/.claude/agents/` hold "
-                "only links to them (a directory junction or symbolic link per skill, a symbolic link per agent).")
+                "only links to them (a directory junction or symbolic link per skill, a symbolic link per agent)."
+                + git_text)
         return ["## " + DEVMODE_HEADING, "", text, "",
-                "- **Dev mode:** on", "- **Source folder:** " + md_link(src), "- **Plugins folder:** " + md_link(plugins)]
+                git_line, "- **Dev mode:** on", "- **Source folder:** " + md_link(src), "- **Plugins folder:** " + md_link(plugins)]
     text = ("Dev mode is off: the installed skills, agents, and tools come from normal plugin installs, and created "
-            "ones are saved in the usual `.claude` folders.")
-    return ["## " + DEVMODE_HEADING, "", text, "", "- **Dev mode:** off"]
+            "ones are saved in the usual `.claude` folders." + git_text)
+    return ["## " + DEVMODE_HEADING, "", text, "", git_line, "- **Dev mode:** off"]
+
+
+def holds_valid_setting(workspace):
+    if not isinstance(workspace, str) or not os.path.isabs(workspace):
+        return False
+    try:
+        text = read_agents(workspace)[1]
+    except (OSError, ValueError):
+        return False
+    return text is not None and not setting_needs(parse_entry(text.splitlines()))
 
 
 def cmd_set(a):
@@ -292,13 +386,10 @@ def cmd_set(a):
     on = a.dev_mode == "on"
     path, text = read_agents(ws)
     if text is None:
-        raise Refused("No AGENTS.md in %s; the setting is kept there. Create one first (environment-audit's "
+        raise Refused("No AGENTS.md in %s; the setting is kept there. Create one first (skill-audit's "
                       "workspace audit drafts it)." % ws)
     before = text.splitlines()
-    try:
-        prev, note = parse_entry(before), None
-    except Refused:
-        prev, note = None, "The current Dev mode section has no labelled lines; set replaces it whole."
+    prev = parse_entry(before)
     src = check_relative("--source-folder", a.source_folder) if a.source_folder else (prev or {}).get("source_folder", "AGENTS")
     if a.plugins_folder:
         plugins = check_relative("--plugins-folder", a.plugins_folder)
@@ -306,23 +397,31 @@ def cmd_set(a):
         plugins = prev["plugins_folder"]
     else:
         plugins = src + "/plugins"
-    lines, act = place(list(before), devmode_block(on, src, plugins), DEVMODE_HEADING,
+    wanted = dict(prev or {}, dev_mode=on)
+    if a.git_version_control:
+        wanted["git_version_control"] = a.git_version_control == "on"
+    needs = setting_needs(wanted)
+    if needs:
+        raise Refused(needs_error(needs), needs_setting=needs)
+    git = wanted["git_version_control"]
+    lines, act = place(list(before), devmode_block(on, src, plugins, git), DEVMODE_HEADING,
                        after=("Workspace layout",), before=(BASELINE_HEADING, "Skills and agents"))
-    setting = {"dev_mode": on, "source_folder": src, "plugins_folder": plugins}
+    setting = {"git_version_control": git, "dev_mode": on, "source_folder": src, "plugins_folder": plugins}
     old_pointer = read_pointer(a.claude_dir)
-    pointer = {"workspace": ws, "howtoai_root": HOWTOAI_ROOT, "updated": a.as_of or datetime.date.today().isoformat()}
+    pointed = ws
+    if not on and isinstance(old_pointer, dict) and holds_valid_setting(old_pointer.get("workspace")):
+        pointed = old_pointer["workspace"]  # dev mode off never takes another workspace's pointer
+    pointer = {"workspace": pointed, "howtoai_root": HOWTOAI_ROOT, "updated": a.as_of or datetime.date.today().isoformat()}
     pointer_changed = old_pointer is None or {k: v for k, v in old_pointer.items() if k != "updated"} != \
         {k: v for k, v in pointer.items() if k != "updated"}
     changed = lines != before
     res = {"ok": True, "write": bool(a.write), "workspace": ws, "agents_md": path, "setting": setting,
-           "previous": {k: v for k, v in prev.items() if k != "line"} if prev else None,
+           "previous": {k: v for k, v in public(prev).items() if k != "line"} if prev else None,
            "entry_action": act, "changed": changed,
            "diff": "\n".join(difflib.unified_diff(before, lines, "AGENTS.md", "AGENTS.md (new)", lineterm="")) if changed else "",
            "pointer_path": pointer_path(a.claude_dir), "pointer": pointer, "pointer_changed": pointer_changed,
-           "paths": resolved_paths(ws, setting)}
+           "git": git_health(ws, setting), "paths": resolved_paths(ws, setting)}
     res["exists"] = {k: os.path.isdir(v) for k, v in res["paths"].items()}
-    if note:
-        res["note"] = note
     res["written"] = False
     if a.write:
         if changed:
@@ -347,7 +446,9 @@ def cmd_link(a):
         kind, dest = "agent", os.path.join(a.claude_dir, "agents", os.path.basename(source))
     else:
         raise Refused("The source must be a skill folder (with SKILL.md) or an agent .md file: %s" % source)
-    ws, _, setting, _ = load_setting(a)
+    ws, _, setting, _, needs = load_setting(a)
+    if needs:
+        raise Refused(needs_error(needs), needs_setting=needs)
     paths = resolved_paths(ws, setting)
     res = {"ok": True, "write": bool(a.write), "kind": kind, "source": source, "dest": dest,
            "link": "junction" if (kind == "skill" and IS_WINDOWS) else "symlink"}
@@ -418,8 +519,8 @@ def cmd_check_deps(a):
                   "detail": "Python %d.%d.%d" % sys.version_info[:3],
                   "fix": "" if py_ok else "Install Python 3.10 or later (Windows: winget install Python.Python.3.13)"})
     git = shutil.which("git")
-    items.append({"name": "git", "kind": "tool", "need": "optional", "status": "ok" if git else "missing",
-                  "detail": git or "keeps dev-mode files under version control",
+    items.append({"name": "git", "kind": "tool", "need": "required for Git version control and dev mode", "status": "ok" if git else "missing",
+                  "detail": git or "keeps the workspace's files under version control",
                   "fix": "" if git else "Windows: winget install Git.Git"})
     uv = shutil.which("uv")
     chroma = subprocess.run([sys.executable, "-c", "import chromadb"], capture_output=True).returncode == 0
@@ -478,7 +579,7 @@ def write_text(path, original, lines):
 
 def baseline_block():
     if not os.path.isfile(REFERENCE):
-        raise Refused("The conventions reference is missing: %s. Restore the environment-audit skill." % REFERENCE)
+        raise Refused("The conventions reference is missing: %s. Restore the skill-audit skill." % REFERENCE)
     with open(REFERENCE, encoding="utf-8") as f:
         lines = f.read().splitlines()
     s = find(sections(lines), BASELINE_HEADING)
@@ -553,7 +654,7 @@ def cmd_agents_md(a):
     ws = os.path.abspath(os.path.expanduser(a.workspace))
     path, text = read_agents(ws)
     if text is None:
-        raise Refused("No AGENTS.md in %s. Create one first (environment-audit's workspace audit drafts it)." % ws)
+        raise Refused("No AGENTS.md in %s. Create one first (skill-audit's workspace audit drafts it)." % ws)
     before = text.splitlines()
     lines = list(before)
     ref = baseline_block()
@@ -563,7 +664,7 @@ def cmd_agents_md(a):
         block.update(action="kept", state="differs",
                      diff="\n".join(difflib.unified_diff(trim(lines[cur[1]:cur[2]]), ref, "AGENTS.md", "reference", lineterm="")),
                      note="Ask the user which copy wins; rerun with --replace-baseline to take the reference, "
-                          "or change the reference in environment-audit.")
+                          "or change the reference in skill-audit.")
     else:
         block["state"] = "missing" if not cur else ("matches" if trim(lines[cur[1]:cur[2]]) == ref else "differs")
         lines, block["action"] = place(lines, ref, BASELINE_HEADING, before=("Skills and agents",))
@@ -591,6 +692,7 @@ def main():
     s.add_argument("--workspace", required=True)
     s.add_argument("--source-folder")
     s.add_argument("--plugins-folder")
+    s.add_argument("--git-version-control", choices=["on", "off"])
     s.add_argument("--as-of", help="date for the pointer's 'updated' field, YYYY-MM-DD (tests)")
     s.add_argument("--write", action="store_true")
     l = sub.add_parser("link")
@@ -613,7 +715,7 @@ def main():
     except BadArgs as e:
         out({"ok": False, "error": str(e)}, 2)
     except Refused as e:
-        out({"ok": False, "error": str(e)}, 1)
+        out(dict(e.extra, ok=False, error=str(e)), 1)
 
 
 if __name__ == "__main__":

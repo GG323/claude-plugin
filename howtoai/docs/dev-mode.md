@@ -22,7 +22,7 @@
 
 Dev mode is one install choice for the `howtoai` plugin and the plugins built on it. The question to the user is: "Do you want to keep the skills, agents, and tools in workspace files, so they are under version control and easier to change?"
 
-- **On:** the main files live in a workspace the user picks. The global folders hold only links: `~/.claude/skills/<skill>` is a directory junction (Windows) or symbolic link, and `~/.claude/agents/<agent>.md` is a symbolic link. Editing the workspace file changes the installed tool at once.
+- **On:** the main files live in a workspace the user picks. The global folders hold only links: `~/.claude/skills/<skill>` is a directory junction (Windows) or symbolic link, and `~/.claude/agents/<agent>.md` is a symbolic link. Editing the workspace file changes the installed tool at once. Dev mode needs Git version control on.
 - **Off:** a normal plugin install from the `howtoai-mods` marketplace; nothing is linked.
 
 This file is the contract: [INSTALL.md](../INSTALL.md), `skill-builder`, and the `howtoai-dev` plugin's install build against the names below.
@@ -36,24 +36,25 @@ The setting lives in the workspace's `AGENTS.md`, in a `## Dev mode` section: th
 ```markdown
 ## Dev mode
 
-Dev mode is on: the installed and created skills, agents, and tools are kept in this workspace's files, under version control, and the global folders `~/.claude/skills/` and `~/.claude/agents/` hold only links to them (a directory junction or symbolic link per skill, a symbolic link per agent).
+Dev mode is on: the installed and created skills, agents, and tools are kept in this workspace's files, under version control, and the global folders `~/.claude/skills/` and `~/.claude/agents/` hold only links to them (a directory junction or symbolic link per skill, a symbolic link per agent). Git version control should be enabled.
 
+- **Git version control:** on
 - **Dev mode:** on
 - **Source folder:** [Agents/](Agents/)
 - **Plugins folder:** [PLUGIN/claude-plugin/](PLUGIN/claude-plugin/)
 ```
 
 - The section goes after `## Workspace layout` (else before `## Markdown conventions` or `## Skills and agents`), with a `- [Dev mode](#dev-mode)` entry in `Contents`.
-- Labelled lines are `- **<Label>:** <value>`, each on one line. **Dev mode** is `on` or `off` and is required; without it, `status` refuses with the line number, and `set` replaces the section whole.
-- **Source folder** and **Plugins folder** are folders relative to the workspace, written as a relative link (`[Agents/](Agents/)`, or `[My tools/](<My tools/>)` with spaces). The parser also accepts a code span (`` `Agents/` ``). Defaults when a line is missing: `AGENTS` and `<source folder>/plugins`. With dev mode off, `set` writes only the **Dev mode** line.
-- The paragraph above is the default description with dev mode on. With it off, the default is: "Dev mode is off: the installed skills, agents, and tools come from normal plugin installs, and created ones are saved in the usual `.claude` folders." The description stays plain: how the script works is documented here, not in `AGENTS.md`.
+- Labelled lines are `- **<Label>:** <value>`, each on one line. **Git version control** (first) and **Dev mode** are both required and each is `on` or `off`. A missing line, a missing section, or any other value is an error: the setting has to be made, so no tool assumes on or off. **Dev mode** on needs **Git version control** on; with dev mode off, Git version control can be either.
+- **Source folder** and **Plugins folder** are folders relative to the workspace, written as a relative link (`[Agents/](Agents/)`, or `[My tools/](<My tools/>)` with spaces). The parser also accepts a code span (`` `Agents/` ``). Defaults when a line is missing: `AGENTS` and `<source folder>/plugins`. With dev mode off, `set` writes only the **Git version control** and **Dev mode** lines.
+- The paragraph above is the default description with dev mode on. With it off, the default is: "Dev mode is off: the installed skills, agents, and tools come from normal plugin installs, and created ones are saved in the usual `.claude` folders. Git version control should be enabled." With Git version control off, which only dev mode off allows, it drops the last sentence. The description stays plain: how the script works is documented here, not in `AGENTS.md`.
 - `set` restores the default description on every run and shows the change in its `diff`, so a new default is changed in `scripts/devmode.py`, here, and in the tests. Edit the labelled lines by rerunning `set`.
 
-A workspace with no entry has dev mode off.
+A workspace with no entry has no setting, which is an error, not dev mode off: ask the user, then record the answer with `set`.
 
 ### The pointer
 
-`~/.claude/howtoai/install.json` is a user-level pointer, not the setting. `set --write` writes it, so tools running in any workspace can find the entry and the script:
+`~/.claude/howtoai/install.json` is a user-level pointer, not the setting. `set --write` writes it, so tools running in any workspace can find the entry and the script. With dev mode off, `set` keeps the workspace an existing pointer names while that workspace still holds a valid setting:
 
 | Key | Type | Meaning |
 | --- | --- | --- |
@@ -61,7 +62,7 @@ A workspace with no entry has dev mode off.
 | `howtoai_root` | absolute path | The `howtoai` plugin folder `devmode.py` ran from, so callers find the script without a `../..` path, which breaks through a junction. |
 | `updated` | `YYYY-MM-DD` | The date of the last write. |
 
-No pointer means the install has not run: callers treat it as dev mode off.
+No pointer means the setting has not been made: callers that need it ask the user and record it with `set`; they never treat it as dev mode off.
 
 ## Source folder layout
 
@@ -88,8 +89,10 @@ Every command prints one JSON object. Exit codes: `0` done or previewed, `1` ref
 
 `status [--workspace <path>]` reads only. The workspace is the one given, else the pointer's. It returns:
 
-- `workspace`, `agents_md`, `agents_md_exists`, and `setting`: the parsed entry (`dev_mode`, `source_folder`, `plugins_folder`, and `line`, its heading's line number), or `null` when there is no entry.
-- `dev_mode`: `true` only when the entry says on.
+- `workspace`, `agents_md`, `agents_md_exists`, and `setting`: the parsed entry (`git_version_control`, `dev_mode`, `source_folder`, `plugins_folder`, and `line`, its heading's line number), or `null` when the setting is missing or invalid.
+- `dev_mode`: `true` or `false` from a valid setting, otherwise `null`. Never read `null` as off.
+- `needs_setting`, only on an error: a list of `setting` and `problem`, with `ok: false`, an `error` that gives the fix, and exit 1. The other keys, `links` included, are still returned.
+- `git`: `null` when the setting is not valid or Git version control is off. Otherwise `ok`, `problems` (sentences to show the user), and `repos` (the repository holding each checked path). It checks that Git is installed and that `AGENTS.md`, and with dev mode on the `skills`, `agents`, `docs`, and `plugins` folders, are each in a repository that does not ignore them. A folder with its own repository counts. It does not check that files are committed.
 - `pointer_path`, `pointer` (or `null`), and `howtoai_root`.
 - `paths`: the resolved absolute `workspace`, `source`, `skills`, `agents`, `docs`, and `plugins` folders (or `null` without an entry), and `exists` for each.
 - `links`: one item per entry in `~/.claude/skills/` and `~/.claude/agents/*.md` (names starting with `.` are skipped), with `name`, `kind` (`skill` or `agent`), `path`, and `state`:
@@ -100,9 +103,9 @@ Every command prints one JSON object. Exit codes: `0` done or previewed, `1` ref
 
 ### set
 
-`set --dev-mode on|off --workspace <path> [--source-folder <f>] [--plugins-folder <f>] [--write]`
+`set --dev-mode on|off --workspace <path> [--source-folder <f>] [--plugins-folder <f>] [--git-version-control on|off] [--write]`
 
-Builds the entry and the pointer, and returns `setting`, the `previous` setting, `entry_action` (`insert`, `replace`, or `none`), `changed`, a unified `diff` of `AGENTS.md`, `pointer`, `pointer_changed`, and the resolved `paths` with `exists`. The workspace must exist (exit 2) and have an `AGENTS.md` (exit 1). Folder options are relative to the workspace and may not contain `..` (exit 2); a folder option left out keeps the entry's current value, or the default. With `--write`, it writes what changed and returns `written: true`. Line endings in `AGENTS.md` are kept.
+Builds the entry and the pointer, and returns `setting`, the `previous` setting, `entry_action` (`insert`, `replace`, or `none`), `changed`, a unified `diff` of `AGENTS.md`, `pointer`, `pointer_changed`, `git` (as in [status](#status)), and the resolved `paths` with `exists`. The workspace must exist (exit 2) and have an `AGENTS.md` (exit 1). Folder options are relative to the workspace and may not contain `..` (exit 2); an option left out keeps the entry's current value, and the folders otherwise get their defaults. `--git-version-control` has no default: without a current value it is required. A result with dev mode on and Git version control off is refused, never corrected silently (exit 1 with `needs_setting`). `set` repairs a broken entry when both values are given, keeping its folders. It records Git version control and never runs `git init`, `add`, or `commit`. With `--write`, it writes what changed and returns `written: true`. Line endings in `AGENTS.md` are kept.
 
 ### link
 
@@ -114,7 +117,7 @@ Links one skill folder (it must hold `SKILL.md`) to `~/.claude/skills/<folder na
 - `none`: the destination already links to this source.
 - `replace`: the destination is a link to somewhere else; allowed only with `--replace-link`, and the old target is not touched.
 
-It never replaces a real folder or file at the destination (exit 1). On Windows a skill folder gets a directory junction, which needs no special rights, and an agent file a symbolic link; when Windows refuses the symbolic link, the error says to turn on Developer Mode or run as administrator. On macOS and Linux both are symbolic links.
+It refuses without a valid setting (exit 1 with `needs_setting`). It never replaces a real folder or file at the destination (exit 1). On Windows a skill folder gets a directory junction, which needs no special rights, and an agent file a symbolic link; when Windows refuses the symbolic link, the error says to turn on Developer Mode or run as administrator. On macOS and Linux both are symbolic links.
 
 ### unlink
 
@@ -124,22 +127,22 @@ Removes one link directly in `~/.claude/skills/` or `~/.claude/agents/`, for exa
 
 ### check-deps
 
-`check-deps` reads only. It returns `deps_ok` (no required item missing) and `items`, each with `name`, `kind`, `need` (`required`, `optional`, or `required for dev mode`), `status` (`ok`, `missing`, or `unknown`), `detail`, and `fix`:
+`check-deps` reads only. It returns `deps_ok` (no required item missing) and `items`, each with `name`, `kind`, `need` (`required`, `optional`, `required for dev mode`, or `required for Git version control and dev mode`), `status` (`ok`, `missing`, or `unknown`), `detail`, and `fix`:
 
 - Python 3.10 or later; `git`; `uv` or the `chromadb` package (for `skill-finder` search); whether this computer can make file links.
-- The six `howtoai` skills: `skill-builder`, `skill-finder`, `environment-audit`, `skill-design`, `brain-dump`, `grilling`.
+- The seven `howtoai` skills: `skill-builder`, `skill-finder`, `skill-audit`, `skill-design`, `brain-dump`, `grilling`, `handover`.
 - Harness skills the plugin uses (`update-config`, `plugin-authoring`, `artifact-design`, `docx`, `pptx`, `schedule`), always `unknown`: a script cannot see them, so the installing agent checks its own skill list.
 
 ### agents-md
 
 `agents-md --workspace <path> [--replace-baseline] [--write]`
 
-Adds the baseline block, `## Markdown conventions`, to the workspace's `AGENTS.md` before `## Skills and agents`, with its `Contents` entries. The block is read by heading from `environment-audit`'s `references/markdown-conventions.md`, its one maintained copy. It returns the block's `state` (`missing`, `matches`, or `differs`), its `action` (`insert`, `replace`, `none`, or `kept`), and a unified `diff`. When the workspace's block differs, it is `kept` with that block's own `diff`, because the user chooses which copy wins (as `environment-audit`'s check W1 does); `--replace-baseline` takes the reference. It needs an existing `AGENTS.md` (exit 1).
+Adds the baseline block, `## Markdown conventions`, to the workspace's `AGENTS.md` before `## Skills and agents`, with its `Contents` entries. The block is read by heading from `skill-audit`'s `references/markdown-conventions.md`, its one maintained copy. It returns the block's `state` (`missing`, `matches`, or `differs`), its `action` (`insert`, `replace`, `none`, or `kept`), and a unified `diff`. When the workspace's block differs, it is `kept` with that block's own `diff`, because the user chooses which copy wins (as `skill-audit`'s check W1 does); `--replace-baseline` takes the reference. It needs an existing `AGENTS.md` (exit 1).
 
 ## Who uses it
 
 - [INSTALL.md](../INSTALL.md) runs `status`, `check-deps`, `set`, `link` or `unlink`, and `agents-md`, showing each preview before a write.
-- `skill-builder` reads the setting in Plan and Build: with dev mode on, a new personal skill or agent is saved under `paths.skills` or `paths.agents` and linked with `link`.
+- `skill-builder` reads the setting in Plan and Build, and asks the user to make it when it is missing: with dev mode on, a new personal skill or agent is saved under `paths.skills` or `paths.agents` and linked with `link`.
 - The `howtoai-dev` plugin's install reads the setting only through `status --workspace <path>`, links its own skills and agents under `paths.plugins` with `link` (with `--replace-link` when the user agrees), runs `set` when the workspace has no entry or dev mode is turned off, and removes its links with `unlink` when dev mode is turned off.
 
 ## Tests
@@ -149,5 +152,5 @@ Adds the baseline block, `## Markdown conventions`, to the workspace's `AGENTS.m
 ## Skills and agents
 
 - `skill-builder` - places new personal skills and agents in the source folder when dev mode is on.
-- `environment-audit` - owns the baseline block `agents-md` copies.
+- `skill-audit` - owns the baseline block `agents-md` copies.
 - `howtoai-dev` - its install uses `status`, `set`, `link`, and `unlink`.
