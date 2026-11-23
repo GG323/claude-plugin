@@ -115,6 +115,58 @@ class DeployTests(unittest.TestCase):
         for part in ("not deploy", "no accepted human review", "not green"):
             self.assertIn(part, joined)
 
+    def gate_after(self, runs, later=()):
+        """runs: (minute, result). Stage test is entered at minute 10 and review at 20; later: (minute, stage)."""
+        self.add_target()
+        change = os.path.join(self.ws, "dev-plans", "c1")
+        at = "2026-11-22T14:{:02d}:00+01:00".format
+        odd = {"bad": "yesterday", "naive": "2026-11-22T08:00:00"}
+        moves = [(0, "plan"), (5, "build"), (10, "test"), (20, "review"), *later, (58, "deploy")]
+        state = {"id": "c1", "stage": "deploy", "approvals": [{"what": "human review, round 1"}],
+                 "history": [{"at": at(minute), "stage": stage} for minute, stage in moves],
+                 "test_runs": [{"n": n, "route": route[0] if route else "run", "result": result,
+                                "at": odd.get(minute) or at(minute)}
+                               for n, (minute, result, *route) in enumerate(runs, 1)]}
+        write(os.path.join(change, "state.json"), json.dumps(state))
+        problems = run("gate", "--workspace", self.ws, "--target", "local-k8s", "--change", change)[1]["problems"]
+        return [p for p in problems if "test" in p and "uncommitted" not in p]
+
+    def test_gate_takes_the_run_that_started_at_stage_test(self):
+        self.assertEqual(self.gate_after([(20, "green")]), [])
+
+    def test_gate_a_resolved_red_after_the_full_run_passes(self):
+        self.assertEqual(self.gate_after([(20, "green"), (25, "red"), (26, "green")]), [])
+
+    def test_gate_a_narrow_green_does_not_cover_a_red_full_run(self):
+        self.assertTrue(self.gate_after([(20, "red"), (26, "green")]))
+
+    def test_gate_a_narrow_green_is_not_the_full_run(self):
+        self.assertTrue(self.gate_after([(8, "green"), (26, "green")]))
+
+    def test_gate_an_unresolved_red_after_the_full_run_stops_it(self):
+        self.assertTrue(self.gate_after([(20, "green"), (25, "red")]))
+
+    def test_gate_work_after_the_full_run_needs_a_new_one(self):
+        self.assertTrue(self.gate_after([(20, "green"), (45, "green")], [(30, "build"), (46, "review")]))
+
+    def test_gate_a_second_round_with_its_own_run_passes(self):
+        self.assertEqual(self.gate_after([(20, "green"), (50, "green")], [(30, "build"), (40, "test"), (50, "review")]), [])
+
+    def test_gate_a_red_check_is_not_the_full_run(self):
+        self.assertTrue(self.gate_after([(15, "green", "red-check"), (26, "green")]))
+
+    def test_gate_skips_an_older_run_it_cannot_place(self):
+        self.assertEqual(self.gate_after([("bad", "red"), (20, "green")]), [])
+
+    def test_gate_reads_a_time_without_a_zone_as_local(self):
+        self.assertEqual(self.gate_after([("naive", "green"), (20, "green")]), [])
+
+    def test_gate_lists_the_stage_test_check(self):
+        self.gate_after([(20, "green")])
+        change = os.path.join(self.ws, "dev-plans", "c1")
+        done = run("gate", "--workspace", self.ws, "--target", "local-k8s", "--change", change)[1]["checks_run"]
+        self.assertTrue(any("started at stage test" in check for check in done), done)
+
     def test_approve_records_exact_command_with_expiry(self):
         self.add_target()
         code, res = run("approve", "--workspace", self.ws, "--target", "local-k8s", "--step", "apply",

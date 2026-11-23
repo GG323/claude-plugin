@@ -11,7 +11,7 @@
 
 Large changes only; for Small and Medium, skip to [Fill the plan](#fill-the-plan).
 
-1. Start three general-purpose subagents in one message, one per stance in [architects.md](../references/architects.md): minimal, clean, and pragmatic. Each brief gives the workspace path, the restated request, the Scope and size section of `plan.md`, the answers and defaults from `questions.md`, the path of the workbook statements (`<change folder>/raw/workbook-statements.md`, saved first with `WORKBOOK resolve`, scope's paths, and `--markdown`), the stance text, and the output format from that file. No other context. Save each reply as it came to `<change folder>/raw/architects/<stance>.md`. A reply that starts `Blocked:` is not a design: stop, as `dev-workbook`'s loading rule says.
+1. Start three general-purpose subagents in one message, one per stance in [architects.md](../references/architects.md): minimal, clean, and pragmatic. Each brief gives the workspace path, the restated request, the Scope and size section of `plan.md`, the answers and defaults from `questions.md`, the stance text, and the output format from that file. No other context. Save each reply as it came to `<change folder>/raw/architects/<stance>.md`.
 2. Show the user the three designs as one comparison table (stance, shape in one line, files touched, new dependencies, main risk, effort) and recommend one, naming why it fits this change. Ask it as one `grilling` question in the architecture layer and record it in `questions.md`. The user may combine parts; record what they chose.
 
 ## Fill the plan

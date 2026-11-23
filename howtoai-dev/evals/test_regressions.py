@@ -571,16 +571,18 @@ class ScoredDuplicates(Workspace):
         self.assertEqual(code, 0, out)
         return out, read(path)
 
-    def test_duplicate_of_a_shown_finding_is_not_shown_again(self):
+    def test_duplicate_of_a_shown_finding_is_one_problem_with_it(self):
         out, text = self.tally([("R1-C1", "in", 92, "read", "Stands"),
                                 ("R1-T2", "in", 15, "Duplicate of R1-C1.", "Stands")])
-        self.assertEqual((out["kept"], out["clean"]), (1, False))
-        self.assertIn("duplicate of R1-C1", text)
+        self.assertEqual((out["kept"], out["clean"]), (2, False))
+        self.assertEqual(self.groups(out), [["R1-C1", "R1-T2"]])
+        self.assertNotIn("duplicate of R1-C1", text.split("## Appendix")[-1])
 
-    def test_duplicate_outside_the_change_is_not_shown_again(self):
+    def test_duplicate_outside_the_change_is_one_problem_with_it(self):
         out, _ = self.tally([("R1-W3", "outside", 75, "read", "Stands"),
                              ("R1-X1", "outside", 15, "Duplicate of R1-W3", "Stands")])
-        self.assertEqual(out["outside_change"], ["R1-W3"])
+        self.assertEqual(sorted(out["outside_change"]), ["R1-W3", "R1-X1"])
+        self.assertEqual(self.groups(out), [["R1-W3", "R1-X1"]])
 
     def test_duplicate_of_a_refuted_finding_stays(self):
         out, _ = self.tally([("R1-C1", "in", 92, "read", "Refuted"),
@@ -591,6 +593,7 @@ class ScoredDuplicates(Workspace):
         out, _ = self.tally([("R1-W3", "outside", 90, "read", "Stands"),
                              ("R1-T2", "in", 15, "Duplicate of R1-W3.", "Stands")])
         self.assertEqual((out["kept"], out["clean"]), (1, False))
+        self.assertEqual(self.groups(out), [["R1-W3", "R1-T2"]])
 
     def test_two_duplicates_of_each_other_both_stay(self):
         out, _ = self.tally([("R1-C1", "in", 15, "Duplicate of R1-T2.", "Stands"),
@@ -615,6 +618,8 @@ class ScoredDuplicates(Workspace):
 
     def test_the_wording_above_20_stays(self):
         self.assert_both_shown(21, "Duplicate of R1-C1")
+        out, _ = self.tally([("R1-C1", "in", 92, "read", "Stands"), ("R1-T2", "in", 21, "Duplicate of R1-C1", "Stands")])
+        self.assertEqual(self.groups(out), [["R1-C1"], ["R1-T2"]])
 
     def test_the_same_pattern_in_another_file_stays(self):
         self.assert_both_shown(15, "Duplicate of R1-C1: same pattern in another file",
@@ -640,23 +645,160 @@ class ScoredDuplicates(Workspace):
                             {"R1-C1": "src/a.py:5", "R1-X1": "src/auth.py:90"})
         self.assertEqual(out["outside_change"], ["R1-X1"])
 
-    def test_the_kept_row_names_the_repeat_its_location_and_its_claim(self):
+    def groups(self, out):
+        return [[problem["id"], *problem["repeats"]] for problem in out.get("problems", [])]
+
+    def test_the_problem_names_the_repeat_its_location_and_its_claim(self):
         out, text = self.tally([("R1-C1", "in", 92, "read", "Stands"),
                                 ("R1-T2", "in", 20, "Duplicate of R1-C1", "Stands")],
                                {"R1-C1": "src/a.cs:1", "R1-T2": "src/a.cs:9"})
-        self.assertEqual(out["kept"], 1)
-        row = next(line for line in text.splitlines() if "claim of R1-C1" in line)
+        self.assertEqual(out["kept"], 2)
+        listed = text.split("### Problems")[-1].split("\n## ")[0]
+        lines = [line for line in listed.splitlines() if "same problem" in line]
+        self.assertEqual(len(lines), 1, text)
         for part in ("R1-T2", "src/a.cs:9", "claim of R1-T2"):
-            self.assertIn(part, row)
+            self.assertIn(part, lines[0])
 
-    def test_one_file_written_absolute_and_relative_is_the_same_file(self):
+    def test_a_repeat_written_at_another_location_is_one_problem(self):
+        out, _ = self.tally([("R1-C4", "in", 88, "read", "Stands"),
+                             ("R1-K3", "in", 10, "Duplicate of R1-C4", "Stands")],
+                            {"R1-C4": "`wi/1.md` header", "R1-K3": "WI 1, header and End-to-end check"})
+        self.assertEqual((out["kept"], self.groups(out)), (2, [["R1-C4", "R1-K3"]]))
+
+    def test_a_repeat_on_the_other_side_is_one_problem_and_keeps_its_side(self):
+        out, _ = self.tally([("R1-C1", "in", 85, "read", "Stands"),
+                             ("R1-S2", "outside", 10, "Duplicate of R1-C1", "Stands")])
+        self.assertEqual((out["kept"], out["outside_change"]), (1, ["R1-S2"]))
+        self.assertEqual(self.groups(out), [["R1-C1", "R1-S2"]])
+
+    def test_a_chain_of_repeats_is_one_problem(self):
+        out, _ = self.tally([("R1-C1", "in", 90, "read", "Stands"),
+                             ("R1-T2", "in", 10, "Duplicate of R1-C1", "Stands"),
+                             ("R1-W3", "in", 10, "Duplicate of R1-T2", "Stands")])
+        self.assertEqual(self.groups(out), [["R1-C1", "R1-T2", "R1-W3"]])
+
+    def test_two_repeats_of_an_original_that_is_not_shown_are_one_problem(self):
+        out, _ = self.tally([("R1-C1", "in", 90, "read", "Refuted"),
+                             ("R1-T2", "in", 10, "Duplicate of R1-C1", "Stands"),
+                             ("R1-W3", "in", 10, "Duplicate of R1-C1", "Stands")])
+        self.assertEqual(self.groups(out), [["R1-T2", "R1-W3"]])
+
+    def test_two_duplicates_of_each_other_are_two_problems(self):
+        out, _ = self.tally([("R1-C1", "in", 15, "Duplicate of R1-T2.", "Stands"),
+                             ("R1-T2", "in", 15, "Duplicate of R1-C1.", "Stands")])
+        self.assertEqual(self.groups(out), [["R1-C1"], ["R1-T2"]])
+
+    def test_a_duplicate_in_part_is_its_own_problem(self):
         out, _ = self.tally([("R1-C1", "in", 92, "read", "Stands"),
-                             ("R1-T2", "in", 20, "Duplicate of R1-C1", "Stands")],
-                            {"R1-C1": "C:/ws/shop/src/a.cs:1", "R1-T2": "`shop/src/a.cs:1`"})
-        self.assertEqual(out["kept"], 1)
+                             ("R1-T2", "in", 15, "Duplicate of R1-C1 in part; another bug too", "Stands")])
+        self.assertEqual(self.groups(out), [["R1-C1"], ["R1-T2"]])
 
     def test_scorer_is_given_the_exact_wording(self):
         self.assertIn("exactly `Duplicate of <ID>`", read(os.path.join(PLUGIN, "agents", "goldfish-scorer.md")))
+
+
+class UnverifiedRepeats(Workspace):
+    """F3 batch 4: a repeat the scorer marked sits under its shown original whatever its own score
+    (run 6: Minor repeats scored 10 went to the appendix), and takes the original's handling."""
+
+    def tally(self, rows, kind="code", handling=None):
+        raw = os.path.join(self.tmp.name, "raw")
+        level = "Severity" if kind == "plan" else "Impact"
+        table = f"| ID | {level} | Area | Change | Location | Quote | Finding | Mark | Proposed fix | Handling |\n" + "| --- " * 10 + "|\n"
+        scores = "| ID | Score | Reason |\n| --- | --- | --- |\n"
+        for fid, impact, change, at, score, reason in rows:
+            table += f"| {fid} | {impact} | Correctness | {change} | {at} | \"{fid}\" | claim of {fid} | confirmed: read | fix | {(handling or {}).get(fid, 'ASK')} |\n"
+            scores += f"| {fid} | {score} | {reason} |\n"
+        write(os.path.join(raw, "correctness.md"), table)
+        write(os.path.join(raw, "scores.md"), scores)
+        code, out = script("dev-core", "findings.py", "collect", raw, "--kind", kind)
+        self.assertEqual(code, 0, out)
+        path = os.path.join(self.tmp.name, "r.md")
+        code, out = script("dev-core", "findings.py", "tally", raw, "--kind", kind, "--round", "1", "--out", path)
+        self.assertEqual(code, 0, out)
+        return out, read(path)
+
+    @staticmethod
+    def groups(out):
+        return [[p["id"]] + p["repeats"] for p in out["problems"]]
+
+    @staticmethod
+    def appendix(text):
+        return text.split("## Appendix")[-1] if "## Appendix" in text else ""
+
+    def test_a_minor_repeat_scored_10_sits_under_its_shown_original(self):
+        # run 6's shape: R1-W5 shown, R1-C5 "Duplicate of R1-W5" scored 10, at another line
+        out, text = self.tally([("R1-W5", "Minor", "in", "e2e.ps1:8", 85, "read"),
+                                ("R1-C5", "Minor", "in", "e2e.ps1:25", 10, "Duplicate of R1-W5")])
+        self.assertEqual(self.groups(out), [["R1-W5", "R1-C5"]])
+        self.assertEqual(out["kept"], 2)
+        self.assertNotIn("R1-C5", self.appendix(text))
+
+    def test_four_repeats_of_one_shown_minor_are_one_problem(self):
+        rows = [("R1-W5", "Minor", "in", "e2e.ps1:8", 85, "read")]
+        rows += [(f"R1-{x}", "Minor", "in", "e2e.ps1:26", 10, "Duplicate of R1-W5") for x in ("C5", "X5", "S2", "T1")]
+        out, text = self.tally(rows)
+        self.assertEqual(self.groups(out), [["R1-W5", "R1-C5", "R1-S2", "R1-T1", "R1-X5"]])
+
+    def test_a_nit_repeat_of_a_shown_major_sits_with_it(self):
+        out, _ = self.tally([("R1-W4", "Minor", "in", "e2e.ps1:62", 90, "read"),
+                             ("R1-X6", "Nit", "in", "e2e.ps1:63", 10, "Duplicate of R1-W4.")])
+        self.assertEqual(self.groups(out), [["R1-W4", "R1-X6"]])
+
+    def test_a_held_chain_to_a_shown_original_is_one_problem(self):
+        out, _ = self.tally([("R1-W5", "Minor", "in", "e2e.ps1:8", 85, "read"),
+                             ("R1-X5", "Minor", "in", "e2e.ps1:27", 10, "Duplicate of R1-C5"),
+                             ("R1-C5", "Minor", "in", "e2e.ps1:25", 10, "Duplicate of R1-W5")])
+        self.assertEqual(self.groups(out), [["R1-W5", "R1-C5", "R1-X5"]])
+
+    def test_the_counts_follow_the_moved_repeats(self):
+        out, text = self.tally([("R1-W5", "Minor", "in", "e2e.ps1:8", 85, "read"),
+                                ("R1-C5", "Minor", "in", "e2e.ps1:25", 10, "Duplicate of R1-W5")])
+        self.assertEqual((out["kept_by_severity"]["Minor"], out["held_back"]), (2, 0))
+
+    def test_a_plan_nit_repeat_sits_with_its_original_and_is_not_counted_held(self):
+        # run 6's plan round: five Nit repeats scored 10 (their originals were held there too)
+        out, text = self.tally([("P1-W4", "Nit", "in", "plan.md:92", 85, "read"),
+                                ("P1-C6", "Nit", "in", "plan.md:93", 10, "Duplicate of P1-W4")], kind="plan")
+        self.assertEqual(self.groups(out), [["P1-W4", "P1-C6"]])
+        self.assertIn("| Nit | 2 | 2 | 0 | 0 | 0 | 0 |", text)
+
+    def test_a_moved_auto_fix_repeat_takes_its_ask_originals_handling(self):
+        # the handler's condition: a held row was never acted on; once shown it must not run apart from its original
+        out, text = self.tally([("R1-W5", "Minor", "in", "e2e.ps1:8", 85, "read"),
+                                ("R1-C5", "Minor", "in", "e2e.ps1:25", 10, "Duplicate of R1-W5")],
+                               handling={"R1-C5": "AUTO-FIX"})
+        self.assertEqual(self.groups(out), [["R1-W5", "R1-C5"]])
+        row = [ln for ln in text.splitlines() if ln.startswith("| R1-C5 |")]
+        self.assertEqual(len(row), 1, text)
+        self.assertEqual(row[0].split("|")[-3].strip(), "ASK", row[0])
+        self.assertIn("| Minor | 2 | 0 | 2 |", text)
+
+    # controls: what must not change
+    def test_control_a_repeat_of_a_held_original_stays_held(self):
+        out, text = self.tally([("R1-W3", "Minor", "in", "e2e.ps1:22", 25, "read"),
+                                ("R1-X6", "Nit", "in", "e2e.ps1:23", 10, "Duplicate of R1-W3")])
+        self.assertEqual(out["problems"], [])
+        self.assertIn("R1-X6", self.appendix(text))
+
+    def test_control_a_low_score_without_the_wording_stays_held(self):
+        out, text = self.tally([("R1-W5", "Minor", "in", "e2e.ps1:8", 85, "read"),
+                                ("R1-C5", "Minor", "in", "e2e.ps1:25", 10, "Same as R1-W5")])
+        self.assertEqual(self.groups(out), [["R1-W5"]])
+        self.assertIn("R1-C5", self.appendix(text))
+
+    def test_control_a_repeat_scored_above_20_stays_held(self):
+        out, text = self.tally([("R1-W5", "Minor", "in", "e2e.ps1:8", 85, "read"),
+                                ("R1-C5", "Minor", "in", "e2e.ps1:25", 30, "Duplicate of R1-W5")])
+        self.assertEqual(self.groups(out), [["R1-W5"]])
+        self.assertIn("R1-C5", self.appendix(text))
+
+    def test_control_a_shown_minor_repeat_outside_the_change_keeps_its_side(self):
+        out, text = self.tally([("R1-W5", "Minor", "in", "e2e.ps1:8", 85, "read"),
+                                ("R1-C5", "Minor", "outside", "e2e.ps1:25", 10, "Duplicate of R1-W5")])
+        self.assertEqual(self.groups(out), [["R1-W5", "R1-C5"]])
+        problems = text.split("### Problems")[1].split("\n## ")[0]
+        self.assertIn("**R1-C5** · Minor · outside the change", problems)
 
 
 class EveryEntryPoint(Workspace):
@@ -874,6 +1016,26 @@ class Batch2Text(unittest.TestCase):
         writes = next(line for line in text.splitlines() if line.startswith("- **Writes outside the change folder:**"))
         self.assertIn("`TESTING.md`", writes)
 
+    def test_the_scorer_sees_a_whole_duplicate_row(self):
+        text = read(os.path.join(PLUGIN, "agents", "goldfish-scorer.md"))
+        self.assertIn("| R1-T2 | 10 | Duplicate of R1-C1 |", text)
+        self.assertIn("Reason cell", text)
+
+    def test_reviewers_do_not_open_each_others_findings(self):
+        text = read(os.path.join(SKILLS, "dev-review", "references", "viewpoints.md"))
+        brief = next(line for line in text.splitlines() if line.startswith("Every brief starts with"))
+        for part in ("another reviewer's", "earlier round's review", "open or search", "not what you report"):
+            self.assertIn(part, brief)
+
+    def test_one_answer_covers_a_problem_unless_it_is_split(self):
+        for rel in (("dev-review", "routes", "human-review.md"), ("dev-plan", "stages", "review.md")):
+            text = read(os.path.join(SKILLS, *rel))
+            self.assertIn("### Problems", text)
+            self.assertIn("split", text)
+        self.assertIn("one line per problem", read(os.path.join(SKILLS, "dev-plan", "stages", "accept.md")))
+        for name in ("review.md", "plan-review.md"):
+            self.assertIn("### Problems", read(os.path.join(SKILLS, "dev-core", "assets", "templates", name)))
+
     def test_a_denied_read_is_not_logged_as_content(self):
         with tempfile.TemporaryDirectory(prefix="dev-audit-", ignore_cleanup_errors=True) as tmp:
             log = os.path.join(tmp, "turn.jsonl")
@@ -898,6 +1060,106 @@ class Batch2Text(unittest.TestCase):
                     self.assertFalse(os.path.exists(path))
                 else:
                     self.assertEqual(json.loads(read(path))["permissions"]["deny"], ["Read(**/.env.production)"])
+
+
+class ScoreCell(Workspace):
+    def tally(self, cells, lead=""):
+        raw = os.path.join(self.tmp.name, "raw")
+        table = "| ID | Impact | Area | Change | Location | Quote | Finding | Mark | Proposed fix | Handling |\n" + "| --- " * 10 + "|\n"
+        scores = "| ID | Score | Reason |\n| --- | --- | --- |\n"
+        for n, cell in enumerate(cells, 1):
+            table += f"| R1-C{n} | Minor | Correctness | in | src/a.cs:{n} | \"q{n}\" | f{n} | confirmed: read | fix | ASK |\n"
+            scores += f"| R1-C{n} | {cell} |" + ("" if cell.startswith("Duplicate") else " reason |") + "\n"
+        write(os.path.join(raw, "correctness.md"), table)
+        write(os.path.join(raw, "scores.md"), scores)
+        self.assertEqual(script("dev-core", "findings.py", "collect", raw, "--kind", "code")[0], 0)
+        return script("dev-core", "findings.py", "tally", raw, "--kind", "code", "--round", "1",
+                      "--out", os.path.join(self.tmp.name, "r.md"))
+
+    def refused(self, *cells):
+        code, out = self.tally(cells)
+        self.assertEqual(code, 1, out)
+        return out["error"]
+
+    def test_an_id_is_not_a_score(self):
+        self.assertIn("R1-C1", self.refused("P1-C13"))
+
+    def test_a_row_without_a_score_cell_is_refused(self):
+        self.assertIn("R1-C1", self.refused("Duplicate of R1-C9"))
+
+    def test_a_score_above_100_is_refused(self):
+        self.assertIn("R1-C1", self.refused("850"))
+
+    def test_a_negative_score_is_refused(self):
+        self.assertIn("R1-C1", self.refused("-90"))
+
+    def test_every_bad_row_is_named(self):
+        error = self.refused("101", "55", "high")
+        self.assertIn("R1-C1", error)
+        self.assertIn("R1-C3", error)
+        self.assertNotIn("R1-C2", error)
+
+    def test_the_ends_of_the_range_are_scores(self):
+        self.assertEqual(self.tally(["0", "100", "**85**"])[0], 0)
+
+
+class ProblemsList(Workspace):
+    """What the Problems list must not break, from batch 3's cold check."""
+
+    def test_a_claim_that_names_the_findings_heading_hides_no_open_blocker(self):
+        review = ("# Plan: plan review round 1\n\n## Summary\n\n### Problems\n\n"
+                  "1. **P1-C1** \u00b7 Blocker \u00b7 in the change \u00b7 doc: the template lacks ## Findings\n"
+                  "2. **P1-C2** \u00b7 Major \u00b7 in the change \u00b7 doc: needs a ### Findings part\n\n"
+                  "## Findings\n\n### critic\n\n| ID | Severity | Resolution |\n| --- | --- | --- |\n"
+                  "| P1-C1 | Blocker | open |\n| P1-C2 | Major | open |\n\n## Outside this change\n\nnone\n")
+        probe = ("import importlib.util, sys; s = importlib.util.spec_from_file_location('p', sys.argv[1]); "
+                 "m = importlib.util.module_from_spec(s); s.loader.exec_module(m); print(m.open_high(sys.argv[2]))")
+        path = os.path.join(SKILLS, "dev-plan", "scripts", "plan_page.py")
+        done = subprocess.run([sys.executable, "-I", "-B", "-c", probe, path, review], capture_output=True, text=True)
+        self.assertEqual(done.stdout.strip(), "2", done.stderr)
+
+    def test_a_fix_now_list_is_not_read_as_a_reviewer(self):
+        raw = os.path.join(self.tmp.name, "raw")
+        table = ("| ID | Impact | Area | Location | Quote | Finding | Mark | Proposed fix | Handling |\n" + "| --- " * 9 + "|\n"
+                 '| {} | Major | Correctness | src/a.cs:1 | "q" | f | confirmed: read | fix | ASK |\n')
+        write(os.path.join(raw, "correctness.md"), table.format("R2-C1"))
+        write(os.path.join(raw, "fix-now.md"), table.format("R1-C3").replace("src/a.cs:1", "src/b.cs:7"))
+        code, out = script("dev-core", "findings.py", "collect", raw, "--kind", "code")
+        self.assertEqual(code, 0, out)
+        found = json.loads(read(os.path.join(raw, "findings.json")))["findings"]
+        self.assertEqual([x["id"] for x in found], ["R2-C1"])
+
+    def text(self, *parts):
+        return read(os.path.join(SKILLS, *parts))
+
+    def test_a_plan_resolution_never_crosses_the_side_of_the_change(self):
+        text = self.text("dev-plan", "stages", "review.md")
+        self.assertIn("on the same side of the change", text)
+        self.assertIn("a row under Outside this change always gets `outside:`", text)
+
+    def test_an_early_choice_never_pulls_outside_work_in(self):
+        text = self.text("dev-review", "routes", "human-review.md")
+        for part in ("only on the same side of the change", "fix now would include it", "most severe ID in the change", "with none in the change",
+                     "one work item per problem"):
+            self.assertIn(part, text)
+
+    def test_spec_gets_the_fix_now_list_in_a_fix_round(self):
+        self.assertIn("fix-now.md", self.text("dev-review", "routes", "review.md"))
+        spec = next(line for line in self.text("dev-review", "references", "viewpoints.md").splitlines()
+                    if line.startswith("| spec |") and "diff.patch" in line)
+        self.assertIn("fix-now.md", spec)
+        given = read(os.path.join(PLUGIN, "agents", "goldfish-spec.md")).split("## Input")[1].split("\n## ")[0]
+        self.assertIn("fix-now.md", given)
+
+    def test_one_problem_is_one_cause_for_learn(self):
+        self.assertIn("One problem, one cause", self.text("dev-learn", "SKILL.md"))
+
+    def test_the_gate_says_what_it_checks(self):
+        route = self.text("dev-deploy", "routes", "deploy.md")
+        for part in ("started at stage `test`", "To clear it", "skip its Hand on", "back to `deploy`", "new review"):
+            self.assertIn(part, route)
+        core = self.text("dev-core", "SKILL.md")
+        self.assertIn("whole number from 0 to 100", core)
 
 
 class Workbooks(Workspace):

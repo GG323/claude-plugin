@@ -10,6 +10,7 @@
 - [Load when](#load-when)
 - [Topic sections](#topic-sections)
 - [Statements](#statements)
+  - [Tags](#tags)
 - [Overrides and conflicts](#overrides-and-conflicts)
 - [What does not belong](#what-does-not-belong)
 - [Skills and agents](#skills-and-agents)
@@ -134,14 +135,23 @@ A section with no statements holds one bullet: `- none yet`.
 One statement per bullet, on one line:
 
 ```markdown
-- **csharp.patterns.004** · MUST · Use `await using` for `IAsyncDisposable` resources. · source: [Implement DisposeAsync](https://learn.microsoft.com/dotnet/standard/garbage-collection/implementing-disposeasync) · confirmed: base, 2026-11-18
+- **csharp.patterns.004** · MUST · Use `await using` for `IAsyncDisposable` resources. · tags: lifecycle, async · source: [Implement DisposeAsync](https://learn.microsoft.com/dotnet/standard/garbage-collection/implementing-disposeasync) · confirmed: base, 2026-11-18
 ```
 
 - **ID:** `<technology>.<slug>.<number>`, with the number from the file's layer (`004`, `u004`, `p004`). IDs are never reused or renumbered; a removed statement leaves a gap.
 - **Level:** optional; `MUST`, `SHOULD`, or `MUST NOT`. Use it in Idioms and patterns and Security; leave it out where it adds nothing.
+- **Tags:** one to three subject [tags](#tags), comma-separated, after the text. Required in base workbooks.
 - **Text:** one or two plain sentences, with commands and code in backticks. It never contains ` · `, the separator.
 - **Source:** a Markdown link to the page the fact comes from, listed in the Header's Sources. For the project's own facts, the file that shows it (`` `Dockerfile` ``) or "user, <date>".
 - **Confirmed:** who confirmed it and when: `base, <date>` for the shipped layer, `user, <date>` or `project, <date>` for facts the user approved.
+
+### Tags
+
+A search finds a statement by tool (from the ID), section, level, and subject tag, so a tag never repeats the tool. The list is closed, and `validate` refuses any other:
+
+`access`, `async`, `build`, `caching`, `cli`, `config`, `data`, `dependencies`, `di`, `errors`, `formatting`, `health`, `http`, `image`, `lifecycle`, `linting`, `logging`, `modules`, `nullability`, `performance`, `secrets`, `state`, `strings`, `style`, `tests`, `versions`.
+
+A new tag changes this list and `TAGS` in `scripts/workbook.py` together. A statement that replaces another keeps that one's tags and level unless it states its own. Give `MUST` or `MUST NOT` to a statement that must never be missed: only those load whatever the search.
 
 ## Overrides and conflicts
 

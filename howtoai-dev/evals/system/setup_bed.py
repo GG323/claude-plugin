@@ -2,7 +2,7 @@
 
 Usage: py -3 -I -B setup_bed.py <new or empty folder> [--fresh]
 
---fresh leaves the dev settings out, for the fresh-install flow.
+--fresh leaves out the dev settings and the Workbooks section Setup writes, for the fresh-install flow.
 
 Creates <folder>/workspace (AGENTS.md, two git repositories, the dev settings, and
 the deny rule dev-core's Setup writes after a yes)
@@ -40,7 +40,7 @@ WORKSPACE = {
 
 ## Skills and agents
 
-- The `howtoai-dev` skills plan, test, build, review, and deploy changes here.
+- `howtoai-dev` - the dev process (plan, tests first, build, review, deploy, learn): start every code change here with `dev-plan`. Settings in `.howtoai/dev/settings.json`, install record in `.howtoai/dev/install.md`.
 """,
 }
 
@@ -485,13 +485,25 @@ def init_repository(root):
     )
 
 
+def with_workbooks(agents):
+    """The bed's AGENTS.md with the Workbooks section Setup adds, worded as the plugin's AUDIT.md has it."""
+    audit = (Path(__file__).resolve().parents[2] / "AUDIT.md").read_text(encoding="utf-8")
+    section = audit.split("\n## Workbooks text\n", 1)[1].split("```markdown\n", 1)[1].split("```", 1)[0]
+    names = SETTINGS["workbooks"]["technologies"]
+    value = "{json:.howtoai/dev/settings.json#workbooks/technologies}"
+    section = section.replace(value, ", ".join(names[:-1]) + ", and " + names[-1])
+    entry, heading = "- [Skills and agents](#skills-and-agents)\n", "## Skills and agents\n"
+    agents = agents.replace(entry, "- [Workbooks](#workbooks)\n" + entry, 1)
+    return agents.replace(heading, section.rstrip("\n") + "\n\n" + heading, 1)
+
+
 def build(out, fresh=False):
     out.mkdir(parents=True, exist_ok=True)
     if any(out.iterdir()):
         raise SystemExit(f"refusing to write into a folder that is not empty: {out}")
 
     workspace = out / "workspace"
-    write_tree(workspace, WORKSPACE)
+    write_tree(workspace, WORKSPACE if fresh else {"AGENTS.md": with_workbooks(WORKSPACE["AGENTS.md"])})
     for name, files in (("shop", SHOP), ("infra", INFRA)):
         write_tree(workspace / name, files)
         init_repository(workspace / name)

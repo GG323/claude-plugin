@@ -37,7 +37,8 @@ Every install requirement of `howtoai-dev` has one section here. Each section sa
 
 | Requirement | Setting | Asked at install | Default |
 | --- | --- | --- | --- |
-| Dev mode | `## Dev mode` entry in the workspace `AGENTS.md` | yes, once per workspace | off |
+| Git version control | `## Dev mode` entry in the workspace `AGENTS.md` | yes, once per workspace; on without a separate question when dev mode is chosen | none: must be set on or off |
+| Dev mode | `## Dev mode` entry in the workspace `AGENTS.md` | yes, once per workspace | none: must be set on or off |
 | Tracker | `tracker.kind` and its keys | yes, when a sign is found or the user wants one | `markdown` |
 | Plan format | `plan.publish` | yes | `auto` |
 | Plan folder | `plan_folder` | stated as a default | `dev-plans` |
@@ -53,19 +54,19 @@ Every install requirement of `howtoai-dev` has one section here. Each section sa
 
 ## Dev mode
 
-- **Setting:** the `## Dev mode` entry in the workspace's `AGENTS.md` (on or off, source folder, plugins folder), read and written only by the `howtoai` plugin's `devmode.py`; the user-level pointer `~/.claude/howtoai/install.json` says which workspace holds it. The contract is the `howtoai` plugin's `docs/dev-mode.md`.
+- **Setting:** the `## Dev mode` entry in the workspace's `AGENTS.md`: **Git version control** and **Dev mode**, both required and each on or off (dev mode on needs Git version control on; a missing or invalid value is an error, never off), plus the source and plugins folders. It is read and written only by the `howtoai` plugin's `devmode.py`; the user-level pointer `~/.claude/howtoai/install.json` says which workspace holds it. The contract is the `howtoai` plugin's `docs/dev-mode.md`.
 - **Set by:** [INSTALL: Dev mode](../INSTALL.md#dev-mode) and [Install or link](../INSTALL.md#install-or-link).
 - **Read by:** INSTALL only; the dev skills run the same from a link or from a plugin install. `scripts/install_check.py deps` reports each skill and agent link as `dev_links`.
-- **Signs:** the existing entry; junctions in `~/.claude/skills` and symbolic links in `~/.claude/agents` that point into a workspace.
+- **Signs:** the existing entry; `devmode.py status`'s `needs_setting` (ask) and `git.problems` (show before linking); junctions in `~/.claude/skills` and symbolic links in `~/.claude/agents` that point into a workspace.
 - **New option:** a different link layout is a change to the `howtoai` plugin's `devmode.py` and its `docs/dev-mode.md`, not to this plugin.
-- **Search:** `rg -n "devmode|Dev mode" INSTALL.md docs`.
+- **Search:** `rg -n "devmode|Dev mode|Git version control|git-version-control" INSTALL.md docs assets`.
 
 ## Dependencies and harness
 
 - **Setting:** none; checked on every run by `scripts/install_check.py deps`.
 - **Set by:** [INSTALL: Check dependencies](../INSTALL.md#check-dependencies).
-- **Read by:** each skill's **Before you start** section: [dev-core](../skills/dev-core/SKILL.md#before-you-start), [dev-plan](../skills/dev-plan/SKILL.md#before-you-start), [dev-test](../skills/dev-test/SKILL.md#before-you-start), [dev-build](../skills/dev-build/SKILL.md#before-you-start), [dev-review](../skills/dev-review/SKILL.md#before-you-start), [dev-deploy](../skills/dev-deploy/SKILL.md#before-you-start), [dev-workbook](../skills/dev-workbook/SKILL.md#before-you-start).
-- **Required:** Python 3.10 or later, `git`, and the `howtoai` plugin's `grilling` and `skill-builder`. Per choice: `gh` signed in (GitHub tracker), `az` with the `azure-devops` extension signed in or the Azure DevOps MCP server (Azure DevOps tracker), the Atlassian MCP server (Jira), Docker (throwaway targets and Docker deploys), `kubectl` (Kubernetes deploys), and the `howtoai` plugin's `devmode.py` (dev mode).
+- **Read by:** each skill's **Before you start** section: [dev-core](../skills/dev-core/SKILL.md#before-you-start), [dev-plan](../skills/dev-plan/SKILL.md#before-you-start), [dev-test](../skills/dev-test/SKILL.md#before-you-start), [dev-build](../skills/dev-build/SKILL.md#before-you-start), [dev-review](../skills/dev-review/SKILL.md#before-you-start), [dev-deploy](../skills/dev-deploy/SKILL.md#before-you-start), [dev-workbook](../skills/dev-workbook/SKILL.md#routes).
+- **Required:** Python 3.10 or later, `git`, and the `howtoai` plugin's `grilling`, `skill-builder`, and `devmode.py` (found through its pointer; INSTALL stops without it), and `skill-audit`, which runs `AUDIT.md`. Per choice: `gh` signed in (GitHub tracker), `az` with the `azure-devops` extension signed in or the Azure DevOps MCP server (Azure DevOps tracker), the Atlassian MCP server (Jira), Docker (throwaway targets and Docker deploys), and `kubectl` (Kubernetes deploys).
 - **Harness:** a shell and Python are required. Subagents run the goldfish reviewers in parallel; without them, [dev-plan's review](../skills/dev-plan/stages/review.md#run-a-round) and [dev-review's passes](../skills/dev-review/routes/review.md#pass-2-quality) stop and say why. The Artifact tool serves `plan.publish` `artifact`. Hooks need Claude Code. Claude Code (CLI and desktop) is verified; Cowork, claude.ai, and other agents are not.
 - **New option:** a new required tool goes into `install_check.py` (`check_deps`) and the **Before you start** section of the skill that uses it.
 - **Search:** `rg -n "compatibility:|Before you start" skills`.
@@ -159,11 +160,11 @@ Every install requirement of `howtoai-dev` has one section here. Each section sa
 
 ## Workbooks and versions
 
-- **Setting:** `workbooks.technologies`; the workbook files (base in `skills/dev-workbook/workbooks/`, user in `~/.claude/howtoai/workbooks/`, project in `<workspace>/.howtoai/workbooks/`); the "Codebase versions" lines in each project `<tech>.md`; and version workbooks `<tech>@<key>.md`.
-- **Set by:** [INSTALL: Workbooks](../INSTALL.md#workbooks), which runs [dev-workbook: Create](../skills/dev-workbook/SKILL.md#create), [Record a version](../skills/dev-workbook/SKILL.md#record-a-version), and [Audit](../skills/dev-workbook/SKILL.md#audit).
-- **Read by:** [dev-workbook: Resolve](../skills/dev-workbook/SKILL.md#resolve), called by [dev-build: Consult the workbook](../skills/dev-build/routes/build.md#consult-the-workbook), [dev-review: Consult the workbook](../skills/dev-review/routes/review.md#consult-the-workbook), dev-plan, dev-test, and dev-deploy; the `goldfish-compliance` agent checks the recorded versions against the code.
+- **Setting:** `workbooks.technologies`; the Workbooks section of the workspace's `AGENTS.md`, whose text and check are in [AUDIT.md](../AUDIT.md#workbooks-text); the workbook files (base in `skills/dev-workbook/workbooks/`, user in `~/.claude/howtoai/workbooks/`, project in `<workspace>/.howtoai/workbooks/`); the "Codebase versions" lines in each project `<tech>.md`; and version workbooks `<tech>@<key>.md`.
+- **Set by:** [INSTALL: Workbooks](../INSTALL.md#workbooks), which runs [dev-workbook: Create](../skills/dev-workbook/routes/create.md#steps), [Record a version](../skills/dev-workbook/routes/record-version.md#steps), and [Audit](../skills/dev-workbook/routes/audit.md#steps).
+- **Read by:** every agent through [dev-workbook: Read the workbooks](../skills/dev-workbook/SKILL.md#read-the-workbooks) (the goldfish preload it with `skills: dev-workbook`; loading writes `.howtoai/cache/workbook-search.md` and `workbook-sources.md`, kept out of Git); [dev-workbook: Resolve](../skills/dev-workbook/routes/resolve.md#steps), called by [dev-build: Consult the workbook](../skills/dev-build/routes/build.md#consult-the-workbook), [dev-review: Consult the workbook](../skills/dev-review/routes/review.md#consult-the-workbook), dev-plan, dev-test, and dev-deploy; the `goldfish-compliance` agent checks the recorded versions against the code.
 - **Signs:** manifests such as `*.csproj`, `global.json`, `package.json`, `pyproject.toml`, `Dockerfile`, and `*.tf`, with the version each declares.
-- **New option:** a new technology needs no skill change: Create makes its workbook. A new section in every workbook is a change to `skills/dev-workbook/references/format.md` and `scripts/workbook.py`.
+- **New option:** a new technology needs no skill change: Create makes its workbook. A new subject tag, or a new section in every workbook, is a change to `skills/dev-workbook/references/format.md` and `scripts/workbook.py`.
 - **Search:** `rg -n "workbook.py resolve|Codebase versions|record-version" skills agents`.
 
 ## Hooks and hook rules

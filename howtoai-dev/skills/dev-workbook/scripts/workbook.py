@@ -5,22 +5,32 @@ Format: references/format.md in this skill. Layers: base (this skill's workbooks
 (~/.claude/howtoai/workbooks/), project (<workspace>/.howtoai/workbooks/); project wins over user, user
 over base. Every command takes --base-dir and --user-dir to replace the default folders (tests use them).
 
-  resolve   --workspace W [--paths P ...] [--technologies T ...] [--topics S ...] [--stage NAME] [--markdown]
+  open      [--workspace W]
+            What the skill prints when it loads, with no arguments from the caller: every MUST and MUST
+            NOT of the workspace's workbooks, the tags, and how to search the rest. Writes the search
+            file <workspace>/.howtoai/cache/workbook-search.md, one tagged line per statement. The
+            workspace is the nearest folder at or above the current one with dev settings. Exits 0 also
+            when it cannot load, and says so, because a failing load would hide the skill.
+  resolve   --workspace W [--paths P ...] [--technologies T ...] [--tags T ...] [--topics S ...]
+            [--stage NAME] [--markdown [--part N] | --versions]
             Finds the technologies a step touches (from --technologies, the project's dev settings
             workbooks.technologies, and the Load when globs of every workbook matched against --paths),
-            merges their layers, and returns the requested topic sections (all when --topics is left
-            out), the overrides, the conflicts, the technologies seen in the paths that have no
+            merges their layers, and returns a tailored subset: every MUST and MUST NOT of every
+            workbook found, plus the other statements of the touched ones (those matched by --paths or
+            named in --technologies), narrowed to --tags when given (a tag or a section slug). With no
+            paths, technologies, or tags it returns everything. --topics shows only some sections, MUST
+            rules included, for a user who asks to see part of a workbook; a dev step never passes it. --markdown ends with the receipt; a result too
+            large to print exact comes in parts (--part N), the MUST rules first, and says how many. --versions leaves the
+            statements out. Also returns the overrides, the conflicts, the technologies seen in the paths that have no
             workbook (missing), and a receipt ready for dev-core's state append.receipts. Each path is
             placed in its code project (the deepest Codebase versions line of the project workbook whose
             folder holds it) and gets that line's workbook: a version workbook such as dotnet@8, or the
             general one. Results are keyed by workbook, each with its code_projects (version, support
             date, support_ended) and unrecorded_paths. [--today YYYY-MM-DD] replaces the system date.
-            Every result carries the rule from references/loading.md: at the top of the Markdown, as
-            loading_rule in the JSON, and on stderr, which still shows when stdout goes to a file.
   validate  FILE [--overlay]
             Checks a workbook against the format. --overlay allows a user or project file that holds
             only some sections. Infers the layer from the Header when not given.
-  propose   --workspace W --tech T --section SLUG --text TEXT --source SOURCE [--level MUST|SHOULD|MUST NOT]
+  propose   --workspace W --tech T --section SLUG --text TEXT --source SOURCE [--level MUST|SHOULD|MUST NOT] [--tags T ...]
             [--layer project|user] [--replaces ID] [--write] [--allow-process-wording] [--date YYYY-MM-DD]
             Previews a new statement (or a replacement for ID) in a project or user workbook: the next
             ID, likely duplicates, process wording, and secret-like text. --write saves it; a write is
@@ -69,9 +79,16 @@ SLUGS = [s for _, s in SECTIONS]
 LAYERS = ["base", "user", "project"]
 LAYER_PREFIX = {"base": "", "user": "u", "project": "p"}
 SEP = " · "
+TAGS = ("access", "async", "build", "caching", "cli", "config", "data", "dependencies", "di", "errors", "formatting",
+        "health", "http", "image", "lifecycle", "linting", "logging", "modules", "nullability", "performance", "secrets",
+        "state", "strings", "style", "tests", "versions")
+SETTINGS = (".howtoai", "dev", "settings.json")
+PAGE = 20000  # characters of statements in one part
+PRINT_MAX = 28000  # characters; the Bash tool saves longer output to a file and shows only a preview
 STMT = re.compile(r"^- \*\*(?P<id>[a-z0-9-]+\.[a-z]+\.[up]?\d{3})\*\*"
                   r"(?: · (?P<level>MUST NOT|MUST|SHOULD))?"
-                  r" · (?P<text>.+?) · source: (?P<source>.+?) · confirmed: (?P<confirmed>.+)$")
+                  r" · (?P<text>.+?)(?: · tags: (?P<tags>[a-z-]+(?:, [a-z-]+)*))?"
+                  r" · source: (?P<source>.+?) · confirmed: (?P<confirmed>.+)$")
 SOURCE_LINE = re.compile(r"^- \[(?P<name>[^\]]+)\]\((?P<url>[^)]+)\) · checked (?P<checked>\d{4}-\d{2}-\d{2})(?P<rest>.*)$")
 KNOWN = {  # technologies the dev process may meet, for reporting missing workbooks
     "csharp": ["**/*.cs", "**/*.csx"], "dotnet": ["**/*.csproj", "**/*.sln", "**/*.slnx", "**/global.json"],
@@ -199,6 +216,7 @@ def parse(path):
                 st = {k: m.group(k) for k in ("id", "level", "text", "source", "confirmed")}
                 st["line"] = n
                 st["section"] = slug
+                st["tags"] = m.group("tags").split(", ") if m.group("tags") else []
                 wb["sections"][slug].append(st)
                 wb["statements"].append(st)
     return wb
@@ -289,6 +307,14 @@ def validate_wb(path, overlay=None):
         seen[st["id"]] = st["line"]
         if SEP in st["text"]:
             errors.append(f"line {st['line']}: text contains the separator ' · '")
+        for tag in st["tags"]:
+            if tag not in TAGS:
+                errors.append(f"line {st['line']}: unknown tag {tag}; use {', '.join(TAGS)}")
+        if not st["tags"] and not st["text"].lower().startswith("withdrawn:"):
+            if layer == "base":
+                errors.append(f"line {st['line']}: {st['id']} has no tags")
+            else:
+                warnings.append(f"line {st['line']}: {st['id']} has no tags")
         for url in re.findall(r"\]\((https?://[^)]+)\)", st["source"]):
             if url not in cited:
                 errors.append(f"line {st['line']}: source {url} is not in the Header Sources")
@@ -366,6 +392,8 @@ def merge(layers):
             entry = dict(st, layer=layer)
             if sid in merged:
                 prev = merged[sid]
+                entry["tags"] = st["tags"] or prev["tags"]  # a replacement keeps the tags and level it does not restate
+                entry["level"] = st["level"] or prev["level"]
                 if prev["text"] != st["text"]:
                     rec = {"id": sid, "from": prev["layer"], "to": layer, "old": prev["text"], "new": st["text"]}
                     if prev["layer"] in ("user", "project") and layer in ("user", "project"):
@@ -401,7 +429,9 @@ def glob_re(pattern):
 
 
 def matches(path, globs):
-    p = path.replace("\\", "/").lstrip("./")
+    p = path.replace("\\", "/")
+    while p.startswith("./"):
+        p = p[2:]
     return any(glob_re(g).match(p) for g in globs)
 
 
@@ -410,35 +440,118 @@ def project_technologies(ws):
         return []
     p = os.path.join(ws, ".howtoai", "dev", "settings.json")
     try:
-        with open(p, encoding="utf-8") as f:
+        with open(p, encoding="utf-8-sig") as f:
             return list((json.load(f).get("workbooks") or {}).get("technologies") or [])
-    except (FileNotFoundError, json.JSONDecodeError):
+    except FileNotFoundError:
         return []
+    except (ValueError, AttributeError, TypeError) as e:
+        raise Fail(f"{p} cannot be read ({type(e).__name__}); fix it, because the workbook rules come from it")
 
 
 # commands ---------------------------------------------------------------------------------
 
-def loading_rule():
+def find_workspace(start):
+    folder = os.path.abspath(start)
+    while True:
+        if os.path.isfile(os.path.join(folder, *SETTINGS)):
+            return folder
+        parent = os.path.dirname(folder)
+        if parent == folder:
+            return None
+        folder = parent
+
+
+def is_must(st):
+    return (st.get("level") or "").startswith("MUST")
+
+
+def statement_line(st):
+    return f"- {st['id']}{' ' + st['level'] if st.get('level') else ''}: {st['text']}"
+
+
+def write_if_changed(path, text):
     try:
-        with open(os.path.join(SKILL_DIR, "references", "loading.md"), encoding="utf-8") as f:
-            body = f.read().split("\n## The rule\n", 1)[1].split("\n## ", 1)[0]
-    except (OSError, IndexError):
-        body = ""
-    items = [line[2:].strip() for line in body.splitlines() if line.startswith("- ")]
-    if not items:
-        raise Fail("dev-workbook's references/loading.md has no rule under '## The rule'; restore it")
-    return items
-
-
-def stderr_is_separate():
-    try:  # with 2>&1 a second copy would land inside what the caller saves or parses
-        return not os.path.samestat(os.fstat(1), os.fstat(2))
+        with open(path, encoding="utf-8") as f:
+            if f.read() == text:
+                return
     except OSError:
-        return False
+        pass
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = f"{path}.{os.getpid()}.tmp"
+    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+        f.write(text)
+    try:
+        os.replace(tmp, path)
+    except OSError:  # another reviewer is writing or reading the same file
+        os.remove(tmp)
+        with open(path, encoding="utf-8") as f:
+            if f.read() != text:
+                raise
 
 
-def cmd_resolve(a):
-    rule = loading_rule()
+def open_text(a):
+    ws = find_workspace(a.workspace or os.getcwd())
+    if not ws and not a.workspace and os.environ.get("CLAUDE_PROJECT_DIR"):
+        ws = find_workspace(os.environ["CLAUDE_PROJECT_DIR"])
+    if not ws:
+        return ("No dev workspace here (no .howtoai/dev/settings.json in this folder or above it), so no workbook "
+                "rules are loaded. If the work is in a dev workspace elsewhere, say that its rules are not loaded. The routes below still work for a workspace you name; howtoai-dev's INSTALL.md "
+                "sets a workspace up.")
+    if not project_technologies(ws):
+        return "The dev settings list no workbooks (workbooks.technologies), so there are no workbook rules to load."
+    found = resolve(argparse.Namespace(workspace=ws, base_dir=a.base_dir, user_dir=a.user_dir, paths=None,
+                                       technologies=None, topics=None, tags=None, stage=None, today=None,
+                                       general=True))
+    dirs = layer_dirs(ws, a.base_dir, a.user_dir)
+    rows, must, tools, sources, broken = [], [], [], [], []
+    for stem, secs in found["sections"].items():
+        info = found["technologies"][stem]
+        for _, wb in load_for(stem, dirs):
+            broken += [f"{wb['path'].replace(os.sep, '/')} {e}" for e in wb["errors"]]
+        globs = []
+        for _, wb in load_layers(info["technology"], dirs):
+            globs += [g for g in wb["globs"] if g not in globs]
+        versions = "".join(f"; code project {c['path']} on {c['version']}" for c in info["code_projects"])
+        tools.append(f"- #{stem} {info['title']} ({info['versions']}): {' '.join(globs)}{versions}")
+        for slug, sts in secs.items():
+            for st in sts:
+                tags = " ".join("#" + x for x in [stem, slug] + [x for x in st["tags"] if x != slug])
+                rows.append(f"- {tags} {statement_line(st)[2:]}")
+                sources.append(f"- {stem} {st['id']}: {st['source']}")
+                if is_must(st):
+                    must.append(statement_line(st) + (f" [{stem}]" if "@" in stem else ""))
+    cache = os.path.join(ws, ".howtoai", "cache")
+    write_if_changed(os.path.join(cache, ".gitignore"), "*\n")
+    search = os.path.join(cache, "workbook-search.md")
+    write_if_changed(search, "\n".join(rows) + "\n")
+    cited = os.path.join(cache, "workbook-sources.md")
+    write_if_changed(cited, "\n".join(sources) + "\n")
+    used = sorted({x for secs in found["sections"].values() for sts in secs.values() for st in sts for x in st["tags"]})
+    lines = [f"Every MUST and MUST NOT of this workspace's workbooks ({len(must)} of {len(rows)} statements):", ""]
+    lines += must + ["", f"Search file for all {len(rows)} statements, one tagged line each: {search.replace(os.sep, '/')}", "",
+                     f"Each statement's source, by ID: {cited.replace(os.sep, '/')}", "",
+                     "Workbooks, their tag, and their files:"] + tools
+    lines += ["", "Section tags: " + " ".join("#" + s for s in SLUGS), "Subject tags: " + " ".join("#" + s for s in used)]
+    if broken:
+        lines.append("Statements NOT loaded because their line is malformed (one may be a MUST; say so in what you report): "
+                     + "; ".join(broken))
+    if found["missing"]:
+        lines.append("No workbook yet: " + ", ".join(found["missing"]) + ". Say so; never fill it in from memory.")
+    if found["conflicts"]:
+        lines.append("Conflicts between the user's and the project's layer: " + ", ".join(c["id"] for c in found["conflicts"]))
+    return "\n".join(lines)
+
+
+def cmd_open(a):
+    try:
+        text = open_text(a)
+    except Exception as e:  # the load must not fail: that would hide the skill and the reason
+        text = (f"The workbooks could not be loaded ({type(e).__name__}: {e}). Never go on from memory: a stage stops "
+                "and says so, and a subagent returns only the line `Blocked: rules not read in full: workbooks`.")
+    sys.stdout.write(text + "\n")
+
+
+def resolve(a):
     ws = os.path.abspath(a.workspace) if a.workspace else None
     dirs = layer_dirs(ws, a.base_dir, a.user_dir)
     have = [t for t in available(dirs) if "@" not in t]
@@ -465,7 +578,14 @@ def cmd_resolve(a):
             if slug not in SLUGS:
                 raise Fail(f"unknown topic {tp!r}; use one of {SLUGS} or their headings")
             topics.append(slug)
-    result = {"ok": True, "loading_rule": rule, "workspace": ws, "technologies": {}, "sections": {}, "overrides": [], "conflicts": [],
+    tags = [x.lstrip("#").lower() for x in (a.tags or [])]
+    for x in tags:
+        if x not in TAGS and x not in SLUGS:
+            raise Fail(f"unknown tag {x!r}; use a section {SLUGS} or one of {list(TAGS)}")
+    tailored = bool(a.paths or a.technologies or tags)
+    aimed = bool(a.paths or a.technologies)
+    named = {tech_of_stem(x) for x in (a.technologies or [])}  # named by the caller, also when the settings list it
+    result = {"ok": True, "workspace": ws, "technologies": {}, "sections": {}, "overrides": [], "conflicts": [],
               "missing": sorted(missing)}
     receipt = {"stage": a.stage or "", "statements": [], "workbooks": {}}
     now = datetime.date.fromisoformat(today(a.today))
@@ -487,8 +607,8 @@ def cmd_resolve(a):
         if not tpaths:  # no paths: every recorded code project's workbook, or the general one
             for c in lines:
                 groups.setdefault(c["workbook"], {"paths": [], "lines": {}, "unrecorded": []})["lines"][c["prefix"]] = c
-            if not lines:
-                groups[t] = {"paths": [], "lines": {}, "unrecorded": []}
+            if not lines or getattr(a, "general", False):  # unrecorded paths get the general workbook
+                groups.setdefault(t, {"paths": [], "lines": {}, "unrecorded": []})
         for stem in sorted(groups):
             g = groups[stem]
             layers = load_for(stem, dirs)
@@ -512,10 +632,14 @@ def cmd_resolve(a):
                                             "code_projects": code_projects, "unrecorded_paths": g["unrecorded"],
                                             "matched_by": sorted(set(labels + g["paths"])), "layers": [l for l, _ in layers]}
             secs = {}
+            touched = bool(tpaths) or t in named or not aimed
             for st in statements:
                 if topics and st["section"] not in topics:
                     continue
-                secs.setdefault(st["section"], []).append({k: st[k] for k in ("id", "level", "text", "source", "layer")})
+                if tailored and not is_must(st):
+                    if not touched or (tags and not set(tags) & {st["section"], *st["tags"]}):
+                        continue
+                secs.setdefault(st["section"], []).append({k: st[k] for k in ("id", "level", "text", "tags", "source", "layer")})
                 receipt["statements"].append(st["id"] if stem == t else f"{stem}:{st['id']}")
             result["sections"][stem] = {s: secs[s] for s in SLUGS if s in secs}
             result["overrides"] += overrides
@@ -523,27 +647,86 @@ def cmd_resolve(a):
             receipt["workbooks"][stem] = " + ".join(f"{l} {wb['header'].get('Updated', '?')}" for l, wb in layers)
     result["missing"] = sorted(result["missing"])
     result["receipt"] = receipt
-    block = ["Loading rule (dev-workbook):"] + [f"- {item}" for item in rule]
-    if stderr_is_separate():
-        sys.stderr.write("\n".join(block) + "\n")  # still seen when stdout is saved to a file
-    if a.markdown:
-        lines = ["# Workbook statements", ""] + [f"> {line}" for line in block] + [""]
-        for t, info in result["technologies"].items():
+    return result
+
+
+def markdown_of(result, part=None):
+    def body():
+        """Rows of (text, workbook heading, section heading, receipt ID, is a MUST)."""
+        rows = []
+        for stem, info in result["technologies"].items():
             ended = f", support ended {info['supported_until']}" if info["support_ended"] else ""
-            lines.append(f"## {info['title']} ({info['versions']}{ended})")
+            named = f" [{stem}]" if "@" in stem else ""
+            top = f"## {info['title']} ({info['versions']}{ended}){named}"
+            rows.append((top, top, None, None, True))
             for c in info["code_projects"]:
                 note = f", support ended {c['supported_until']}" if c["support_ended"] else ""
-                lines.append(f"Code project `{c['path']}`: {c['version']}{note}")
+                rows.append((f"Code project `{c['path']}`: {c['version']}{note}", top, None, None, True))
             if info["unrecorded_paths"]:
-                lines.append("No recorded version for: " + ", ".join(info["unrecorded_paths"]))
-            for slug, sts in result["sections"][t].items():
-                lines.append(f"### {dict((s, h) for h, s in SECTIONS)[slug]}")
-                lines += [f"- {s['id']}{' ' + s['level'] if s['level'] else ''}: {s['text']}" for s in sts]
+                rows.append(("No recorded version for: " + ", ".join(info["unrecorded_paths"]), top, None, None, True))
+            for slug, sts in result["sections"][stem].items():
+                sub = f"### {dict((s, h) for h, s in SECTIONS)[slug]}"
+                rows.append((sub, top, sub, None, None))
+                for s in sts:
+                    sid = s["id"] if stem == info["technology"] else f"{stem}:{s['id']}"
+                    rows.append((statement_line(s), top, sub, sid, is_must(s)))
         if result["missing"]:
-            lines.append("Missing workbooks: " + ", ".join(result["missing"]))
+            rows.append(("Missing workbooks: " + ", ".join(result["missing"]), None, None, None, True))
         if result["conflicts"]:
-            lines.append("Conflicts: " + ", ".join(c["id"] for c in result["conflicts"]))
-        sys.stdout.write("\n".join(lines) + "\n")
+            rows.append(("Conflicts to ask the user about:", None, None, None, True))
+            rows += [(f"- {c['id']}: {c['from']} says {c['old']!r}; {c['to']} says {c['new']!r}", None, None, None, True)
+                     for c in result["conflicts"]]
+        return rows
+
+    def with_receipt(lines, receipt):
+        return "\n".join(lines + ["", "Receipt: " + json.dumps(receipt, ensure_ascii=False, separators=(",", ":"))]) + "\n"
+
+    def paged(rows):
+        """Pages that each repeat the workbook and section heading their statements belong to."""
+        pages, lines, ids, top, sub, size = [], [], [], None, None, 0
+        for text, t, s, sid, _ in rows:
+            if text in (t, s):
+                continue  # headings are written with the row that needs them
+            need = len(text) + len(t or "") + len(s or "") + 3
+            if lines and size + need > PAGE:
+                pages.append((lines, ids))
+                lines, ids, top, sub, size = [], [], None, None, 0
+            for head, changed in ((t, t != top), (s, s != sub or t != top)):
+                if head and changed:
+                    lines.append(head)
+                    size += len(head) + 1
+            top, sub = t, s
+            lines.append(text)
+            size += len(text) + 1
+            if sid:
+                ids.append(sid)
+        return pages + ([(lines, ids)] if lines else [])
+
+    rows = body()
+    whole = with_receipt([r[0] for r in rows], result["receipt"])
+    if len(whole) <= PRINT_MAX:
+        if part not in (None, 1):
+            raise Fail("this result has one part")
+        return whole
+    # too long to arrive exact at once: parts of the same resolve, the MUST rules first, each with its own receipt
+    pages = paged([r for r in rows if r[4] is True]) + paged([r for r in rows if r[4] is False])
+    n = part or 1
+    if not 1 <= n <= len(pages):
+        raise Fail(f"--part is 1 to {len(pages)}")
+    head = [f"PART {n} of {len(pages)} of this step's statements" +
+            (": they are too many to print exact at once. Before you go on, run the same command with "
+             + ", ".join(f"--part {i}" for i in range(2, len(pages) + 1)) + " added, and record every part's receipt."
+             if n == 1 else "."), ""]
+    lines, ids = pages[n - 1]
+    return with_receipt(head + lines, dict(result["receipt"], statements=ids, part=f"{n}/{len(pages)}"))
+
+
+def cmd_resolve(a):
+    result = resolve(a)
+    if a.versions:
+        out({k: result[k] for k in ("ok", "workspace", "technologies", "missing", "overrides", "conflicts")})
+    if a.markdown:
+        sys.stdout.write(markdown_of(result, a.part))
         sys.exit(0)
     out(result)
 
@@ -563,7 +746,8 @@ def render_overlay(tech, title, layer, updated, sources, sections, codebase=None
         lines += ["", f"## {h}", ""]
         for st in sections[s]:
             lvl = f" · {st['level']}" if st.get("level") else ""
-            lines.append(f"- **{st['id']}**{lvl} · {st['text']} · source: {st['source']} · confirmed: {st['confirmed']}")
+            tagged = f" · tags: {', '.join(st['tags'])}" if st.get("tags") else ""
+            lines.append(f"- **{st['id']}**{lvl} · {st['text']}{tagged} · source: {st['source']} · confirmed: {st['confirmed']}")
     lines += ["", "## Skills and agents", "",
               f"- `dev-workbook` - keeps this {layer} layer; the dev skills read it through `workbook.py resolve`."]
     return "\n".join(lines) + "\n"
@@ -631,6 +815,9 @@ def cmd_propose(a):
     if SEP in a.text or SEP in a.source:
         raise Fail("text and source must not contain ' · '")
     date = today(a.date)
+    unknown = [x for x in (a.tags or []) if x not in TAGS]
+    if unknown:
+        raise Fail(f"unknown tags {unknown}; use {list(TAGS)}")
     target = os.path.join(dirs[layer], f"{stem}.md")
     if "@" in stem and (layer != "project" or not os.path.isfile(target)):
         raise Fail(f"no project workbook {stem}.md: a version workbook is changed only in the project layer once "
@@ -651,8 +838,11 @@ def cmd_propose(a):
              len(new_t & tokens(s["text"])) / max(1, len(new_t | tokens(s["text"]))) >= 0.6]
     process = [w for w in PROCESS_WORDS if re.search(w, a.text, re.I)]
     secrets = [p for p in SECRET_PATTERNS if re.search(p, a.text + " " + a.source)]
-    lvl = f" · {a.level}" if a.level else ""
-    line = f"- **{sid}**{lvl} · {a.text} · source: {a.source} · confirmed: {layer}, {date}"
+    level = a.level or next((s["level"] for s in statements if s["id"] == sid), None)
+    lvl = f" · {level}" if level else ""
+    given = list(a.tags or next((s["tags"] for s in statements if s["id"] == sid), []))
+    tagged = f" · tags: {', '.join(given)}" if given else ""
+    line = f"- **{sid}**{lvl} · {a.text}{tagged} · source: {a.source} · confirmed: {layer}, {date}"
     preview = {"ok": True, "written": False, "file": target, "id": sid, "line": line, "duplicates": dupes,
                "process_wording": process, "secret_like": bool(secrets)}
     if secrets:
@@ -687,7 +877,7 @@ def cmd_propose(a):
         for st in own["statements"]:
             sections[st["section"]].append(st)
         sources = own["sources"]
-    entry = {"id": sid, "level": a.level, "text": a.text, "source": a.source, "confirmed": f"{layer}, {date}"}
+    entry = {"id": sid, "level": level, "text": a.text, "tags": given, "source": a.source, "confirmed": f"{layer}, {date}"}
     for s in SLUGS:
         sections[s] = [x for x in sections[s] if x["id"] != sid]
     sections[slug].append(entry)
@@ -834,6 +1024,9 @@ def cmd_audit(a):
             report["checked"].append(name)
             v = validate_wb(wb["path"], overlay=(l != "base" and not is_version))
             report["format_errors"] += [f"{name}: {e}" for e in v["errors"]]
+            report.setdefault("untagged", []).extend(  # a replacement inherits the base statement's tags
+                f"{name}: {w}" for w in v.get("warnings", [])
+                if w.endswith("has no tags") and (l == "base" or w.split(": ")[1].split()[0] not in base_ids))
             for s in wb["sources"]:
                 age = (now - datetime.date.fromisoformat(s["checked"])).days
                 if age > a.max_age:
@@ -912,7 +1105,6 @@ def cmd_check_skills(a):
 def main(argv=None):
     try:
         sys.stdout.reconfigure(encoding="utf-8")
-        sys.stderr.reconfigure(encoding="utf-8")
     except AttributeError:
         pass
     ap = argparse.ArgumentParser(prog="workbook")
@@ -922,7 +1114,10 @@ def main(argv=None):
         p.add_argument("--base-dir")
         p.add_argument("--user-dir")
         return p
+    p = common(sub.add_parser("open"))
+    p.add_argument("--workspace")
     p = common(sub.add_parser("resolve"))
+    p.add_argument("--tags", nargs="*"); p.add_argument("--versions", action="store_true"); p.add_argument("--part", type=int)
     p.add_argument("--workspace"); p.add_argument("--paths", nargs="*"); p.add_argument("--technologies", nargs="*")
     p.add_argument("--topics", nargs="*"); p.add_argument("--stage"); p.add_argument("--markdown", action="store_true")
     p.add_argument("--today")
@@ -931,6 +1126,7 @@ def main(argv=None):
     p.add_argument("--workspace", required=True); p.add_argument("--tech", required=True); p.add_argument("--section", required=True)
     p.add_argument("--text", required=True); p.add_argument("--source", required=True)
     p.add_argument("--level", choices=["MUST", "SHOULD", "MUST NOT"]); p.add_argument("--layer", choices=["project", "user"], default="project")
+    p.add_argument("--tags", nargs="*")
     p.add_argument("--replaces"); p.add_argument("--write", action="store_true"); p.add_argument("--allow-process-wording", action="store_true")
     p.add_argument("--date")
     p = common(sub.add_parser("skeleton"))
@@ -948,7 +1144,9 @@ def main(argv=None):
     p = common(sub.add_parser("check-skills")); p.add_argument("skills_dir")
     a = ap.parse_args(argv)
     try:
-        if a.cmd == "resolve":
+        if a.cmd == "open":
+            cmd_open(a)
+        elif a.cmd == "resolve":
             cmd_resolve(a)
         elif a.cmd == "validate":
             if not os.path.isfile(a.file):

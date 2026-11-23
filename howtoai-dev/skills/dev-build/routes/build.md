@@ -24,7 +24,7 @@ Entered from [SKILL.md](../SKILL.md#routes) at stage `build`, after a red-check 
 
 ## Consult the workbook
 
-1. `WORKBOOK resolve --workspace "<workspace>" --stage build --paths <the files the work item names or the plan's scope facts list, with their project files>`.
+1. `WORKBOOK resolve --workspace "<workspace>" --stage build --paths <the files the work item names or the plan's scope facts list, with their project files> --markdown`.
 2. Record the receipt as returned: `DEVCORE state "<change folder>" --patch '{"append": {"receipts": <receipt>}}'`.
 3. MUST and MUST NOT statements are rules for this build; the others are weighed. Keep the IDs you apply for the record's Workbook statements applied list and for the Source column of the ladder.
 4. A technology in `missing` pauses only the part of the build that needs it, while `dev-workbook` runs its Create with the user: they choose to find a workbook or make one. Never write code for that technology from memory meanwhile.
@@ -64,7 +64,7 @@ Before changing an existing function, method, type, route, schema, or other cont
 ## Run the gate
 
 1. Run every gate command with `--label after`, in order: `BUILD gate "<change folder>" --n <n> --label after --name <name> --command "<command>"`.
-2. Then run the work item's tests through `dev-test`'s Run route as a progress run for this work item; the stage stays `build`.
+2. Then run the work item's tests through `dev-test`'s Run route as a progress run for this work item; the stage stays `build`. Run them no other way, and never before that route's target check has a clear verdict (`ok`, or an answer that covers this entry point); a target it asks about waits for the user's answer first.
 3. On a failure, read the output lines `BUILD gate` returned or the test-run report, fix only your own hunks (or add the missing ones the failure shows the work item needs, with their trace rows), and run the whole gate and the tests again, because a fix can break an earlier step. Count each round: `DEVCORE state "<change folder>" --patch '{"increment": {"build-<n>-fix": 1}}'`.
 4. At `build.max_fix_rounds` rounds without a green gate, stop: write the record with Result `stopped`, record the build as `stopped`, keep the stage `build`, and report what still fails and your reading of why, for the user to decide whether the plan, the test, or the design changes. Skip the rest of this section and [Record and hand on](#record-and-hand-on).
 
@@ -74,7 +74,7 @@ Before changing an existing function, method, type, route, schema, or other cont
 2. **Skipped or unchecked**, the footer `dev-review` reads: what this build left out on purpose (rung 1 decisions, a smaller option not taken), what it could not check (callers a search cannot find, a platform it could not run, behaviour only an end-to-end check shows), and any risk the reviewer must know. At least one line; never "none" when something was left out.
 3. `BUILD check "<change folder>" --n <n>`. Fix every error it lists and run it again; after a code change, that means the gate and the tests again. Report its warnings in the closing report.
 4. Record the build and move the stage: `DEVCORE state "<change folder>" --patch '{"stage": "test", "append": {"builds": {"n": <n>, "wi": <wi or null>, "route": "build", "result": "passed", "hunks": <hunks>, "fix_rounds": <rounds>, "report": "build-<n>.md"}}}'`. When other work items are still unbuilt, keep the stage `build` and say which work item is next.
-5. Close with the short report: result, the hunks and what they trace to, the gate, the Skipped or unchecked lines, and the next step: the next work item, or `dev-test`'s Run route for the whole suite.
+5. Close with the short report: result, the hunks and what they trace to, the gate, the Skipped or unchecked lines, and the next step: the next work item, or `dev-test`'s Run route for the whole suite. When the build passed and no blocking question is open, go on with that next step in the same turn, unless the user said to stop after the build. Never ask whether to.
 
 ## Skills and agents
 

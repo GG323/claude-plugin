@@ -22,7 +22,7 @@ One row per thing the work item needed. Rungs: 1 not needed, 2 existing code, 3 
 
 ## Trace
 
-Every hunk `build.py hunks` lists has exactly one row. Traces to: `T<n>` or `C<n>` (a test-map row), `AC<n>` (the nth acceptance criterion of the work item), or a review finding ID such as `R1-C3` (Fix route); several, comma-separated.
+Every hunk `build.py hunks` lists has exactly one row. Traces to: `T<n>` or `C<n>` (a test-map row), `AC<n>` (the nth acceptance criterion of the work item), or a review finding ID such as `R1-C3` (Fix route); several, comma-separated. The hunks are the changes since the build's snapshot; files `dev-test` wrote before the build are traced in the test map, not here.
 
 | Hunk | Traces to | Ladder | Why this line |
 | --- | --- | --- | --- |

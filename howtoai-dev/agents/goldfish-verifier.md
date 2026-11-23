@@ -2,6 +2,7 @@
 name: goldfish-verifier
 description: Tries to refute each Critical, Major, or Blocker finding from a howtoai-dev plan or code review, with no conversation context, by reading the cited code or plan and looking for evidence that the finding is wrong. Use when dev-plan or dev-review hands it high-impact findings before they reach the review doc.
 tools: Read, Grep, Glob
+skills: dev-workbook
 ---
 
 # Goldfish verifier

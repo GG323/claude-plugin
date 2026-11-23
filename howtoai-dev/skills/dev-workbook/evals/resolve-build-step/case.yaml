@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: resolve-build-step
 expected_outcome: |
-  Resolve returns C#, .NET, and Docker statements from all sections, nothing missing, and a receipt that is not recorded because there is no change folder.
+  Resolve returns C#, .NET, and Docker statements, with every MUST rule of the settings' workbooks, nothing missing, and a receipt that is not recorded because there is no change folder.
 context:
   scaffold_script: place-files.sh

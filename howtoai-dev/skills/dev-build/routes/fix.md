@@ -19,7 +19,7 @@ Entered from [SKILL.md](../SKILL.md#routes) at stage `human-review`, after the u
 
 1. Consult the workbook for the files the findings name, as the Build route's [Consult the workbook](build.md#consult-the-workbook) section says. When `build.gate` is empty, set it next, as its [Set the gate](build.md#set-the-gate) section says.
 2. `BUILD start "<change folder>" --n <n> --wi <the work item the findings belong to, or whole> --route fix --review review-<round>.md`, then run the gate's baseline as in [Snapshot and baseline](build.md#snapshot-and-baseline).
-3. Apply each finding's proposed fix, or a smaller one that fully fixes it, with [the ladder](../SKILL.md#the-ladder) and the callers search, as in the Build route's [Find the callers](build.md#find-the-callers) and [Climb the ladder and edit](build.md#climb-the-ladder-and-edit) sections. A fix that would change a test, CI, or a lockfile needs the user's approval with its paths, as there.
+3. Apply each finding's proposed fix, or a smaller one that fully fixes it, with [the ladder](../SKILL.md#the-ladder) and the callers search, as in the Build route's [Find the callers](build.md#find-the-callers) and [Climb the ladder and edit](build.md#climb-the-ladder-and-edit) sections. A fix that would change a test, CI, or a lockfile needs the user's approval with its paths, as there. A fix-now mark covers a change to a test only when the finding's proposed fix names that test file: record that approval with its `"paths"` and `"by": "fix-now choice"`, never `"by": "user"`. Any other change to a test, to CI, or to a lockfile stops and asks, as in the Build route.
 4. Trace every hunk to its finding ID, as in [Trace every hunk](build.md#trace-every-hunk).
 
 ## Gate and record

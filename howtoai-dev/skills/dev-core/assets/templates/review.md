@@ -13,6 +13,10 @@ Change `{change_id}` · Diff: {base}..{head} · Reviewers: {goldfish viewpoints 
 
 Counts come from the tally script. Outside this change: {n} (not counted above). Findings scored under the confidence threshold are in the appendix.
 
+### Problems
+
+{one number per problem: ID, impact, side of the change, location, claim; a repeat the scorer marked is listed under its original as "same problem"}
+
 ## Findings by area
 
 ### {area}

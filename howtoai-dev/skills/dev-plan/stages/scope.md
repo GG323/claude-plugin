@@ -23,8 +23,8 @@
 
 ## Workbook statements
 
-1. Run `WORKBOOK resolve --workspace "<workspace>" --stage plan --paths <the files the facts name, with their project files>`.
-2. Record the receipt: `DEVCORE state "<change folder>" --patch '{"append": {"receipts": <receipt>}}'`, unless the receipt is empty.
+1. Run `WORKBOOK resolve --workspace "<workspace>" --stage plan --paths <the files the facts name, with their project files> --markdown`.
+2. Record the `receipt` object exactly as `resolve` returned it, never a subset or a list of only the statements you used: `DEVCORE state "<change folder>" --patch '{"append": {"receipts": <receipt>}}'`, unless the receipt is empty.
 3. Keep the statements for grill, draft, and review. For a technology in `missing`, the other technologies go on. Run `dev-workbook`'s Create route for it only when a decision in this change depends on that technology's rules (a new pattern, a pitfall, a security or performance choice); when the change only follows what the code already does there, write "no `<technology>` workbook; follows `<file:line>`" under Assumptions instead.
 
 ## Size

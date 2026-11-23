@@ -4,4 +4,4 @@ focus: trace
 weight: 1
 ---
 
-The run reports that python has no workbook.
+The run reports that go has no workbook.

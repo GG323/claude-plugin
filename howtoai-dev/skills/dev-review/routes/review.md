@@ -20,7 +20,7 @@ Entered from [SKILL.md](../SKILL.md#routes) at stage `review`.
 1. **Subagents.** Start no probe. When this harness has no way to start subagents, halt here; when the first reviewer in [Pass 1](#pass-1-spec) cannot start or does not answer, halt there. Either way, tell the user the review needs fresh subagents, which the harness did not start, and change nothing: no state, no round, no receipt, no findings, no review. A review by you alone would not be a goldfish review.
 2. **The round.** `<n>` is one more than `loops.review` in state (none counts as 0). Record nothing in state yet: the round and its receipt are recorded in [Pass 1](#pass-1-spec), once the first reviewer answered, so a halt leaves the state as it was and a retry is the same round.
 3. **Re-review or first review.** Round 1 reviews the whole change. A later round reviews only the latest fix: the highest `n` in `builds` whose `route` is `fix`, built after the previous review.
-4. **Declined findings.** Write `<change folder>/raw/review-<n>/declined.md` with one line per entry of `declined` in state (its finding and reason), or "none". Every brief names it.
+4. **Declined findings.** Write `<change folder>/raw/review-<n>/declined.md` with one line per entry of `declined` in state (its finding and reason), or "none". Every brief names it. In a round after a fix, also write `<change folder>/raw/review-<n>/fix-now.md`: only the previous round's fix-now rows (ID, finding, fix), which the spec brief names, so spec can judge each hunk's trace without opening the earlier review.
 5. Tell the user in one line: "Review round <n> of `<change id>`".
 
 ## Collect the diff
@@ -31,9 +31,9 @@ Entered from [SKILL.md](../SKILL.md#routes) at stage `review`.
 
 ## Consult the workbook
 
-1. `WORKBOOK resolve --workspace "<workspace>" --stage review --paths <the changed files, with their project files> --markdown`, saved as `<change folder>/raw/review-<n>/workbook-statements.md`.
-2. Run it again without `--markdown`, saved as `<change folder>/raw/review-<n>/workbook-resolve.json`, for the receipt that Pass 1 records.
-3. A technology in `missing` does not stop the review: brief the reviewers without its statements, and say in Test inspection which technology had no workbook.
+1. `WORKBOOK resolve --workspace "<workspace>" --stage review --paths <the changed files, with their project files> --markdown`: its last line is the receipt that Pass 1 records.
+2. Run it again with `--versions` in place of `--markdown`, saved as `<change folder>/raw/review-<n>/workbook-resolve.json`, for the compliance reviewer.
+3. A technology in `missing` does not stop the review: say in Test inspection which technology had no workbook.
 
 ## Pass 1: spec
 

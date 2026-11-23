@@ -217,7 +217,8 @@ def review_info(folder):
 
 def open_high(review):
     count = 0
-    sec = review.split("## Findings", 1)[-1].split("\n## ", 1)[0]
+    # the heading itself: the Problems list above it quotes claims, which can name it
+    sec = re.split(r"(?m)^## Findings[ \t]*$", review, maxsplit=1)[-1].split("\n## ", 1)[0]
     lines = sec.splitlines()
     for i, l in enumerate(lines):
         if l.strip().startswith("|") and i + 1 < len(lines) and is_sep(lines[i + 1]):

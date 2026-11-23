@@ -60,7 +60,6 @@ Read each stage file when you reach it and run its steps in order. A stage that 
 
 ## Core rules
 
-- **Workbook rules load as `dev-workbook` says.** Before the first `WORKBOOK resolve`, read `${CLAUDE_SKILL_DIR}/../dev-workbook/references/loading.md` and follow it; every resolve prints that rule again.
 - **Facts before questions.** Look up everything the code, docs, settings, and workbooks can answer before asking the user; ask only decisions.
 - **Top-down.** Decide architecture before tools and services, tools before languages and frameworks, and those before details, so earlier answers can remove later questions.
 - **Sources and marks.** Each decision and fact names its source (user, project, tool with the workbook ID, industry, or general) and is marked **confirmed** (file and line, doc link, or workbook ID; a search that found nothing counts when you name what was searched) or **inferred** (with the reason).

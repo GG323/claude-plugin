@@ -21,7 +21,8 @@
 
 | Decision | Value | Stored in | Source |
 | --- | --- | --- | --- |
-| Dev mode | {on / off} | {`AGENTS.md` `## Dev mode` / not stored: no `howtoai` install} | {asked / already set / not asked} |
+| Git version control | {on / off} | `AGENTS.md` `## Dev mode` | {asked / required by dev mode / already set} |
+| Dev mode | {on / off} | `AGENTS.md` `## Dev mode` | {asked / already set} |
 | Tracker | {markdown / jira PROJ / github owner/name / azure-devops org project} | {user / project} settings `tracker` | {asked / sign found in ...} |
 | Plan format | {auto / artifact / html-file / markdown / tracker} | {user / project} settings `plan.publish` | {asked / default} |
 | Plan folder | {dev-plans} | {schema default / project settings `plan_folder`} | {default / asked} |
@@ -43,11 +44,8 @@
 
 | Check | Result |
 | --- | --- |
-| `install_check.py deps` | {deps_ok true / false, with what is missing} |
-| `devcore.py settings` | {configured true / false} |
-| `workbook.py validate` and `audit` | {clean / findings} |
-| `devmode.py status` | {links ok N, missing N, or "plugin mode"} |
-| `install_check.py index` | {clean / problems} |
+| {one row per check ID in this plugin's AUDIT.md (D) and howtoai's (H)} | {pass / fail / not applicable / not run, with why} |
+| approved values, Git problems, and deny rules | {as approved / differences} |
 | `skill-builder` double check | {passed after N rounds / findings left / not run, and why} |
 
 ## Left out

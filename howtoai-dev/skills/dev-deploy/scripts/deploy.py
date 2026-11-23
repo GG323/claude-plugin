@@ -22,7 +22,8 @@ target     The workspace's targets file, <ws>/.howtoai/deploy/targets.json. writ
 gate       Checks what code can: the target exists, the work is committed (git status clean
            apart from .howtoai/, the plan folder, and the deploy files a first setup just wrote,
            given as --new-file), and, with --change, the change is at
-           stage deploy with an accepted human review and a green latest test run. Lists
+           stage deploy with an accepted human review, a green latest test run, and a green
+           run that started at stage test since the last tests or build. Lists
            checks_run and checks_skipped.
 approve    Records one approved step in <ws>/.howtoai/deploy/approvals.json with its exact
            command and an expiry (default: the target's approval_minutes, else 30). The
@@ -337,6 +338,37 @@ def unversioned(ws, repos, plan_folder):
     return sorted(loose)
 
 
+def stage_test_problems(state, runs):
+    """The newest run that started at stage test must be green and newer than the last work on the change.
+
+    A run started at stage test when that is the last stage set before the second the run was recorded: review's
+    own reruns and build's progress runs are narrower and never stand in for it."""
+    full = None
+    try:
+        # astimezone reads a time without a zone as local, so old and new records compare
+        moves = [(datetime.datetime.fromisoformat(h["at"]).astimezone(), h["stage"]) for h in state.get("history", [])]
+        for run in runs:
+            if run.get("route") != "run":
+                continue
+            try:
+                when = datetime.datetime.fromisoformat(run["at"]).astimezone()
+            except (KeyError, TypeError, ValueError):
+                continue  # a run that cannot be placed never stands in for the full one
+            before = [stage for at, stage in moves if at < when]
+            if before and before[-1] == "test":
+                full = (when, run.get("result"))
+        work = [at for at, stage in moves if stage in ("tests-first", "build", "test")]
+        if not full:
+            return ["no test run that started at stage test is recorded"]
+        if full[1] != "green":
+            return [f"the latest test run that started at stage test is {full[1]}, not green"]
+        if work and full[0] < max(work):
+            return ["the change went back to tests or build after its last test run that started at stage test"]
+    except (KeyError, TypeError, ValueError):
+        return ["the test runs cannot be placed in the change's stage history"]
+    return []
+
+
 def cmd_gate(a):
     ws = os.path.abspath(a.workspace)
     run, skipped, problems = [], [], []
@@ -394,7 +426,7 @@ def cmd_gate(a):
         if not os.path.isfile(sp):
             raise Fail(f"no state.json in {a.change}")
         st = json.loads(read(sp))
-        run += ["stage deploy", "human review accepted", "latest test run green"]
+        run += ["stage deploy", "human review accepted", "latest test run green", "latest run started at stage test green and newer than the last build"]
         if st.get("stage") != "deploy":
             problems.append(f"the change is at stage {st.get('stage')}, not deploy")
         if not any(str(x.get("what", "")).startswith("human review") for x in st.get("approvals", [])):
@@ -404,6 +436,8 @@ def cmd_gate(a):
             problems.append("no test run recorded")
         elif runs[-1].get("result") != "green":
             problems.append(f"the latest test run is {runs[-1].get('result')}, not green")
+        if runs:
+            problems += stage_test_problems(st, runs)
     return {"ok": not problems, "problems": problems, "checks_run": run, "checks_skipped": skipped,
             "note": "The target's ready commands (for example kubectl cluster-info) are run by the agent."}
 

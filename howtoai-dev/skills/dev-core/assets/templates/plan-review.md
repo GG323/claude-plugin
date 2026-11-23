@@ -14,6 +14,10 @@ Counted by the severity each finding was raised with; Raised = Kept + Outside + 
 | Major | {n} | {n} | {n} | {n} | {n} | {n} |
 | Nit | {n} | {n} | {n} | {n} | {n} | {n} |
 
+### Problems
+
+{one number per problem: ID, severity, side of the change, location, claim; a repeat the scorer marked is listed under its original as "same problem"}
+
 ## Findings
 
 ### {viewpoint}

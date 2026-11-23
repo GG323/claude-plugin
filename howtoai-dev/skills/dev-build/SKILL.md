@@ -50,7 +50,6 @@ Each route is one file in `routes/`. "Stage" in this skill always means a stage 
 
 ## Core rules
 
-- **Workbook rules load as `dev-workbook` says.** Before the first `WORKBOOK resolve`, read `${CLAUDE_SKILL_DIR}/../dev-workbook/references/loading.md` and follow it; every resolve prints that rule again.
 - **Smallest complete change.** Take the first rung of [the ladder](#the-ladder) that fully works, and finish every part the work item needs, because a short diff that leaves a caller broken is not done.
 - **Every changed line traces to the work item.** A hunk with no acceptance criterion, test-map row, or fix-now finding behind it is reverted, not justified. Tidying, renaming, and reformatting that the work item does not need stay out, also when asked in passing; offer them as a new work item instead.
 - **Never cut safety.** Validation at trust boundaries, error handling that prevents data loss, security, and accessibility stay, also in code you move or merge.
@@ -125,7 +124,7 @@ Send requested changes or reported problems to the `skill-builder` skill (`/skil
 ## Skills and agents
 
 - `dev-core` - settings, state, the change folder, and the build template.
-- `dev-workbook` - every statement of the project's workbooks.
+- `dev-workbook` - the workbook rules and the statements that fit the step.
 - `dev-test` - the stage before (Write route) and the work item's test runs (Run route).
 - `dev-plan` - the plan and work items this skill builds; `dev-review` - the next stage after `dev-test`'s Run route, and the source of fix-now findings.
 - `skill-builder` - changes this skill.

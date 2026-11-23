@@ -46,10 +46,10 @@ compatibility: Needs Python 3 (standard library only) and the dev-core, dev-work
 
 ## Core rules
 
-- **Workbook rules load as `dev-workbook` says.** Before the first `WORKBOOK resolve`, read `${CLAUDE_SKILL_DIR}/../dev-workbook/references/loading.md` and follow it; every resolve prints that rule again.
 - **Lowest level first.** A fix lands at the lowest level that resolves it: a workbook or another reference file, then a goldfish, then a skill file. A skill file change needs evidence, in the record and the change plan, that neither lower level can resolve it; without that evidence, propose the lower level.
 - **Evidence, not opinion.** Every root cause quotes the instruction, statement, or test that let the problem through, with its file and line, or names where the missing one belongs.
 - **The user approves each fix.** Records (the learn record and lesson lines) are written without asking; every fix is proposed with a recommendation and goes to its owner only after the user's yes for that fix. This skill edits no workbook, skill, agent, or settings file itself.
+- **One problem, one cause.** The IDs under one number of the review's Problems list are one cause: one root cause, one lesson, and one repeat, with a record row for each ID.
 - **Settled lessons leave the log.** A lesson whose fix is applied, or whose fix is declined, is removed from the log with its copies. The learn record keeps the history, and `LEARN collect` reads earlier learn records, so a problem that comes back after its fix is still found.
 - **Repeats come first.** A finding that matches an open lesson raises its count; one that matches an applied fix means the fix did not hold. Both are listed first in the proposal, with the stronger fix recommended.
 - **Never blocks the change.** The fix-now hand-on and the deploy do not wait for the learn step's approvals.

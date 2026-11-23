@@ -36,7 +36,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 PLUGIN_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOWTOAI_SKILLS = {"grilling": "required", "skill-builder": "required", "skill-finder": "optional",
-                  "skill-design": "optional", "environment-audit": "optional"}
+                  "skill-design": "optional", "skill-audit": "required"}
 HOOK_FILES = ("dev_test_first.py", "dev_safe_target.py")
 
 

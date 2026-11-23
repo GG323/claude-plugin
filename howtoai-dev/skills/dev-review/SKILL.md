@@ -50,7 +50,6 @@ Each route is one file in `routes/`. "Stage" always means a stage of the `howtoa
 
 ## Core rules
 
-- **Workbook rules load as `dev-workbook` says.** Before the first `WORKBOOK resolve`, read `${CLAUDE_SKILL_DIR}/../dev-workbook/references/loading.md` and follow it; every resolve prints that rule again.
 - **Goldfish stay goldfish.** A reviewer brief holds only what the agent's Input section lists. When no fresh subagent can start, halt and say why: a review by the agent that holds the conversation is not a goldfish review.
 - **Findings, not fixes.** This skill never changes product code; `dev-build` applies the fixes the user chooses. Reviewers never run or change code; only you run tests, through `dev-test`.
 - **Numbers from scripts.** Findings are counted, scored, filtered, and ranked by `FINDINGS`; the diff and missing receipts come from `REVIEW`. Never count, relabel, or drop a finding yourself; a reply off the agent's scale goes back to that agent.
@@ -106,7 +105,7 @@ Send requested changes or reported problems to the `skill-builder` skill (`/skil
 ## Skills and agents
 
 - `dev-core` - state, settings, `findings.py`, the review and work-item templates, and the [self-edit method](../dev-core/references/self-edit.md).
-- `dev-workbook` - every statement of the project's workbooks, and proposals after a correction.
+- `dev-workbook` - the workbook rules and the statements that fit the step, and proposals after a correction.
 - `dev-test` - reruns the tests for the inspection; `dev-build` - applies the fix-now findings.
 - `dev-plan` - creates tracker items for fix-later work items; `dev-learn` - the learn step after each human review.
 - `grilling` - the question method for the human review.

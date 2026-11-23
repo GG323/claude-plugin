@@ -63,7 +63,7 @@ class InstallCheckTests(unittest.TestCase):
         code, out = self.deps()
         items = self.by_name(out)
         self.assertEqual((code, out["deps_ok"]), (1, False))
-        for name in ("git", "grilling", "skill-builder"):
+        for name in ("git", "grilling", "skill-builder", "skill-audit"):
             self.assertEqual(items[name]["status"], "missing", name)
             self.assertTrue(items[name]["fix"], name)
         self.assertEqual(items["devmode.py"]["for_choice"], "dev mode on")
@@ -73,7 +73,7 @@ class InstallCheckTests(unittest.TestCase):
     def test_required_items_present(self):
         self.fake_tool("git")
         self.fake_tool("gh")
-        for name in ("grilling", "skill-builder"):
+        for name in ("grilling", "skill-builder", "skill-audit"):
             write(os.path.join(self.home, ".claude", "skills", name, "SKILL.md"), "---\nname: x\n---\n")
         code, out = self.deps()
         items = self.by_name(out)

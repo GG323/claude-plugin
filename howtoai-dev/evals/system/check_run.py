@@ -92,16 +92,35 @@ def check_receipts(changes):
     return result(problems, bool(changes))
 
 
-def check_all_rules(copy, changes):
-    every = set(script(WORKBOOK, "resolve", "--workspace", copy).get("receipt", {}).get("statements", []))
+def check_must_rules(copy, changes):
+    """Each receipt holds every MUST and MUST NOT. A long step's parts do together, and none is missing."""
+    resolved = script(WORKBOOK, "resolve", "--workspace", copy)
+    must = set()
+    for stem, sections in resolved.get("sections", {}).items():
+        prefix = "" if resolved["technologies"][stem]["technology"] == stem else f"{stem}:"
+        must |= {prefix + st["id"] for rows in sections.values() for st in rows
+                 if (st.get("level") or "").startswith("MUST")}
     problems, seen = [], 0
     for change in changes:
+        steps = {}
         for receipt in json.loads((change / "state.json").read_text(encoding="utf-8")).get("receipts", []):
             seen += 1
-            short = len(every - set(receipt.get("statements", [])))
-            if short:
-                problems.append(f"{change.name}: the {receipt.get('stage')} receipt lacks {short} of {len(every)} statements")
-    return result(problems, seen > 0 and bool(every))
+            held = set(receipt.get("statements", []))
+            stage, part = receipt.get("stage"), str(receipt.get("part") or "")
+            if "/" in part:
+                number, _, of = part.partition("/")
+                counts, union = steps.setdefault((stage, of), ({}, set()))
+                counts[number] = counts.get(number, 0) + 1
+                union |= held
+            elif must - held:
+                problems.append(f"{change.name}: the {stage} receipt lacks {len(must - held)} of {len(must)} MUST rules")
+        for (stage, of), (counts, union) in steps.items():
+            recorded = [counts.get(str(n), 0) for n in range(1, int(of) + 1)] if of.isdigit() else [0]
+            if min(recorded) < max(max(recorded), 1):
+                problems.append(f"{change.name}: the {stage} receipt lacks parts ({recorded} recorded of parts 1 to {of})")
+            if must - union:
+                problems.append(f"{change.name}: the {stage} parts lack {len(must - union)} of {len(must)} MUST rules")
+    return result(problems, seen > 0 and bool(must))
 
 
 def check_templates(changes):
@@ -259,7 +278,7 @@ def check(workspace):
             "leftovers": check_leftovers(changes),
             "state_and_index": check_state(copy, changes),
             "receipts": check_receipts(changes),
-            "all_rules": check_all_rules(copy, changes),
+            "must_rules": check_must_rules(copy, changes),
             "entry_points": check_entry_points(copy, changes),
         }
 

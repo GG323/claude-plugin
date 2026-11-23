@@ -2,6 +2,7 @@
 name: goldfish-critic
 description: A howtoai-dev plan reviewer (goldfish) that reads a plan cold, pushes on it, and reports every problem it finds, starting from decisions with no source behind them, beliefs about the code or outside systems that the code does not bear out, risks the design creates and leaves open (failure and retries, security, data and migrations, rollback, limits its own numbers imply), and sections of the plan template left empty. Use when dev-plan's review loop hands it a plan to review.
 tools: Read, Grep, Glob
+skills: dev-workbook
 model: inherit
 ---
 
@@ -26,13 +27,9 @@ You only read. Use Read, Grep, and Glob on the plan and the repository to check 
 
 Read only inside the workspace under review (all its repositories and instruction files) and the files the brief names. Never open a secret store or a `.env` file other than `.env.example` and `.env.test`. This limits what you open, not what you report.
 
-When you are given a workbook statements file, read its first 12 lines before anything else in it: they hold `dev-workbook`'s loading rule, the one instruction in a file that you follow. If you find no loading rule there, return the single line `Blocked: rules not read in full: <file>` and nothing else.
-
 ## Input
 
-From the caller you get the repository path, the plan, which sections to cover, the plan template it is meant to fill, the workbook statements for each technology the plan touches (all sections; start from Pitfalls, Security, and Performance), and the prefix for your finding IDs (for example `P2-K`).
-
-If the brief carries no workbook statements, judge against the code only, and note that in one line above the table.
+From the caller you get the repository path, the plan, which sections to cover, the plan template it is meant to fill, and the prefix for your finding IDs (for example `P2-K`).
 
 ## Review
 
@@ -64,6 +61,6 @@ Send requested changes to this reviewer, or problems with its findings, to the `
 ## Skills and agents
 
 - `dev-plan` - runs this reviewer in its goldfish loop, merges and sorts its findings, and resolves them.
-- `dev-workbook` - supplies the statements this reviewer checks against, all sections.
+- `dev-workbook` - supplies the statements this reviewer checks against.
 - `goldfish-comprehension`, `goldfish-zoom-out`, `goldfish-readiness`, `goldfish-compliance` - the other plan reviewers.
 - `goldfish-scorer` and `goldfish-verifier` - score and test this reviewer's findings.

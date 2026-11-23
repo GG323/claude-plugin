@@ -43,7 +43,7 @@ Sources:
 
 ## Overview
 
-- **demo.overview.001** · Demo is a sample. · source: [Demo docs](https://example.org/demo) · confirmed: base, 2026-01-01
+- **demo.overview.001** · Demo is a sample. · tags: style · source: [Demo docs](https://example.org/demo) · confirmed: base, 2026-01-01
 
 ## Setup and configuration
 
@@ -51,8 +51,8 @@ Sources:
 
 ## Idioms and patterns
 
-- **demo.patterns.001** · MUST · Pin the demo version. · source: [Demo docs](https://example.org/demo) · confirmed: base, 2026-01-01
-- **demo.patterns.002** · SHOULD · Keep demo files small. · source: [Demo docs](https://example.org/demo) · confirmed: base, 2026-01-01
+- **demo.patterns.001** · MUST · Pin the demo version. · tags: versions · source: [Demo docs](https://example.org/demo) · confirmed: base, 2026-01-01
+- **demo.patterns.002** · SHOULD · Keep demo files small. · tags: style · source: [Demo docs](https://example.org/demo) · confirmed: base, 2026-01-01
 
 ## Pitfalls
 
@@ -60,7 +60,7 @@ Sources:
 
 ## Commands
 
-- **demo.commands.001** · Run `demo check`. · source: [Demo docs](https://example.org/demo) · confirmed: base, 2026-01-01
+- **demo.commands.001** · Run `demo check`. · tags: cli · source: [Demo docs](https://example.org/demo) · confirmed: base, 2026-01-01
 
 ## Testing
 
@@ -129,7 +129,7 @@ class WorkbookTests(unittest.TestCase):
         code, out = run("validate", os.path.join(self.base, "demo.md"))
         self.assertTrue(out["ok"], out["errors"])
         bad = BASE.replace("demo.patterns.002", "demo.pitfalls.002").replace(
-            "Demo is a sample. · source: [Demo docs](https://example.org/demo)", "Demo is a sample. · source: [Other](https://other.example)")
+            "Demo is a sample. · tags: style · source: [Demo docs](https://example.org/demo)", "Demo is a sample. · tags: style · source: [Other](https://other.example)")
         p = os.path.join(self.base, "demo.md")
         with open(p, "w", encoding="utf-8") as f:
             f.write(bad)

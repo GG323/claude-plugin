@@ -56,7 +56,6 @@ The Write route calls the Run route for its red check; the Run route never calls
 
 The full list, with the layer that enforces each rule, is in [references/safety-rules.md](references/safety-rules.md).
 
-- **Workbook rules load as `dev-workbook` says.** Before the first `WORKBOOK resolve`, read `${CLAUDE_SKILL_DIR}/../dev-workbook/references/loading.md` and follow it; every resolve prints that rule again.
 - **Unknown is production.** Only targets the allow list matches by evidence (host, database, profile, environment variable), in-memory or file databases, and containers this run created are used. An unknown target stops the run and asks; a production target or marker refuses it.
 - **Never read real secrets.** Read config files and `.env.test`, never `.env`, `.env.production`, a secret store, or a key vault. Never print, log, or write a secret, including into `TESTING.md` and the reports.
 - **The project's own entry points.** Run the commands CI runs (`testing.entry_points`), never ad-hoc ones, and never edit CI configuration, test settings, or thresholds to make tests pass.

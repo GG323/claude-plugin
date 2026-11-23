@@ -38,6 +38,8 @@ The twelve data and system safety rules of the `howtoai-dev` process. Each is en
 | local (file) | An in-memory or file database (SQLite, LocalDB) | Yes |
 | unknown | Anything else; a loopback host not on the allow list gets a hint | No: the run stops and asks |
 
+`environments.deny` holds production markers only. A shared target that is not production, such as a team's dev database or a staging service, belongs on neither list, so `dev-test` asks about it at each run.
+
 Only targets in files a test run loads count for the verdict: test settings, `.env.test`, `.runsettings`, and shared config such as `appsettings.json`, unless a test settings file next to it overrides the same key. Files for other environments (`appsettings.Production.json`), `.env.example`, and CI files are listed but do not decide.
 
 ## What the hooks check

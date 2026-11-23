@@ -218,7 +218,7 @@ class FindingsTests(unittest.TestCase):
         code, out = run("tally", self.raw, "--round", "1", "--out", self.review(), "--changed", changed, "--inspection", insp)
         self.assertEqual((code, out["kept"], out["held_back"], out["outside_change"]), (0, 2, 1, ["R1-C2"]), out)
         text = open(self.review(), encoding="utf-8").read()
-        kept = text.split("## Test inspection")[0]
+        kept = text.split("## Findings by area")[1].split("## Test inspection")[0]
         self.assertIn("R1-C1", kept)
         self.assertIn("R1-S1", kept)
         self.assertNotIn("R1-C2", kept)

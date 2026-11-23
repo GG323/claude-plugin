@@ -9,7 +9,7 @@ document from dev-core's template shape.
 Commands (each prints one JSON object; "ok": false carries the error):
 
   collect <raw dir> [--kind plan|code]
-      Parse every reviewer table in <raw dir>/*.md (all files except declined.md, inspection.md, workbook-statements.md, findings.md,
+      Parse every reviewer table in <raw dir>/*.md (all files except declined.md, fix-now.md, inspection.md, workbook-statements.md, findings.md,
       high-impact.md, scores.md, verdicts.md; the file stem is the viewpoint), check IDs and
       severities, and write findings.json, findings.md (for the scorer), and high-impact.md
       (Blocker/Critical and Major findings, for the verifier; removed when there are none).
@@ -22,9 +22,12 @@ Commands (each prints one JSON object; "ok": false carries the error):
         [--title T] [--change-id ID] [--size S] [--diff BASE..HEAD] [--force]
         [--changed CHANGED.json] [--inspection FILE.md]
       Merge findings.json with scores.md and verdicts.md and write the review document.
-      A finding scored 20 or less whose whole reason is "Duplicate of <ID>" (a final period may follow)
-      goes to the appendix when that finding is shown, is at least as severe, and is in the same file on
-      the same side of the change; that finding then names its ID, location, and claim. Otherwise:
+      Every Score cell must be a whole number from 0 to 100; otherwise tally stops and names
+      the rows. A finding scored 20 or less whose whole reason is "Duplicate of <ID>" (a
+      final period may follow) is listed as one numbered problem with its original under
+      "### Problems" and returned in "problems", whatever its file or side of the change,
+      when the original is shown: its low score never holds it back. It keeps its own row and
+      count and takes the original's handling. A repeat of a held original stays held with it.
       A finding the verifier says stands is kept whatever its score, and so is one in confirmed.md
       (test inspection; confidence 100). A held-back Correctness, Risk, or Security finding scored 70
       or more is returned in "possible". "Not run:" lines of the reviewers are returned in "not_run".
@@ -60,7 +63,7 @@ KINDS = {
     "plan": {"levels": ["Blocker", "Major", "Nit"], "high": {"Blocker", "Major"}},
     "code": {"levels": ["Critical", "Major", "Minor", "Nit"], "high": {"Critical", "Major"}},
 }
-RESERVED = {"findings.md", "high-impact.md", "scores.md", "verdicts.md",
+RESERVED = {"findings.md", "fix-now.md", "high-impact.md", "scores.md", "verdicts.md",
             "declined.md", "inspection.md", "workbook-statements.md"}  # the elephant's own notes, not reviewers
 NOTE_LINE = re.compile(r"^[\s>*_`+\-]*(blocked|not run)[*_`\s]*:[*_`\s]*(.*)$", re.I)
 CONFIRMED = "confirmed"  # confirmed.md: bugs dev-review's test inspection proved; they need no score or verdict
@@ -264,6 +267,12 @@ def merge_duplicates(findings, kind):
 
 # tally -------------------------------------------------------------------------------------
 
+def score_of(row):
+    """The Score cell as a whole number from 0 to 100; None for anything else."""
+    text = col(row, "score").strip(" *`")
+    return int(text) if re.fullmatch(r"[0-9]{1,3}", text) and int(text) <= 100 else None
+
+
 def read_table_file(path, need):
     if not os.path.exists(path):
         return None
@@ -309,50 +318,46 @@ def is_possible(x):
     return x["confidence"] >= POSSIBLE_FROM and x.get("area", "").strip().lower() in POSSIBLE_AREAS
 
 
-def files_of(x):
-    """The files a location names, without lines and notes."""
-    files = set()
-    for part in re.split(r"[;,]", re.sub(r"\([^)]*\)|[`*]", "", x.get("location") or "")):
-        path = re.sub(r":\d+(-\d+)?$", "", part.strip()).replace("\\", "/")
-        if path:
-            files.add(path[2:] if path.startswith("./") else path)
-    return files
+def group_problems(kept, outside, findings, levels):
+    """The shown findings as numbered problems. A repeat the scorer marked sits under its original.
 
-
-def same_file(a, b):
-    if a == b:
-        return True
-    short, long = sorted((a, b), key=len)  # one reviewer writes workspace-relative paths, another absolute ones
-    absolute = re.compile(r"^([A-Za-z]:/|/)")
-    return bool("/" in short and not absolute.match(short) and absolute.match(long) and long.endswith("/" + short))
-
-
-def in_the_same_files(x, first):
-    mine, its = files_of(x), files_of(first)
-    return bool(mine) and all(any(same_file(m, i) for i in its) for m in mine)
-
-
-def collapse_repeats(kept, outside, held, summary, levels):
-    """Hold back a scored repeat only when what it repeats is itself shown, at least as severe, and no repeat.
-
-    Both must be in the same file and on the same side of the change. The shown row then carries the repeat."""
+    Every finding keeps its row, its side of the change, and its count: grouping hides nothing. When the original
+    is not shown, its shown repeats are one problem under the most severe of them."""
     rank = {lv: i for i, lv in enumerate(levels)}
-    shown = {x["id"]: ("in", x) for x in kept}
-    shown.update({x["id"]: ("outside", x) for x in outside})
-    for place, items, count in (("in", kept, "kept"), ("outside", outside, "outside")):
-        for x in list(items):
-            where, first = shown.get(x.get("repeats"), (None, None))
-            if not first or first.get("repeats") or rank[first["severity"]] > rank[x["severity"]]:
-                continue
-            if place != where or not in_the_same_files(x, first):
-                continue
-            first.setdefault("also", []).append(x["id"])
-            first["finding"] = first["finding"].rstrip() + " Also raised by %s (%s) at %s: %s" % (
-                x["id"], x["viewpoint"], x["location"], x["finding"].strip())
-            items.remove(x)
-            summary[x["raised_as"]][count] -= 1
-            summary[x["raised_as"]]["held"] += 1
-            held.append(dict(x, reason="duplicate of %s, which is shown" % first["id"]))
+    points = {x["id"]: x.get("repeats") for x in findings}
+
+    def original(fid):
+        seen, at = {fid}, fid
+        while points.get(at):
+            at = points[at]
+            if at in seen:
+                return fid  # repeats of each other: neither is the original
+            seen.add(at)
+        return at
+
+    groups = {}
+    for side, items in (("in the change", kept), ("outside the change", outside)):
+        for x in items:
+            groups.setdefault(original(x["id"]), []).append((side, x))
+    problems = []
+    for first_id, members in groups.items():
+        members.sort(key=lambda m: (m[1]["id"] != first_id, rank[m[1]["severity"]]))
+        problems.append(members)
+    problems.sort(key=lambda members: min(rank[x["severity"]] for _, x in members))
+    return problems
+
+
+def problems_md(problems):
+    if not problems:
+        return []
+    out = ["", "### Problems", "",
+           "One problem for each number. A repeat the scorer marked is under its original, and keeps its own row below.", ""]
+    for n, members in enumerate(problems, 1):
+        for i, (side, x) in enumerate(members):
+            lead = "   - same problem: " if i else f"{n}. "
+            out.append("%s**%s** · %s · %s · %s: %s" % (
+                lead, x["id"], x["severity"], side, cell(x["location"]), cell(x["finding"])))
+    return out
 
 
 def tally(raw, a):
@@ -372,6 +377,10 @@ def tally(raw, a):
     missing = [x["id"] for x in to_judge if x["id"] not in scores]
     if missing:
         raise Fail(f"no score for {missing}")
+    bad = [x["id"] for x in to_judge if score_of(scores[x["id"]]) is None]
+    if bad:
+        raise Fail(f"the Score cell is not a whole number from 0 to 100 in the rows {bad}; "
+                   "have the scorer return its table again, with ID, Score, and Reason in every row")
     hi = [x for x in to_judge if x["severity"] in high]
     verdicts = read_table_file(os.path.join(raw, "verdicts.md"), ["id", "verdict"]) or {}
     if hi and not verdicts:
@@ -388,10 +397,7 @@ def tally(raw, a):
         proven = is_proven(x)
         summary[orig]["raised"] += 1
         s = {"score": "100", "reason": "confirmed by test inspection"} if proven else scores[x["id"]]
-        raw_score = re.sub(r"[^0-9]", "", col(s, "score"))
-        if not raw_score:
-            raise Fail(f"score for {x['id']} is not a number")
-        score = int(raw_score)
+        score = score_of(s)
         x["confidence"] = score
         may_repeat = not proven and score <= DUPLICATE_UP_TO and score < a.threshold
         repeat = DUPLICATE_OF.fullmatch(col(s, "reason").strip()) if may_repeat else None
@@ -429,7 +435,8 @@ def tally(raw, a):
         verified_high = where and x["severity"] in high and x["verdict"] != "not verified"
         if score < a.threshold and not verified_high and x["verdict"] != "stands":
             summary[orig]["held"] += 1
-            held.append(dict(x, possible=is_possible(x), reason="below threshold: " + col(s, "reason") + (" (%s)" % where if where else "")))
+            held.append(dict(x, possible=is_possible(x), held_for="threshold", where=where,
+                             reason="below threshold: " + col(s, "reason") + (" (%s)" % where if where else "")))
             continue
         if where:
             if x["severity"] in high:
@@ -442,7 +449,31 @@ def tally(raw, a):
         summary[orig]["kept"] += 1
         kept.append(x)
 
-    collapse_repeats(kept, outside, held, summary, levels)
+    # A marked repeat follows its original: shown with it whatever its own score, so nothing is held for being a repeat.
+    # It takes the original's handling: a held row was never acted on, and an AUTO-FIX repeat must not run apart.
+    shown, points = {y["id"]: y for y in kept + outside}, {y["id"]: y.get("repeats") for y in findings}
+
+    def shown_original(fid):
+        seen, at = {fid}, points.get(fid)
+        while at and at not in seen:
+            if at in shown:
+                return shown[at]
+            seen.add(at)
+            at = points.get(at)
+        return None
+
+    for y in [y for y in held if y.get("held_for") == "threshold" and y.get("repeats") and shown_original(y["id"])]:
+        held.remove(y)
+        y = {k: v for k, v in y.items() if k not in ("held_for", "reason", "possible")}
+        y["handling"] = shown_original(y["id"])["handling"]
+        summary[y["raised_as"]]["held"] -= 1
+        if y["where"]:
+            summary[y["raised_as"]]["outside"] += 1
+            outside.append(y)
+        else:
+            summary[y["raised_as"]]["kept"] += 1
+            kept.append(y)
+
     for m in data.get("merged", []):
         summary[m["severity"]]["raised"] += 1
         summary[m["severity"]]["held"] += 1
@@ -461,6 +492,8 @@ def tally(raw, a):
         if re.search(r"\|\s*(fixed:|decided:|asked:|declined:|outside:|fix now|later|decline)", prev):
             raise Fail(f"{a.out} already has resolutions; pass --force to overwrite")
 
+    problems = group_problems(kept, outside, findings, levels)
+    data["problems"] = problems
     render = render_plan if kind == "plan" else render_code
     md = render(a, data, kept, outside, held, summary, clean)
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
@@ -469,7 +502,10 @@ def tally(raw, a):
     count = {lv: sum(1 for x in kept if x["severity"] == lv) for lv in levels}
     return {"ok": True, "out": a.out.replace("\\", "/"), "clean": clean, "kept": len(kept),
             "kept_by_severity": count, "outside_change": [x["id"] for x in outside], "held_back": len(held),
-            "possible": [x["id"] for x in held if x.get("possible")], "not_run": data.get("not_run", []),
+            "possible": [x["id"] for x in held if x.get("possible")],
+            "problems": [{"n": n, "id": m[0][1]["id"], "repeats": [x["id"] for _, x in m[1:]]}
+                         for n, m in enumerate(problems, 1)],
+            "not_run": data.get("not_run", []),
             "refuted": sum(summary[lv]["refuted"] for lv in levels)}
 
 
@@ -523,6 +559,7 @@ def render_plan(a, data, kept, outside, held, summary, clean):
     for lv in KINDS["plan"]["levels"]:
         s = summary[lv]
         L.append("| %s | %d | %d | %d | %d | %d | %d |" % (lv, s["raised"], s["kept"], s["outside"], s["held"], s["refuted"], s["weakened"]))
+    L += problems_md(data.get("problems"))
     L += ["", "## Findings", ""]
     if not kept:
         L += ["No findings kept.", ""]
@@ -552,8 +589,9 @@ def render_code(a, data, kept, outside, held, summary, clean):
         items = [x for x in kept if x["severity"] == lv]
         auto = sum(1 for x in items if x["handling"] == "AUTO-FIX")
         L.append("| %s | %d | %d | %d |" % (lv, len(items), auto, len(items) - auto))
-    L += ["", "Counts come from the tally script. Outside this change: %d (not counted above). Findings scored under the confidence threshold are in the appendix." % len(outside), "",
-          "## Findings by area", ""]
+    L += ["", "Counts come from the tally script. Outside this change: %d (not counted above). Findings scored under the confidence threshold are in the appendix." % len(outside)]
+    L += problems_md(data.get("problems"))
+    L += ["", "## Findings by area", ""]
     if not kept:
         L += ["No findings kept.", ""]
     for area, items in grouped(kept, "area").items():
