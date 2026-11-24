@@ -5,6 +5,7 @@ Usage (Python 3, standard library only; every command prints one JSON object):
   py -3 -I -B deploy.py target   list|show|write --workspace WS [--name N] [--file ENTRY.json] [--write]
   py -3 -I -B deploy.py gate     --workspace WS --target N [--change CHANGE_DIR] [--new-file PATH ...]
   py -3 -I -B deploy.py approve  --workspace WS --target N --step ID --command CMD [--minutes M]
+  py -3 -I -B deploy.py use      --workspace WS --id A<n> --command CMD [--now ISO]
   py -3 -I -B deploy.py check    --url URL [--expect 200] [--contains TEXT] [--retries 5] [--wait 3]
   py -3 -I -B deploy.py log      --workspace WS --target N --steps S --outcome O --rollback R
                                  --approved A [--change CHANGE_DIR] [--checks C] [--now ISO]
@@ -26,9 +27,12 @@ gate       Checks what code can: the target exists, the work is committed (git s
            run that started at stage test since the last tests or build. Lists
            checks_run and checks_skipped.
 approve    Records one approved step in <ws>/.howtoai/deploy/approvals.json with its exact
-           command and an expiry (default: the target's approval_minutes, else 30). The
-           dev-safe-target hook passes that command once before the expiry. Run it only after
-           the user's yes for that step.
+           command and an expiry (default: the target's approval_minutes, else 30). Run it only
+           after the user's yes for that step.
+use        Checks one approval right before its step runs: the exact command (after trimming)
+           and the expiry, then marks it claimed. A used, claimed, expired, unknown, or different
+           one is refused. As a second layer, the dev-safe-target hook, where it runs, passes the
+           command once before the expiry and marks it used.
 check      An HTTP check with retries: status code and optional text. Commands checks are run
            by the agent, not here.
 log        Adds a run row to the deploy log: <change>/deploy-log.md with --change, else
@@ -145,7 +149,7 @@ def cmd_discover(a):
             found["helm"].append(os.path.dirname(rel) or ".")
         elif low in ("kustomization.yaml", "kustomization.yml"):
             found["kustomize"].append(os.path.dirname(rel) or ".")
-        elif low.endswith((".yaml", ".yml")) and rel.startswith(".github/workflows/"):
+        elif low.endswith((".yaml", ".yml")) and re.search(r"(^|/)\.github/workflows/", rel):
             found["ci"].append({"file": rel, "system": "GitHub Actions"})
         elif name in CI:
             found["ci"].append({"file": rel, "system": CI[name]})
@@ -438,6 +442,10 @@ def cmd_gate(a):
             problems.append(f"the latest test run is {runs[-1].get('result')}, not green")
         if runs:
             problems += stage_test_problems(st, runs)
+        for x in st.get("approvals", []):
+            if x.get("unverified"):
+                skipped.append({"check": f"approval verified against the reply log: {x.get('what')}",
+                                "reason": "recorded unverified: there was no reply log to check the user's reply against"})
     return {"ok": not problems, "problems": problems, "checks_run": run, "checks_skipped": skipped,
             "note": "The target's ready commands (for example kubectl cluster-info) are run by the agent."}
 
@@ -464,6 +472,25 @@ def cmd_approve(a):
             "approved": t.isoformat(timespec="seconds"),
             "expires": (t + datetime.timedelta(minutes=minutes)).isoformat(timespec="seconds"), "used": False}
     data["approvals"].append(item)
+    write_json(path, data)
+    return {"ok": True, "approval": item, "path": path}
+
+
+def cmd_use(a):
+    path = ws_path(a.workspace, "approvals.json")
+    data = json.loads(read(path)) if os.path.isfile(path) else {"approvals": []}
+    item = next((x for x in data.get("approvals", []) if x.get("id") == a.id), None)
+    if item is None:
+        raise Fail(f"no approval {a.id}: ask the user, then DEPLOY approve the step")
+    if item.get("used") or item.get("claimed"):
+        raise Fail(f"approval {a.id} was already used: ask the user again for this step")
+    if (item.get("command") or "").strip() != a.command.strip():
+        raise Fail(f"--command differs from the command approved as {a.id}: run the approved one, or ask again")
+    expires = datetime.datetime.fromisoformat(item["expires"])
+    t = now(a)
+    if (expires if expires.tzinfo else expires.astimezone()) <= t:
+        raise Fail(f"approval {a.id} expired at {item['expires']}: ask the user again for this step")
+    item["claimed"] = t.isoformat(timespec="seconds")
     write_json(path, data)
     return {"ok": True, "approval": item, "path": path}
 
@@ -565,6 +592,8 @@ def main(argv=None):
     p = sub.add_parser("approve"); p.add_argument("--workspace", required=True)
     p.add_argument("--target", required=True); p.add_argument("--step", required=True)
     p.add_argument("--command", required=True); p.add_argument("--minutes", type=int); p.add_argument("--now")
+    p = sub.add_parser("use"); p.add_argument("--workspace", required=True); p.add_argument("--id", required=True)
+    p.add_argument("--command", required=True); p.add_argument("--now")
     p = sub.add_parser("check"); p.add_argument("--url", required=True); p.add_argument("--expect", type=int, default=200)
     p.add_argument("--contains"); p.add_argument("--retries", type=int, default=5); p.add_argument("--wait", type=float, default=3)
     p = sub.add_parser("log"); p.add_argument("--workspace", required=True); p.add_argument("--target", required=True)
@@ -577,7 +606,7 @@ def main(argv=None):
     p.add_argument("--change"); p.add_argument("--now")
     a = ap.parse_args(argv)
     cmds = {"discover": cmd_discover, "target": cmd_target, "gate": cmd_gate, "approve": cmd_approve,
-            "check": cmd_check, "log": cmd_log, "self-edit": cmd_self_edit}
+            "use": cmd_use, "check": cmd_check, "log": cmd_log, "self-edit": cmd_self_edit}
     try:
         res = cmds[a.cmd](a)
     except (Fail, ValueError, OSError, json.JSONDecodeError, KeyError) as e:

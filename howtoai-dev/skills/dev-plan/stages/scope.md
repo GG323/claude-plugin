@@ -26,6 +26,7 @@
 1. Run `WORKBOOK resolve --workspace "<workspace>" --stage plan --paths <the files the facts name, with their project files> --markdown`.
 2. Record the `receipt` object exactly as `resolve` returned it, never a subset or a list of only the statements you used: `DEVCORE state "<change folder>" --patch '{"append": {"receipts": <receipt>}}'`, unless the receipt is empty.
 3. Keep the statements for grill, draft, and review. For a technology in `missing`, the other technologies go on. Run `dev-workbook`'s Create route for it only when a decision in this change depends on that technology's rules (a new pattern, a pitfall, a security or performance choice); when the change only follows what the code already does there, write "no `<technology>` workbook; follows `<file:line>`" under Assumptions instead.
+4. For each path in `unrecorded_paths`, run `dev-workbook`'s [Record a version](../../dev-workbook/routes/record-version.md#steps) route once per change, before grill. A code project that this change moves to another version is the exception: record nothing for the version it leaves, and offer no workbook for it. Write under Assumptions, with the version its project file states, "`<code project>` is on `<version>`, outside the `<technology>` workbook's Versions; this change moves it to `<new version>`", and list recording the new version with that route as a step of this change in Design details, never as a follow-up.
 
 ## Size
 

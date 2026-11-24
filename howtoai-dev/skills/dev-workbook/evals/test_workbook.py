@@ -349,5 +349,18 @@ class WorkbookTests(unittest.TestCase):
             self.assertTrue(out["ok"], f"{name}: {out['errors']}")
 
 
+    def test_github_actions_found_in_a_repository_in_a_subfolder(self):
+        for rel in ("shop/.github/workflows/ci.yml", ".github/workflows/ci.yml", "shop/docs/workflows.yml"):
+            path = os.path.join(self.ws, *rel.split("/"))
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("on: push\n")
+        for rel, found in (("shop/.github/workflows/ci.yml", True), (".github/workflows/ci.yml", True),
+                           ("shop/docs/workflows.yml", False)):
+            code, out = run("resolve", "--workspace", self.ws, "--stage", "build", "--paths", rel, *self.dirs)
+            self.assertEqual(code, 0, out)
+            self.assertEqual("github-actions" in out["missing"], found, rel)
+
+
 if __name__ == "__main__":
     unittest.main()

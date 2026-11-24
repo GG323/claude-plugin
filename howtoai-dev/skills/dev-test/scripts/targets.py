@@ -198,7 +198,7 @@ def find_targets(ws, test_globs):
             skipped.append({"file": rel, "reason": "secret store, never read"})
             continue
         is_cfg = any(fnmatch.fnmatch(name, g) for g in CONFIG_GLOBS)
-        is_ci = any(fnmatch.fnmatch(rel, g) for g in CI_GLOBS)
+        is_ci = any(fnmatch.fnmatch(rel, g) or fnmatch.fnmatch(rel, "*/" + g) for g in CI_GLOBS)
         if not (is_cfg or is_ci):
             continue
         try:

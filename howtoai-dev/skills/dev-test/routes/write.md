@@ -29,6 +29,7 @@
    - An assumption in the plan that a test can pin (for example "items are counted by quantity") may get a row with the source `plan.md Assumptions`; it is optional.
 2. Add a Characterization tests row for each untested neighbour in the scope facts: code next to the change that no test covers. The test pins today's observable behaviour, with real inputs and outputs, and must pass before the build.
 3. List each workbook statement that shaped a test under Workbook statements applied, by ID.
+4. Resolve again with the new test files' paths added, record its receipt as in [Read the inputs](#read-the-inputs), and add the statements that shaped a test to the list in step 3. A test file in a technology in `missing` pauses as code does. Write an end-to-end script only in a language or tool that has a workbook; when none fits, drive the path from the project's own test framework, for example an xUnit test that starts the process.
 
 ## Write the tests
 

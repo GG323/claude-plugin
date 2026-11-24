@@ -5,6 +5,10 @@ trimming, an unexpired and unused step in <workspace>/.howtoai/deploy/approvals.
 dev-deploy after the user's yes) is marked used and passes with no decision, so the user's normal
 permission prompt still shows. Nothing here ever returns allow.
 
+Checked before everything, the approved step included: a write, edit, command, or MCP call that
+touches <workspace>/.howtoai/dev/replies.jsonl (the dev-reply-log hook's record of real user
+replies) is denied, in every workspace.
+
 Then, in this order (deny wins over ask, ask over warn):
   1. Deny markers (environments.deny in the dev settings, user or project): a command or MCP call
      whose text holds one is denied. Applies in every workspace whose settings name markers.
@@ -31,6 +35,7 @@ import common  # noqa: E402
 import datetime  # noqa: E402
 
 CONFIRM = "howtoai-dev: destructive-confirmed"
+REPLY_LOG = os.path.join(".howtoai", "dev", "replies.jsonl")
 DESTRUCTIVE_CMD = [
     (r"\bdrop\s+(table|database|schema|column|index|view)\b", "drops a database object"),
     (r"\btruncate\b(\s+table)?\s+\w", "truncates a table"),
@@ -150,6 +155,10 @@ def check(data):
     else:
         text = ""
     low = text.lower()
+    log_rel = REPLY_LOG.replace("\\", "/")
+    if (is_edit and (common.rel(ws, path) or "").lower() == log_rel) or ((is_cmd or is_mcp) and "replies.jsonl" in low):
+        return ("deny", f"dev-safe-target: {log_rel} is written only by the dev-reply-log hook on a real user prompt. "
+                        "Ask the user and wait for the reply; never write or edit the log.")
     if is_cmd and approved_step(ws, text):
         return None
 

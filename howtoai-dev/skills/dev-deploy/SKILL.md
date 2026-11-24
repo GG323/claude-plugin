@@ -47,7 +47,7 @@ compatibility: Needs Python 3 (standard library only), git, the target's own CLI
 ## Core rules
 
 - **Existing tools first.** Use the project's own deploy files and the computer's own CLIs. A new deploy file (for example a Kubernetes manifest) or tool is written or installed only when none exists, and only after the user's yes.
-- **One yes per production step.** A production step runs only after the user approves that step in chat. A target marked `"production": false` still shows its plan and asks once for the whole run. Either way, `DEPLOY approve` records each step's exact command with a short expiry before it runs, so every step in the log names its approval; for production steps that record is the only thing that lets the `dev-safe-target` hook pass the command.
+- **One yes per production step.** A production step runs only after the user approves that step in chat. A target marked `"production": false` still shows its plan and asks once for the whole run. Either way, `DEPLOY approve` records each step's exact command with a short expiry before it runs, so every step in the log names its approval, and `DEPLOY use` checks and claims that approval right before the step runs, so it runs once. For production steps that record is also the only thing that lets the `dev-safe-target` hook pass the command.
 - **Rollback first.** No step runs without its rollback written down; a rollback runs only after the user's yes, except when the user approved "roll back on a failed check" for this run.
 - **Read before acting on failure.** A failed step or check is read (its output, logs, and events) before anything is retried; a retry happens at most once, and a second failure stops the run.
 - **No product code changes.** Inside the dev process a code fix goes back through `dev-build` and `dev-test`; outside it, it is proposed to the user.
@@ -66,14 +66,14 @@ compatibility: Needs Python 3 (standard library only), git, the target's own CLI
 ## Verify the output
 
 - `DEPLOY check` (or the target's command checks) passed after the run, or the run is logged as failed with its rollback state.
-- Every step in the log names its approval ID; where the `dev-safe-target` hook is active, `.howtoai/deploy/approvals.json` shows each production approval used once.
+- Every step in the log names its approval ID, and `.howtoai/deploy/approvals.json` shows each one claimed once by `DEPLOY use`; where the `dev-safe-target` hook is active, each production approval is also used once.
 - The log row exists and names the steps, outcome, checks, and rollback.
 
 ## Common failures
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| The hook denies an approved step | The command run differs from the approved one (spacing, quoting, a changed tag) or the approval expired | Run the exact approved command; for a changed command, ask again and `DEPLOY approve` it |
+| `DEPLOY use` refuses an approved step, or the hook denies it | The command run differs from the approved one (spacing, quoting, a changed tag), or the approval expired or was used | Check first with `DEPLOY use`, with the hook as a second layer; run the exact approved command, and for a changed command, ask again and `DEPLOY approve` it |
 | A Kubernetes rollout never finishes | The new pods fail to start (bad image tag, crash, failing probe) | Read `kubectl describe` and the pod logs before anything else, then offer the rollback |
 | The health check fails right after the rollout | The service port or the check URL in the target entry is wrong, or the app needs longer to start | Compare the target entry's check with the deploy files; raise retries only with evidence |
 | A local cluster answers in one run and not the next | It runs in a VM that stops when idle (for example WSL shuts down its VM) | The `ready` command fails, so the gate offers the entry's `start` commands; keep them in the target entry |
@@ -91,7 +91,7 @@ Send requested changes or reported problems to the `skill-builder` skill (`/skil
 
 ## Skills and agents
 
-- [Set up a target](routes/setup-target.md), [Deploy](routes/deploy.md), and [Self-edit](routes/self-edit.md) - the routes; [scripts/deploy.py](scripts/deploy.py) - discover, target, gate, approve, check, log, and self-edit.
+- [Set up a target](routes/setup-target.md), [Deploy](routes/deploy.md), and [Self-edit](routes/self-edit.md) - the routes; [scripts/deploy.py](scripts/deploy.py) - discover, target, gate, approve, use, check, log, and self-edit.
 - `dev-workbook` - finds or makes each technology's workbook and returns its statements; takes new technology facts through Propose.
 - `dev-core` - the change's state and the self-edit and root-cause method, inside the dev process; `skill-builder` - applies a change to this skill's files.
 - The `dev-safe-target` hook in the same plugin reads the approvals file.

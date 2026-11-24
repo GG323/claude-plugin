@@ -4,7 +4,7 @@ Usage (Python 3, standard library only; every command prints one JSON object):
   py -3 -I devcore.py root      [--cwd DIR]
   (every command except root also takes [--user-file F], read instead of the default user defaults file)
   py -3 -I devcore.py settings  [--workspace W] [--user-file F]
-  py -3 -I devcore.py setup     --workspace W --values JSON [--scope project|user] [--write]
+  py -3 -I devcore.py setup     --workspace W (--values JSON | --values-file F) [--scope project|user] [--write]
   py -3 -I devcore.py new-change --workspace W --title TEXT [--slug SLUG] [--date YYYY-MM-DD]
   py -3 -I devcore.py state     CHANGE_DIR [--patch JSON] [--now ISO]
   py -3 -I devcore.py index     --workspace W
@@ -14,7 +14,8 @@ root        Finds the workspace root: the nearest folder at or above --cwd (defa
 settings    Merges the schema defaults, the user file (default ~/.claude/howtoai/dev-settings.json),
             and the project file (<workspace>/.howtoai/dev/settings.json). Prints the merged values,
             the source of each top-level key, and whether the project is configured.
-setup       Validates --values (a JSON object of project settings) against the schema. Without
+setup       Validates --values (a JSON object of project settings), or the same JSON read from the
+            --values-file F (UTF-8), against the schema. Give exactly one of the two. Without
             --write it prints the file it would write (a preview); with --write it writes
             <workspace>/.howtoai/dev/settings.json, or with --scope user the user defaults file.
             Values that look like secrets are refused.
@@ -27,6 +28,14 @@ state       Prints a change's state.json. With --patch it applies the patch firs
                           "test_runs": {...}, "ephemeral": {...}, "builds": {...}},
                "increment": {"review": 1}}
             Stage changes are recorded in history. The index is rebuilt after every write.
+            An approval with "by": "user" needs "reply", the user's reply word for word. When
+            <workspace>/.howtoai/dev/replies.jsonl exists (written by the dev-reply-log hook on each
+            user prompt, as a sha256 of the normalized text, never the text), the reply must match an
+            entry newer than the change's last user approval, or the patch is refused. Without that
+            log the approval is recorded with "unverified": true and a warning is printed.
+            A move from tests-first to build is refused when git shows files changed since the
+            tests-first stage outside testing.test_globs, the plan folder, and .howtoai/; without
+            git the move is recorded with "unchecked" and a warning.
 index       Rebuilds <workspace>/<plan_folder>/INDEX.md in full from every state.json.
 
 Exit code 0 on success; 1 with {"ok": false, "error": "..."} on any error. Nothing is written
@@ -35,10 +44,14 @@ outside <workspace>/<plan_folder>/ and <workspace>/.howtoai/dev/.
 
 import argparse
 import datetime
+import fnmatch
+import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
+import unicodedata
 
 SKILL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_PATH = os.path.join(SKILL_DIR, "assets", "settings.schema.json")
@@ -253,7 +266,106 @@ def new_change(ws, title, slug, date, now, user_arg=None):
             "index": index, "changes": count}
 
 
-def apply_patch(state, patch, ts):
+REPLY_LOG = os.path.join(".howtoai", "dev", "replies.jsonl")
+
+
+def reply_hash(text):
+    """sha256 of a reply, normalized the same way by the dev-reply-log hook: NFC, whitespace
+    collapsed, case folded."""
+    norm = " ".join(unicodedata.normalize("NFC", str(text)).split()).casefold()
+    return hashlib.sha256(norm.encode("utf-8")).hexdigest()
+
+
+def _when(value):
+    try:
+        t = datetime.datetime.fromisoformat(str(value))
+    except ValueError:
+        return None
+    return t if t.tzinfo else t.astimezone()
+
+
+def check_user_approval(entry, state, ws):
+    """An approval in the user's name carries the user's reply; with the reply log, it must match
+    a logged prompt newer than the change's last user approval (or its creation)."""
+    reply = entry.get("reply")
+    if not isinstance(reply, str) or not reply.strip():
+        raise Fail('an approval "by": "user" needs "reply", the user\'s reply word for word: '
+                   "ask, wait for the answer, then record it")
+    log = os.path.join(ws, REPLY_LOG) if ws else None
+    if not log or not os.path.isfile(log):
+        entry["unverified"] = True
+        entry["at"] = now_iso()  # the real clock here too
+        return entry
+    entry.pop("unverified", None)
+    created = _when(state.get("created"))
+    used = [t for t in (_when(a.get("at")) for a in state.get("approvals", []) if a.get("by") == "user") if t]
+    since = max(used, default=None)
+
+    def fresh(at):
+        # a reply comes after the change was made (same second allowed) and strictly after the
+        # last user approval, whose own reply came before it was stamped
+        return (created is None or at >= created) and (since is None or at > since)
+    want = reply_hash(reply)
+    with open(log, encoding="utf-8") as f:
+        for line in f:
+            try:
+                rec = json.loads(line)
+            except ValueError:
+                continue
+            at = _when(rec.get("at")) if isinstance(rec, dict) else None
+            if at:
+                at = at.replace(microsecond=0)  # approvals are stamped to the second
+            if rec.get("sha256") == want and at and fresh(at):
+                entry["at"] = now_iso()  # the real clock: a patch's "at" or --now never backdates it
+                return entry
+    raise Fail('no user reply since the last user approval matches "reply": record an approval '
+               "in the user's name only after the user answered, quoting that answer")
+
+
+def tests_first_changes(state, ws, user_arg):
+    """Files git shows changed since the tests-first stage outside the test globs, the plan folder, and
+    .howtoai/; None when git cannot tell."""
+    since = _when(next((h["at"] for h in reversed(state.get("history", [])) if h.get("stage") == "tests-first"), ""))
+    git = ["git", "-c", "core.quotepath=off", "-c", f"safe.directory={ws}", "-C", ws]
+    try:
+        top = subprocess.run(git + ["rev-parse", "--show-toplevel"], capture_output=True, text=True, encoding="utf-8")
+        status = subprocess.run(git + ["status", "--porcelain", "-z", "--untracked-files=all"],
+                                capture_output=True, text=True, encoding="utf-8")
+    except OSError:
+        return None
+    if since is None or top.returncode or status.returncode:
+        return None
+    settings, _ = load_settings(ws, user_arg)
+    keep = (".howtoai/", settings["plan_folder"] + "/")
+    globs = settings["testing"]["test_globs"]
+    found, parts = [], iter(status.stdout.split("\0"))
+    for part in parts:
+        if len(part) < 4:
+            continue
+        if "R" in part[:2] or "C" in part[:2]:
+            next(parts, None)  # a rename or copy is followed by its old path
+        path = os.path.join(top.stdout.strip(), part[3:])
+        rel = os.path.relpath(path, ws).replace(os.sep, "/")
+        if rel.startswith("../") or rel.startswith(keep) or any(
+                fnmatch.fnmatch(rel, g) or fnmatch.fnmatch("/" + rel, g) for g in globs):
+            continue
+        if not os.path.exists(path) or os.path.getmtime(path) > since.timestamp():
+            found.append(rel)
+    return found
+
+
+def check_plan_cover(entry, state):
+    """An approval "by": "plan" (a path the approved work item names) cites the user's plan approval."""
+    plans = [a for a in state.get("approvals", []) if a.get("by") == "user" and a.get("what") == "plan"]
+    if not plans:
+        raise Fail('an approval "by": "plan" needs the user\'s plan approval in this change; '
+                   'without it, ask the user and record "by": "user" with the reply')
+    entry["covers"] = "plan approval at " + str(plans[-1].get("at"))
+    return entry
+
+
+def apply_patch(state, patch, ts, ws=None, warnings=None, user_arg=None):
+    warnings = [] if warnings is None else warnings
     if not isinstance(patch, dict):
         raise Fail("--patch must be a JSON object")
     allowed = {"stage", "size", "title", "plan_item", "append", "increment"}
@@ -271,8 +383,18 @@ def apply_patch(state, patch, ts):
         if patch["stage"] not in STAGES:
             raise Fail(f"stage must be one of {STAGES}")
         if patch["stage"] != state.get("stage"):
+            move = {"at": ts, "stage": patch["stage"]}
+            if state.get("stage") == "tests-first" and patch["stage"] == "build" and ws:
+                changed = tests_first_changes(state, ws, user_arg)
+                if changed is None:
+                    move["unchecked"] = "no git history to show what changed at stage tests-first"
+                    warnings.append("the move to build is unchecked: git cannot show what changed at stage tests-first")
+                elif changed:
+                    raise Fail("files outside testing.test_globs changed at stage tests-first: "
+                               + "; ".join(changed[:10]) + ". Only tests, test data, and the change folder change "
+                               "before the red check; revert them or ask the user")
             state["stage"] = patch["stage"]
-            state.setdefault("history", []).append({"at": ts, "stage": patch["stage"]})
+            state.setdefault("history", []).append(move)
     if "size" in patch:
         if patch["size"] not in SIZES:
             raise Fail(f"size must be one of {SIZES}")
@@ -289,6 +411,14 @@ def apply_patch(state, patch, ts):
         if secrets_in(item):
             raise Fail(f"append.{key} looks like it holds a secret; state files never store secrets")
         entry = dict(item)
+        if key == "approvals" and entry.get("by") == "user":
+            entry.pop("at", None)
+            entry = check_user_approval(entry, state, ws)
+            if entry.get("unverified"):
+                warnings.append(f"approval {entry.get('what')!r} is recorded unverified: no reply log to check the "
+                                "reply against; show it to the user in your next message")
+        elif key == "approvals" and entry.get("by") == "plan":
+            entry = check_plan_cover(entry, state)
         entry.setdefault("at", ts)
         state.setdefault(key, []).append(entry)
     for key, by in (patch.get("increment") or {}).items():
@@ -317,7 +447,7 @@ def main(argv=None):
     p = sub.add_parser("root"); p.add_argument("--cwd", default=os.getcwd())
     p = sub.add_parser("settings"); p.add_argument("--workspace"); p.add_argument("--user-file")
     p = sub.add_parser("setup"); p.add_argument("--workspace", required=True); p.add_argument("--user-file")
-    p.add_argument("--values", required=True); p.add_argument("--write", action="store_true")
+    p.add_argument("--values"); p.add_argument("--values-file"); p.add_argument("--write", action="store_true")
     p.add_argument("--scope", choices=["project", "user"], default="project")
     p = sub.add_parser("new-change"); p.add_argument("--workspace", required=True)
     p.add_argument("--title", required=True); p.add_argument("--slug"); p.add_argument("--date")
@@ -336,10 +466,20 @@ def main(argv=None):
                  "settings": merged, "sources": sources})
         if a.cmd == "setup":
             ws = os.path.abspath(a.workspace)
+            if (a.values is None) == (a.values_file is None):
+                raise Fail("setup needs exactly one of --values or --values-file")
+            raw, source = a.values, "--values"
+            if a.values_file is not None:
+                source = "--values-file"
+                try:
+                    with open(a.values_file, encoding="utf-8-sig") as f:
+                        raw = f.read()
+                except (OSError, UnicodeDecodeError) as e:
+                    raise Fail(f"--values-file cannot be read: {e}")
             try:
-                values = json.loads(a.values)
+                values = json.loads(raw)
             except json.JSONDecodeError as e:
-                raise Fail(f"--values is not valid JSON: {e}")
+                raise Fail(f"{source} is not valid JSON: {e}")
             errs = validate(values, schema())
             if errs:
                 raise Fail("; ".join(errs))
@@ -370,9 +510,12 @@ def main(argv=None):
                     patch = json.loads(a.patch)
                 except json.JSONDecodeError as e:
                     raise Fail(f"--patch is not valid JSON: {e}")
-                state = apply_patch(state, patch, now_iso(a.now))
+                warnings = []
+                state = apply_patch(state, patch, now_iso(a.now), workspace_of(a.change_dir), warnings, a.user_file)
                 write_json(path, state)
                 rebuild_index(workspace_of(a.change_dir), a.user_file)
+                if warnings:
+                    out({"ok": True, "state": state, "warnings": warnings})
             out({"ok": True, "state": state})
         if a.cmd == "index":
             path, count = rebuild_index(os.path.abspath(a.workspace), a.user_file)

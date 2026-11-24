@@ -30,7 +30,7 @@ Entered from [SKILL.md](../SKILL.md#routes) or [Set up a target](setup-target.md
 For each step, in order:
 
 1. **Approve.** After the user's yes (for that step, or for the whole run on a non-production target): `DEPLOY approve --workspace "<workspace>" --target <target> --step <id> --command "<the exact command>"`. Run the command exactly as approved; any change needs a new yes.
-2. **Run.** Run the command, then its `watch` command when it has one.
+2. **Run.** Right before it: `DEPLOY use --workspace "<workspace>" --id <approval ID> --command "<the exact command>"`. On `"ok": false` (used, expired, unknown, or a different command), do not run the step: ask again. Then run the command, then its `watch` command when it has one.
 3. **On failure.** Read before acting: the step's output, then the platform's own diagnostics (for Kubernetes: `kubectl describe` of the deployment and its pods, the pod logs, and the events). Classify the cause, first match wins:
    - **Flaky:** a timeout or a lost connection with no error from the app or platform. Offer one rerun.
    - **The app:** the app fails to start or answer (a crash, a failing probe, a missing config). Stop; inside the dev process propose a fix-now finding for `dev-build`, outside it propose the fix.
@@ -47,18 +47,18 @@ For each step, in order:
 ## Roll back
 
 1. Take the rollback of each step that ran, last step first. Unless the user allowed rollback without asking for this run, ask first; then `DEPLOY approve` it with the step ID `rollback-<id>`.
-2. Run it, then the step's `watch` command, then the checks, so the log can say the old version is back and healthy.
+2. Run it after `DEPLOY use`, as in step 2 of [Approve and run](#approve-and-run), then the step's `watch` command, then the checks, so the log can say the old version is back and healthy.
 3. A rollback that fails stops everything: tell the user the target's state as the platform reports it, and do not retry.
 
 ## Record and close
 
 1. `DEPLOY log --workspace "<workspace>" --target <target> --steps "<step IDs run>" --outcome "<succeeded, or failed at <step>: <reason>>" --checks "<passed, or failed: which>" --rollback "<planned / used / not needed>" --approved "<you, approval IDs>"` (with `--change` inside the dev process).
-2. Inside the dev process, after a clean run with passing checks: `DEVCORE state "<change folder>" --patch '{"stage": "done", "append": {"approvals": {"what": "deploy to <target>", "by": "user", "conditions": "<approval IDs>"}}}'`.
+2. Inside the dev process, after a clean run with passing checks: `DEVCORE state "<change folder>" --patch '{"stage": "done", "append": {"approvals": {"what": "deploy to <target>", "by": "user", "conditions": "<approval IDs>", "reply": "<the user's reply, word for word>"}}}'`.
 3. When the run failed because of a rule, run the [Self-edit](self-edit.md) route now: its `DEPLOY self-edit` row with status `proposed` is written before the report, and its proposal goes in the same message.
 4. Report as the [output contract](../SKILL.md#output-contract) says.
 
 ## Skills and agents
 
-- [SKILL.md](../SKILL.md) - the rules; [Set up a target](setup-target.md) and [Self-edit](self-edit.md) - the routes this one leads to; [scripts/deploy.py](../scripts/deploy.py) - gate, approve, check, and log.
+- [SKILL.md](../SKILL.md) - the rules; [Set up a target](setup-target.md) and [Self-edit](self-edit.md) - the routes this one leads to; [scripts/deploy.py](../scripts/deploy.py) - gate, approve, use, check, and log.
 - `dev-workbook` - the statements; `dev-core` - state, inside the dev process; `dev-build` - code fixes inside the dev process.
 - No agents are used.

@@ -6,7 +6,8 @@ Usage:
 
 deps    Checks what the install needs and prints one JSON object: deps_ok (no required item
         missing), items (name, kind, need, status, detail, fix, and for_choice where only one
-        install choice needs it), and dev_links (each of this plugin's skills and agents in
+        install choice needs it), missing (name, need, and fix of every item with status
+        "missing", the dev hooks included, for the first message to the user), and dev_links (each of this plugin's skills and agents in
         ~/.claude/skills and ~/.claude/agents: ok, missing, elsewhere, or real).
         need is "required", "optional", or "required for <choice>". status is "ok", "missing",
         or "unknown" (a script cannot see it: the agent checks its own tool list).
@@ -37,7 +38,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 PLUGIN_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOWTOAI_SKILLS = {"grilling": "required", "skill-builder": "required", "skill-finder": "optional",
                   "skill-design": "optional", "skill-audit": "required"}
-HOOK_FILES = ("dev_test_first.py", "dev_safe_target.py")
+HOOK_FILES = ("dev_test_first.py", "dev_safe_target.py", "dev_reply_log.py")
 
 
 def item(name, kind, need, status, detail="", fix="", for_choice=None):
@@ -150,7 +151,7 @@ def check_deps(home, no_probe, search_path):
                           "The agent searches its own tool list; the user connects it in the harness", choice))
     for name, why in (("subagents", "the goldfish reviewers; without them dev-plan's and dev-review's reviews stop and say why"),
                       ("Artifact tool", "plan.publish auto and artifact"),
-                      ("hooks", "the dev-test-first and dev-safe-target hooks")):
+                      ("hooks", "the dev-test-first, dev-safe-target, and dev-reply-log hooks")):
         items.append(item(name, "harness", "optional", "unknown", why, "The agent checks what its harness offers"))
 
     links = dev_links(home)
@@ -163,7 +164,9 @@ def check_deps(home, no_probe, search_path):
     skipped = [{"check": c, "reason": "--no-probe"} for c in
                ("gh auth status", "az extension show azure-devops", "az account show", "docker version")] if no_probe else []
     return {"ok": True, "deps_ok": deps_ok, "plugin_root": PLUGIN_ROOT, "howtoai_root": root,
-            "pointer_workspace": ws, "items": items, "dev_links": links, "checks_skipped": skipped}
+            "pointer_workspace": ws, "items": items,
+            "missing": [{"name": i["name"], "need": i["need"], "fix": i["fix"]} for i in items if i["status"] == "missing"],
+            "dev_links": links, "checks_skipped": skipped}
 
 
 def real(p):

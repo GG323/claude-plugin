@@ -98,6 +98,23 @@ class TestFirstTests(HookBase):
         self.assertEqual((p.returncode, p.stdout), (0, ""))
 
 
+    def test_ci_of_a_repository_in_a_subfolder_is_denied_in_test_stages(self):
+        for stage in ("tests-first", "test"):
+            self.change(stage)
+            for ci in ("shop/.github/workflows/ci.yml", "a/b/.github/workflows/deploy.yaml", "shop/azure-pipelines.yml",
+                       "shop/.gitlab-ci.yml", "shop/Jenkinsfile"):
+                d, reason = self.hook(self.H, "Edit", file_path=self.path(ci))
+                self.assertEqual(d, "deny", (stage, ci))
+                self.assertIn("CI configuration", reason)
+        self.change("build", test_runs=[{"route": "red-check", "result": "red"}])
+        self.assertEqual(self.hook(self.H, "Edit", file_path=self.path("shop/.github/workflows/ci.yml"))[0], None)
+
+    def test_control_ci_look_alikes_are_not_ci(self):
+        self.change("test")
+        for other in ("shop/docs/.github-notes.md", "shop/src/github/workflows.cs", "shop/x.github/workflows/ci.yml"):
+            self.assertEqual(self.hook(self.H, "Edit", file_path=self.path(other))[0], None, other)
+
+
 class SafeTargetTests(HookBase):
     H = "dev_safe_target.py"
 
@@ -107,6 +124,27 @@ class SafeTargetTests(HookBase):
         self.assertIn("environments.deny", reason)
         self.assertEqual(self.hook(self.H, "mcp__db__query", host="SHOP-PROD.postgres.database.azure.com", sql="select 1")[0], "deny")
         self.assertEqual(self.hook(self.H, "PowerShell", command="dotnet test")[0], None)
+
+    # F1 fix batch 5: the marker match stays as it is, so a written script cannot carry a marker; documents
+    # go through the Write tool, which this hook does not read for markers.
+    def test_a_heredoc_naming_a_marker_is_still_denied(self):
+        cmd = "cat > .howtoai/dev/report.md <<'EOF'\n| Target | shop-prod.postgres.database.azure.com | refused |\nEOF"
+        self.assertEqual(self.hook(self.H, "Bash", command=cmd)[0], "deny")
+        here = "$r=@'\n| Target | shop-prod.postgres.database.azure.com |\n'@; [IO.File]::WriteAllText('test-run-1.md', $r)"
+        self.assertEqual(self.hook(self.H, "PowerShell", command=here)[0], "deny")
+
+    def test_a_write_tool_document_naming_a_marker_is_allowed(self):
+        body = "| Target | shop-prod.postgres.database.azure.com | refused |\n"
+        self.assertEqual(self.hook(self.H, "Write", file_path=self.path(".howtoai/dev/report.md"), content=body)[0], None)
+
+    # F1 fix batch 6: inline settings values that name a marker are still denied; a values file keeps the
+    # command free of the marker.
+    def test_inline_values_naming_a_marker_are_still_denied(self):
+        inline = ("py -3 -I -B devcore.py setup --workspace ws --values "
+                  "'{\"environments\": {\"deny\": [\"shop-prod.postgres.database.azure.com\"]}}' --write")
+        self.assertEqual(self.hook(self.H, "Bash", command=inline)[0], "deny")
+        by_file = 'py -3 -I -B devcore.py setup --workspace ws --values-file "C:/scratch/values.json" --write'
+        self.assertEqual(self.hook(self.H, "Bash", command=by_file)[0], None)
 
     def test_destructive_commands_ask_unless_owned(self):
         for cmd in ("psql -h db.test -c 'DROP TABLE users'", "dotnet ef database drop --force", "terraform destroy",
@@ -174,6 +212,44 @@ class SafeTargetTests(HookBase):
         self.assertEqual(self.hook(self.H, "Bash", command=cmd)[0], "deny")
         write(os.path.join(self.ws, ".howtoai", "deploy", "approvals.json"), "{broken")
         self.assertEqual(self.hook(self.H, "Bash", command=cmd)[0], "deny")
+
+
+class ReplyLogTests(HookBase):
+    """F8-C1: the dev-reply-log hook records a hash of each user prompt; nothing else may write it."""
+    H = "dev_reply_log.py"
+    LOG = ".howtoai/dev/replies.jsonl"
+
+    def prompt(self, text, cwd=None):
+        data = {"hook_event_name": "UserPromptSubmit", "prompt": text, "cwd": cwd or self.ws}
+        p = subprocess.run([sys.executable, "-I", "-B", os.path.join(HOOKS, self.H)], input=json.dumps(data),
+                           capture_output=True, text=True, env=self.env, encoding="utf-8")
+        self.assertEqual((p.returncode, p.stdout), (0, ""), p.stderr)
+
+    def test_records_a_hash_and_time_never_the_text(self):
+        for n in range(55):
+            self.prompt(f"approve number {n}")
+        with open(self.path(self.LOG), encoding="utf-8") as f:
+            lines = f.read().splitlines()
+        self.assertEqual(len(lines), 50)
+        self.assertEqual(sorted(json.loads(lines[-1])), ["at", "sha256"])
+        self.assertNotIn("approve", "".join(lines))
+
+    def test_silent_and_writes_nothing_without_project_settings(self):
+        other = os.path.join(self.tmp.name, "plain")
+        write(os.path.join(other, "AGENTS.md"), "# plain\n")
+        self.prompt("yes", cwd=other)
+        self.assertFalse(os.path.exists(os.path.join(other, ".howtoai")))
+
+    def test_safe_target_denies_writing_the_log(self):
+        self.prompt("yes")
+        log = self.path(self.LOG)
+        self.assertEqual(self.hook("dev_safe_target.py", "Write", file_path=log, content="{}")[0], "deny")
+        self.assertEqual(self.hook("dev_safe_target.py", "Edit", file_path=log, old_string="a", new_string="b")[0], "deny")
+        self.assertEqual(self.hook("dev_safe_target.py", "Bash", command=f"echo x >> {self.LOG}")[0], "deny")
+        self.assertEqual(self.hook("dev_safe_target.py", "PowerShell", command="Add-Content .howtoai/dev/replies.jsonl x")[0], "deny")
+
+    def test_control_other_dev_files_are_not_denied_by_this_rule(self):
+        self.assertIsNone(self.hook("dev_safe_target.py", "Write", file_path=self.path(".howtoai/dev/install.md"), content="x")[0])
 
 
 if __name__ == "__main__":

@@ -51,6 +51,7 @@ Each route is one file in `routes/`. "Stage" always means a stage of the `howtoa
 ## Core rules
 
 - **Goldfish stay goldfish.** A reviewer brief holds only what the agent's Input section lists. When no fresh subagent can start, halt and say why: a review by the agent that holds the conversation is not a goldfish review.
+- **Production markers stop you.** Before any command or MCP call, check it against the settings' `environments.deny` markers; on a match, stop and ask.
 - **Findings, not fixes.** This skill never changes product code; `dev-build` applies the fixes the user chooses. Reviewers never run or change code; only you run tests, through `dev-test`.
 - **Numbers from scripts.** Findings are counted, scored, filtered, and ranked by `FINDINGS`; the diff and missing receipts come from `REVIEW`. Never count, relabel, or drop a finding yourself; a reply off the agent's scale goes back to that agent.
 - **The user decides.** Every kept finding, and every finding outside this change, gets the user's choice: fix now, later, or decline with a reason. AUTO-FIX is a recommendation, never a decision.

@@ -35,8 +35,8 @@ Entered from [SKILL.md](../SKILL.md#routes) when the target is not in the target
    - Values that change per run (an image tag) appear once, as a placeholder such as `{tag}` in every step and deploy file that uses them, so the build and the manifest can never disagree; the Deploy route fills them in.
    - `checks`: health URLs with the expected status and text, or read-only commands.
    - Every command names its context or account explicitly, so a run never lands on whatever context happens to be current.
-2. When a deploy file is missing (for example no Kubernetes manifest), draft the smallest one that runs the app, from the workbook statements, and list it as a file to write.
-3. `DEPLOY target write --workspace "<workspace>" --file "<entry.json>"` without `--write` validates the entry and prints the preview; fix every problem it lists.
+2. When a deploy file is missing (for example no Kubernetes manifest), draft the smallest one that runs the app, from the workbook statements, and list it as a file to write (with the file tools, see `dev-core`'s [Plan folder contract](../../dev-core/SKILL.md#plan-folder-contract)).
+3. Write the entry to `<entry.json>` (with the file tools, see `dev-core`'s [Plan folder contract](../../dev-core/SKILL.md#plan-folder-contract)), since it names real hosts, then `DEPLOY target write --workspace "<workspace>" --file "<entry.json>"` without `--write` validates the entry and prints the preview; fix every problem it lists.
 
 ## Ask and write
 

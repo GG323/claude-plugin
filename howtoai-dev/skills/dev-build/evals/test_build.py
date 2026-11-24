@@ -243,10 +243,37 @@ none: no existing function, type, or contract changed
         _, c = self.b("check")
         self.assertIn("gate lint: fails after the build", c["errors"])
         core("state", self.cdir, "--patch", json.dumps({"append": {"approvals": {
-            "what": "continue with pre-existing gate failure", "by": "user", "build": 1, "gate": "lint"}}}))
+            "what": "continue with pre-existing gate failure", "by": "user", "reply": "yes, go on", "build": 1, "gate": "lint"}}}))
         _, c = self.b("check")
         self.assertTrue(c["passed"], c["errors"])
         self.assertEqual(c["gate"]["lint"], "pre-existing failure, continued with approval")
+
+    def test_named_path_rests_on_the_plan_and_others_need_the_user(self):
+        core("state", self.cdir, "--patch", json.dumps({"append": {"approvals": {
+            "what": "plan", "by": "user", "reply": "approved"}}}))
+        self.b("start", "--wi", "1")
+        self.edit_code()
+        write(os.path.join(self.ws, "tests", "t.py"), "def test_bulk():\n    assert True\n")
+        self.report("| src/discount.py:2-2 | T1, AC1 | L1 | rule |\n| tests/t.py:2-2 | T1 | L1 | named in WI 1 |")
+        self.b("gate", "--label", "after", "--name", "lint", "--command", PASS_CMD)
+        self.green_tests()
+        _, c = self.b("check")
+        self.assertIn("test file changed without approval: tests/t.py:2-2", c["errors"])
+        out = core("state", self.cdir, "--patch", json.dumps({"append": {"approvals": {
+            "what": "build may change tests/t.py, named in WI 1", "by": "plan", "paths": ["tests/t.py"]}}}))
+        self.assertNotIn("error", out)
+        self.assertTrue(out["state"]["approvals"][-1]["covers"].startswith("plan approval at "))
+        _, c = self.b("check")
+        self.assertNotIn("test file changed without approval: tests/t.py:2-2", c["errors"])
+        write(os.path.join(self.ws, "tests", "u.py"), "def test_more():\n    assert True\n")
+        self.report("| src/discount.py:2-2 | T1, AC1 | L1 | rule |\n| tests/t.py:2-2 | T1 | L1 | named in WI 1 |\n"
+                    "| tests/u.py:1-2 | T1 | L1 | not named |")
+        _, c = self.b("check")
+        self.assertIn("test file changed without approval: tests/u.py:1-2", c["errors"])
+        core("state", self.cdir, "--patch", json.dumps({"append": {"approvals": {
+            "what": "build may change tests/u.py", "by": "user", "reply": "yes, add it", "paths": ["tests/u.py"]}}}))
+        _, c = self.b("check")
+        self.assertNotIn("test file changed without approval: tests/u.py:1-2", c["errors"])
 
     def test_approved_test_change_and_fix_route(self):
         write(os.path.join(self.cdir, "review-1.md"),
@@ -259,7 +286,7 @@ none: no existing function, type, or contract changed
         self.edit_code()
         write(os.path.join(self.ws, "tests", "t.py"), "def test_bulk():\n    assert 1\n")
         core("state", self.cdir, "--patch", json.dumps({"append": {"approvals": {
-            "what": "fix may change the test", "by": "user", "paths": ["tests/t.py"]}}}))
+            "what": "fix may change the test", "by": "user", "reply": "yes, it may", "paths": ["tests/t.py"]}}}))
         self.report("| src/discount.py:2-2 | R1-C1 | L1 | fix |\n| tests/t.py:2-2 | R1-02 | L1 | x |")
         self.b("gate", "--label", "after", "--name", "lint", "--command", PASS_CMD)
         _, c = self.b("check")

@@ -49,7 +49,7 @@ Every install requirement of `howtoai-dev` has one section here. Each section sa
 | Build gate | `build.gate` | confirmed from CI | none, found on the first build |
 | Deploy | `deploy.entry_points`, `.howtoai/deploy/targets.json` | yes: now, later, or never | none |
 | Workbooks | `workbooks.technologies`, workbook files, codebase versions | yes, per technology and version | found in manifests |
-| Hooks | `hook_rules`; registration of the two hooks | dev mode only | plugin hooks |
+| Hooks | `hook_rules`; registration of the three hooks | dev mode only | plugin hooks |
 | Review | `review.confidence_threshold`, `review.max_rounds`, `review.clean_rounds_to_stop` | stated as defaults | 80, 5, 2 |
 
 ## Dev mode
@@ -169,11 +169,11 @@ Every install requirement of `howtoai-dev` has one section here. Each section sa
 
 ## Hooks and hook rules
 
-- **Setting:** `hook_rules`; in dev mode, the two hooks registered in `~/.claude/settings.json` by absolute path; in plugin mode, the plugin's [hooks.json](../hooks/hooks.json).
+- **Setting:** `hook_rules`; in dev mode, the three hooks registered in `~/.claude/settings.json` by absolute path (two `PreToolUse`, and `dev_reply_log.py` under `UserPromptSubmit`); in plugin mode, the plugin's [hooks.json](../hooks/hooks.json).
 - **Set by:** [INSTALL: Install or link](../INSTALL.md#install-or-link); `hook_rules` are added later by dev-learn, after approval.
-- **Read by:** [dev_test_first.py](../hooks/dev_test_first.py), [dev_safe_target.py](../hooks/dev_safe_target.py), and their shared [common.py](../hooks/common.py).
+- **Read by:** [dev_test_first.py](../hooks/dev_test_first.py), [dev_safe_target.py](../hooks/dev_safe_target.py), and their shared [common.py](../hooks/common.py). [dev_reply_log.py](../hooks/dev_reply_log.py) writes `.howtoai/dev/replies.jsonl` (a hash and time per user prompt, never the text), which `devcore.py`'s state patch reads to check an approval `"by": "user"`; without it, such approvals are recorded `"unverified": true`.
 - **New option:** a new hook goes into `hooks/` and `hooks.json`, and into the dev-mode registration step of [Install or link](../INSTALL.md#install-or-link).
-- **Search:** `rg -n "hook_rules|dev_test_first|dev_safe_target" skills hooks INSTALL.md`.
+- **Search:** `rg -n "hook_rules|dev_test_first|dev_safe_target|dev_reply_log|replies.jsonl" skills hooks INSTALL.md`.
 
 ## Review defaults
 

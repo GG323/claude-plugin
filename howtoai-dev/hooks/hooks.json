@@ -1,5 +1,5 @@
 {
-  "description": "howtoai-dev safety hooks: dev-test-first keeps the test-first order and blocks CI edits during test stages; dev-safe-target denies production markers and asks before destructive commands and migration edits. dev-test-first is silent unless a change is at a test or build stage; dev-safe-target applies deny markers wherever the dev settings name them, and its destructive checks only in workspaces with project dev settings.",
+  "description": "howtoai-dev safety hooks: dev-reply-log records a hash of each user prompt so an approval in the user's name can be checked against a real reply; dev-test-first keeps the test-first order and blocks CI edits during test stages; dev-safe-target denies production markers and asks before destructive commands and migration edits. dev-test-first is silent unless a change is at a test or build stage; dev-safe-target applies deny markers wherever the dev settings name them, and its destructive checks only in workspaces with project dev settings.",
   "hooks": {
     "PreToolUse": [
       {
@@ -20,6 +20,19 @@
             "type": "command",
             "shell": "bash",
             "command": "F=\"${CLAUDE_PLUGIN_ROOT}/hooks/dev_safe_target.py\"; if command -v py >/dev/null 2>&1; then exec py -3 -I -B \"$F\"; else exec python3 -I -B \"$F\"; fi",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "F=\"${CLAUDE_PLUGIN_ROOT}/hooks/dev_reply_log.py\"; if command -v py >/dev/null 2>&1; then exec py -3 -I -B \"$F\"; else exec python3 -I -B \"$F\"; fi",
             "timeout": 15
           }
         ]

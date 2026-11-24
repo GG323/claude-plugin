@@ -34,7 +34,7 @@ compatibility: Needs Python 3 (standard library only), git, and the dev-core, de
    Each prints one JSON object; `"ok": false` carries the error, which you report before stopping that step. Without Python 3 or git, stop and say the dev build needs them.
 2. **The change.** Find the change folder: the one the user names, else the newest row of `<workspace>/<plan_folder>/INDEX.md` at stage `build` or `human-review`. Read it with `DEVCORE state "<change folder>"`. Never edit `state.json` by hand.
 3. **Settings.** `DEVCORE settings --workspace "<workspace>"`. When `configured` is false, stop: the dev settings come from `dev-plan`'s Setup.
-4. **Hooks.** With the plugin installed, `dev-test-first` and `dev-safe-target` run on every edit and command. A denial or question from them is a rule working, not an error: follow its reason and never work around it (no other tool, no renamed file, no split command).
+4. **Hooks.** Check every edit and command yourself first, as [Without hooks](../dev-test/references/safety-rules.md#without-hooks) lists, because hooks do not run everywhere. With the plugin installed, `dev-test-first` and `dev-safe-target` run on every edit and command as a second layer. A denial or question from them is a rule working, not an error: follow its reason and never work around it (no other tool, no renamed file, no split command).
 
 ## Routes
 
@@ -54,6 +54,9 @@ Each route is one file in `routes/`. "Stage" in this skill always means a stage 
 - **Every changed line traces to the work item.** A hunk with no acceptance criterion, test-map row, or fix-now finding behind it is reverted, not justified. Tidying, renaming, and reformatting that the work item does not need stay out, also when asked in passing; offer them as a new work item instead.
 - **Never cut safety.** Validation at trust boundaries, error handling that prevents data loss, security, and accessibility stay, also in code you move or merge.
 - **Tests and CI are not yours to change.** `TESTING.md` files belong to `dev-test`, which rewrites them after each run, so they are not part of the build's hunks. Never edit tests, test data, test settings, thresholds, CI configuration, or lockfiles to make the gate pass, because a weakened gate hides the failure it exists to show. If the work item really needs such a change, ask, and record the approval with its `paths`.
+- **Production markers stop you.** Before any command or MCP call, check it against the settings' `environments.deny` markers; on a match, stop and ask.
+- **Destructive commands on throwaway targets.** Drops, truncates, bulk deletes, down-migrations, resets, destroy, and prune run only on a throwaway container this run created; otherwise ask first.
+- **Destructive migrations need a yes.** A migration that drops, truncates, or renames needs the user's yes, recorded with its `paths` as `append.approvals`, before you write it.
 - **No new dependency without asking.** Rung 4 means a dependency already installed; adding one is the user's call.
 - **The project's own commands.** The gate runs only the commands saved in `build.gate`, through `BUILD gate`, and the tests run through `dev-test`; never ad-hoc commands.
 - **Numbers from scripts.** Hunks, trace results, gate results, and test results come from `BUILD` and `dev-test`, never from your own reading of a diff or a log.

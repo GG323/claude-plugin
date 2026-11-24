@@ -36,7 +36,7 @@ compatibility: Needs Python 3 (standard library only) and the dev-core and dev-w
    Each prints one JSON object; `"ok": false` carries the error, which you report before stopping that step. Without Python 3, stop and say the dev skills need it.
 2. **The change.** Find the change folder: the one the user names, else the newest row of `<workspace>/<plan_folder>/INDEX.md` at a stage this skill runs (`tests-first`, `build`, `test`). Read it with `DEVCORE state "<change folder>"`. Never edit `state.json` by hand.
 3. **Settings.** `DEVCORE settings --workspace "<workspace>"`. When `configured` is false, stop: the dev settings come from `dev-plan`'s Setup, because the allow and deny lists must exist before any test runs.
-4. **Hooks.** With the plugin installed, `dev-test-first` runs on every file edit and `dev-safe-target` on every command, MCP call, and edit. A denial or question from them is a rule working, not an error: follow its reason and never work around it (no other tool, no renamed file, no split command).
+4. **Hooks.** Check every edit, command, and MCP call yourself first, as [Without hooks](references/safety-rules.md#without-hooks) lists, because hooks do not run everywhere. With the plugin installed, `dev-test-first` runs on every file edit and `dev-safe-target` on every command, MCP call, and edit as a second layer. A denial or question from them is a rule working, not an error: follow its reason and never work around it (no other tool, no renamed file, no split command).
 
 ## Routes
 
@@ -57,6 +57,8 @@ The Write route calls the Run route for its red check; the Run route never calls
 The full list, with the layer that enforces each rule, is in [references/safety-rules.md](references/safety-rules.md).
 
 - **Unknown is production.** Only targets the allow list matches by evidence (host, database, profile, environment variable), in-memory or file databases, and containers this run created are used. An unknown target stops the run and asks; a production target or marker refuses it.
+- **Production markers stop you.** Before any command or MCP call, check it against the settings' `environments.deny` markers; on a match, stop and ask.
+- **Destructive commands on throwaway targets.** Drops, truncates, bulk deletes, down-migrations, and resets run only on a throwaway container this run created; otherwise ask first.
 - **Never read real secrets.** Read config files and `.env.test`, never `.env`, `.env.production`, a secret store, or a key vault. Never print, log, or write a secret, including into `TESTING.md` and the reports.
 - **The project's own entry points.** Run the commands CI runs (`testing.entry_points`), never ad-hoc ones, and never edit CI configuration, test settings, or thresholds to make tests pass.
 - **No gate weakening.** Never skip, delete, loosen, or mark as expected-to-fail a test or assertion unless the plan approved it; report it instead.
@@ -93,7 +95,7 @@ Before the closing report (a refused run checks only the report, state, and tear
 | A base config file with a production connection string refuses every run | The tests override it in code, which `TARGETS` cannot see | Ask the user to add a test-scope override (`appsettings.Test.json`, `.env.test`) or an allow-list item; never run anyway |
 | A new test passes before the build | The behaviour exists already, or the test asserts too little | Read why; strengthen the test, or ask the user whether the criterion is already met |
 | A new test fails for another reason (a missing package, a wrong fixture path) | The test is broken, not red | Fix the test until it fails for the expected reason |
-| The hook denies an edit to a test file | Its path does not match `testing.test_globs` | Ask the user to extend `testing.test_globs` in the dev settings; never rename to dodge it |
+| A test file you are about to edit, or the hook denies it | Its path does not match `testing.test_globs` | Check the path against `testing.test_globs` before the edit, with the hook as a second layer; on no match, ask the user to extend `testing.test_globs` in the dev settings; never rename to dodge it |
 | Results show 0 tests | The entry point wrote no result file, or wrote it elsewhere | Add the logger option the workbook names (for example `--logger trx`) to the entry point's `results`, with the user's confirmation |
 | A container is left after a failed run | The run stopped before tear-down | `EPHEMERAL down --run-id <id>`, then `EPHEMERAL sweep` |
 

@@ -103,7 +103,8 @@ class InstallCheckTests(unittest.TestCase):
         link_dir(other, os.path.join(skills, "dev-build"))
         write(os.path.join(self.home, ".claude", "settings.json"),
               json.dumps({"hooks": {"PreToolUse": [{"hooks": [{"command": "x/hooks/dev_test_first.py"},
-                                                              {"command": "x/hooks/dev_safe_target.py"}]}]}}))
+                                                              {"command": "x/hooks/dev_safe_target.py"}]}],
+                                        "UserPromptSubmit": [{"hooks": [{"command": "x/hooks/dev_reply_log.py"}]}]}}))
         _, out = self.deps()
         states = {l["name"]: l["state"] for l in out["dev_links"]}
         self.assertEqual((states["dev-plan"], states["dev-test"], states["dev-build"], states["goldfish-spec.md"]),
@@ -142,6 +143,13 @@ class InstallCheckTests(unittest.TestCase):
         self.assertEqual(out["keys_checked"], 3)
         self.assertEqual(out["names_skipped"], ["os.path: its first part is not a top-level setting", "plan.md: a file name"])
 
+    def test_missing_lists_every_missing_item_the_dev_hooks_too(self):
+        code, out = run("--home", self.home, "deps", "--no-probe", "--path", self.bin)
+        names = [m["name"] for m in out["missing"]]
+        self.assertIn("dev hooks", names)
+        self.assertEqual(sorted(names), sorted(i["name"] for i in out["items"] if i["status"] == "missing"))
+        self.assertTrue(all(m["need"] for m in out["missing"]))
+
 
 def git_bash():
     for p in (r"C:\Program Files\Git\bin\bash.exe", r"C:\Program Files (x86)\Git\bin\bash.exe"):
@@ -162,7 +170,7 @@ class HookCommandTests(unittest.TestCase):
         cmd = re.search(r'command `(F="<plugins folder>/howtoai-dev/hooks/dev_test_first\.py";[^`]+)`', text)
         self.assertTrue(cmd, "hook command not found in INSTALL.md")
         plugins = os.path.dirname(PLUGIN).replace("\\", "/")
-        for hook in ("dev_test_first.py", "dev_safe_target.py"):
+        for hook in ("dev_test_first.py", "dev_safe_target.py", "dev_reply_log.py"):
             line = cmd.group(1).replace("<plugins folder>", plugins).replace("dev_test_first.py", hook)
             with tempfile.TemporaryDirectory(prefix="hook-cmd-") as cwd:
                 p = subprocess.run([bash, "-c", line], input=json.dumps({"tool_name": "Edit", "cwd": cwd,

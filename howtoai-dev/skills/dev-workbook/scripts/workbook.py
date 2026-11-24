@@ -97,7 +97,7 @@ KNOWN = {  # technologies the dev process may meet, for reporting missing workbo
     "terraform": ["**/*.tf", "**/*.tfvars", "**/*.tftest.hcl"], "python": ["**/*.py", "**/pyproject.toml"],
     "typescript": ["**/*.ts", "**/*.tsx", "**/tsconfig.json"], "javascript": ["**/*.js", "**/*.jsx", "**/*.mjs"],
     "go": ["**/*.go", "**/go.mod"], "java": ["**/*.java", "**/pom.xml", "**/build.gradle*"], "rust": ["**/*.rs", "**/Cargo.toml"],
-    "sql": ["**/*.sql"], "github-actions": [".github/workflows/*.yml", ".github/workflows/*.yaml"],
+    "sql": ["**/*.sql"], "github-actions": ["**/.github/workflows/*.yml", "**/.github/workflows/*.yaml"],
     "kubernetes": ["**/k8s/**/*.yaml", "**/*.helm.yaml", "**/Chart.yaml"], "powershell": ["**/*.ps1", "**/*.psm1"],
 }
 PROCESS_WORDS = [r"(?<!auto-)\bapprov", r"\bask (the )?user", r"\breview round", r"\bdev stage",r"\bbefore (you|the agent|building|merging)",

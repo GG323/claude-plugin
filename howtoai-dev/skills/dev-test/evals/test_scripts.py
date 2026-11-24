@@ -430,6 +430,18 @@ class HostListTests(Base):
         self.assertNotIn("zq9secret", json.dumps(res).lower())
 
 
+class CiFileTests(Base):
+    def test_ci_of_a_repository_in_a_subfolder_is_read(self):
+        write(os.path.join(self.ws, "shop", ".github", "workflows", "ci.yml"), "on: push\n")
+        write(os.path.join(self.ws, ".github", "workflows", "root.yml"), "on: push\n")
+        write(os.path.join(self.ws, "shop", "docs", "github", "workflows", "notes.yml"), "x: 1\n")
+        code, res = self.classify()
+        files = [f["file"] for f in res["files"]]
+        self.assertIn("shop/.github/workflows/ci.yml", files)
+        self.assertIn(".github/workflows/root.yml", files)
+        self.assertNotIn("shop/docs/github/workflows/notes.yml", files)
+
+
 class ResultsTests(Base):
     def test_parse_trx_and_junit(self):
         write(os.path.join(self.ws, "r/a.trx"), TRX)

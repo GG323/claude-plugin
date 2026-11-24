@@ -3,7 +3,7 @@
 Silent unless the edited file's workspace has a howtoai-dev change at stage tests-first, build,
 or test (when several do, the most recently updated of those counts). Then:
   - The plan folder, .howtoai/, and files matching testing.test_globs are always allowed.
-  - CI files (.github/workflows/, azure-pipelines.yml, .gitlab-ci.yml, Jenkinsfile) are denied at
+  - CI files (.github/workflows/, azure-pipelines.yml, .gitlab-ci.yml, Jenkinsfile, in any folder) are denied at
     stage tests-first and test: tests never pass by changing CI.
   - Any other file at stage tests-first: denied when testing.test_first is block, a warning when
     warn, nothing when off.
@@ -20,7 +20,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I leaves the script folder off sys.path
 import common  # noqa: E402
 
-CI = re.compile(r"^(\.github/workflows/|azure-pipelines\.ya?ml$|\.gitlab-ci\.ya?ml$|Jenkinsfile$)")
+CI = re.compile(r"(^|/)(\.github/workflows/|azure-pipelines\.ya?ml$|\.gitlab-ci\.ya?ml$|Jenkinsfile$)")
 
 
 def is_test(path, globs):

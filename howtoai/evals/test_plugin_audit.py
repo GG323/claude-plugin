@@ -152,6 +152,20 @@ class DevPlugin(Fake):
         got = self.statuses()
         self.assertEqual(got["D1"]["status"], "not-applicable")
 
+    def test_dev_mode_needs_the_reply_log_hook(self):
+        put(os.path.join(self.ws, "AGENTS.md"), "# W\n\n- **Dev mode:** on\n")
+        cmd = 'F="/p/howtoai-dev/hooks/%s"; exec py -3 -I -B "$F"'
+        hooks = {"PreToolUse": [
+            {"matcher": "Edit|Write|MultiEdit|NotebookEdit", "hooks": [{"type": "command", "command": cmd % "dev_test_first.py"}]},
+            {"matcher": "^(Bash|PowerShell|Edit|Write|MultiEdit|mcp__.*)$",
+             "hooks": [{"type": "command", "command": cmd % "dev_safe_target.py"}]}]}
+        put(os.path.join(self.home, "settings.json"), json.dumps({"hooks": hooks}))
+        got = self.statuses()
+        self.assertEqual((got["D10"]["status"], got["D11"]["status"], got["D18"]["status"]), ("pass", "pass", "fail"))
+        hooks["UserPromptSubmit"] = [{"matcher": "*", "hooks": [{"type": "command", "command": cmd % "dev_reply_log.py"}]}]
+        put(os.path.join(self.home, "settings.json"), json.dumps({"hooks": hooks}))
+        self.assertEqual(self.statuses()["D18"]["status"], "pass")
+
 
 class WeeklyAuditAllowRule(Fake):
     AUDIT = os.path.join(HOWTOAI, "AUDIT.md")
