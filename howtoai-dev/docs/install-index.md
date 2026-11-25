@@ -5,6 +5,7 @@
 - [How to use this index](#how-to-use-this-index)
 - [Requirements at a glance](#requirements-at-a-glance)
 - [Dev mode](#dev-mode)
+- [Settings folder](#settings-folder)
 - [Dependencies and harness](#dependencies-and-harness)
 - [Tracker](#tracker)
 - [Plan format](#plan-format)
@@ -59,6 +60,15 @@ Every install requirement of `howtoai-dev` has one section here. Each section sa
 - **Signs:** the existing entry; `devmode.py status`'s `needs_setting` (ask) and `git.problems` (show before linking); junctions in `~/.claude/skills` and symbolic links in `~/.claude/agents` that point into a workspace.
 - **New option:** a different link layout is a change to the `howtoai` plugin's `devmode.py` and its `docs/dev-mode.md`, not to this plugin.
 - **Search:** `rg -n "devmode|Dev mode|Git version control|git-version-control" INSTALL.md docs assets`.
+
+## Settings folder
+
+- **Setting:** none; the location is fixed: `<workspace>/AGENTS/settings/`, found in any letter case (`Agents/` counts). It holds `dev/` (`settings.json`, `install.md`, `replies.jsonl`, `lessons.md`), `workbooks/`, `deploy/` (`targets.json`, `approvals.json`, `log.md`), and the generated `cache/`. The user's defaults are in `~/.claude/howtoai/`.
+- **Set by:** [INSTALL: The settings folder](../INSTALL.md#goal), and the move of an older install's folder in [Look up the project](../INSTALL.md#look-up-the-project).
+- **Read by:** one helper per script, `state_dir()` and `agents_dir()` with `STATE_FOLDER`: [devcore.py](../skills/dev-core/scripts/devcore.py) (also used by both hooks), [workbook.py](../skills/dev-workbook/scripts/workbook.py), and [deploy.py](../skills/dev-deploy/scripts/deploy.py). The whole `AGENTS/` folder is tooling: the root-only skips in [build.py](../skills/dev-build/scripts/build.py), [targets.py](../skills/dev-test/scripts/targets.py), [testing_md.py](../skills/dev-test/scripts/testing_md.py), and `deploy.py`, and the `agents/` prefix checks in `devcore.py` and [dev_test_first.py](../hooks/dev_test_first.py).
+- **Signs:** an existing `AGENTS/settings/`; a leftover `.howtoai/` or `AGENTS/howtoai/` from an older install, which nothing reads.
+- **New option:** a different folder name is one change to `STATE_FOLDER` in the three scripts, the eval fixtures under `skills/*/evals/*/files/AGENTS/`, and every text this section's search finds.
+- **Search:** `rg -n "AGENTS/settings|STATE_FOLDER|state_dir|agents_dir|settings/cache" skills hooks scripts INSTALL.md AUDIT.md docs assets README.md`.
 
 ## Dependencies and harness
 

@@ -27,10 +27,12 @@ Install `howtoai-dev` for one user and one workspace, so the dev skills work the
 - the user's defaults in `~/.claude/howtoai/dev-settings.json` and the project's settings in `<workspace>/AGENTS/settings/dev/settings.json`;
 - the `## Dev mode` entry in the workspace `AGENTS.md` (Git version control and dev mode, each on or off), and this plugin's one line under its `## Installed skills` section ([AUDIT.md](AUDIT.md#skills-line));
 - deny rules for secret env files in `<workspace>/.claude/settings.json`, through `update-config`;
-- workbooks and version workbooks through `dev-workbook`, and deploy targets in `AGENTS/settings/deploy/targets.json` through `dev-deploy`;
+- workbooks and version workbooks in `AGENTS/settings/workbooks/` through `dev-workbook`, and deploy targets in `AGENTS/settings/deploy/targets.json` through `dev-deploy`;
 - in dev mode, links in `~/.claude/skills` and `~/.claude/agents` and the three hooks in `~/.claude/settings.json`; in plugin mode, the installed plugin;
 - the install record `<workspace>/AGENTS/settings/dev/install.md`, from [assets/install-record.md](assets/install-record.md), every row filled or "none";
 - the [Summary](#summary) message in chat.
+
+**The settings folder.** Everything this plugin keeps for a workspace is in `<workspace>/AGENTS/settings/`, a plain folder the user can open, review, and track in the `AGENTS/` repository: `dev/settings.json` (the project settings), `dev/install.md` (the install record), `dev/replies.jsonl` (the dev-reply-log hook's hashes, written only by that hook), `dev/lessons.md` (`dev-learn`'s log), `workbooks/` (project and version workbooks), `deploy/` (targets, approvals, and the deploy log), and `cache/` (generated, left out of Git). The user's own defaults stay in `~/.claude/howtoai/`. The scripts and hooks read only `AGENTS/settings/`; a settings folder left from an older install (`.howtoai/` or `AGENTS/howtoai/`) is not read, and [Look up the project](#look-up-the-project) offers to move it. For a nontechnical user, say that all the project's choices for the dev tools are kept in one folder they can open and check, and name it only when they ask.
 
 A need no setting covers is a plugin change through `skill-builder`; [docs/install-index.md](docs/install-index.md) says which files it touches. The install creates no tracker items (`dev-plan` makes them after approval). Only Claude Code (CLI and desktop) is verified; without hooks, the hooks' rules hold only through the skills' instructions. Rerun this file at any time ([Change a decision later](#change-a-decision-later)).
 
@@ -119,6 +121,7 @@ Read files only, never a real `.env` or other secret store: `.env.production` an
 
 - **Code projects and versions:** for each technology, every code project with its own version (for .NET, each `*.csproj` `TargetFramework` and any `global.json`; for others, the manifest's runtime or engine field), for [Workbooks](#workbooks).
 - **Existing settings:** `DEVCORE settings --workspace "<workspace>"`. On a rerun, every value already set is the recommendation for its question.
+- **A settings folder from an older install:** when `<workspace>/.howtoai/` or `<workspace>/AGENTS/howtoai/` exists, its settings, record, workbooks, and deny markers are not read any more, so production markers in it no longer block anything. Say so, and offer to move its contents into `<workspace>/AGENTS/settings/` (each subfolder as it is: `dev/`, `workbooks/`, `deploy/`; `cache/` is regenerated). Move it only after the user's yes, never over a file that already exists there (list such a file and ask), and then run `DEVCORE settings` again. For a nontechnical user, say the earlier setup is stored in an old place and offer to move it, with no folder names.
 
 Say what the lookups found as "From `<file>`: …", for the user to correct. For a nontechnical user, name each source by what it is ("the shop's live settings"), with no file name.
 
