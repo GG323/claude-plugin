@@ -13,7 +13,7 @@
     {
       "name": "howtoai",
       "source": "./howtoai",
-      "version": "0.6.1",
+      "version": "0.6.2",
       "description": "HowToAI skills: skill-builder, skill-finder, skill-audit, skill-design, brain-dump, grilling, and handover"
     },
     {

@@ -30,6 +30,7 @@ An item is answered only when the request or the conversation says it, or the pr
 | **Name and trigger phrases** | A short hyphenated name from the goal; triggers from the user's own words | "Named `weekly-report`; starts when you say 'make my weekly report'." |
 | **Language and tone** | The language of the request; the tone of the user's examples, else plain and friendly | "Written in English, plain and friendly." |
 | **Placement** | This workspace's `AGENTS/` folder, linked from its `.claude/` (and `.agents/` or `.copilot/` when used); global, in every workspace (the main development workspace's `AGENTS/`, linked globally) or a plugin only when the user asks for it; the plugin only for the HowToAI pack | "Saved in this workspace's AGENTS folder; available in this workspace only." |
+| **Settings place** (only when it has settings) | `AGENTS/settings/<name>/` in this workspace, tracked in git ([Every target skill](skill-types.md#every-target-skill) item 15) | "Your choices are saved in AGENTS/settings/<name>/settings.json, where you can change them." |
 | **Look** (HTML pages only) | The HowToAI house design from `skill-design`, unless a client's own design is found | "Uses the HowToAI page design." |
 
 ## What the items mean for each kind
