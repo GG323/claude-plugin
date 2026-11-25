@@ -2,13 +2,13 @@
 
 Python 3, standard library only. Every command prints one JSON object (resolve can print Markdown).
 Format: references/format.md in this skill. Layers: base (this skill's workbooks/), user
-(~/.claude/howtoai/workbooks/), project (<workspace>/AGENTS/howtoai/workbooks/); project wins over user, user
+(~/.claude/howtoai/workbooks/), project (<workspace>/AGENTS/settings/workbooks/); project wins over user, user
 over base. Every command takes --base-dir and --user-dir to replace the default folders (tests use them).
 
   open      [--workspace W]
             What the skill prints when it loads, with no arguments from the caller: every MUST and MUST
             NOT of the workspace's workbooks, the tags, and how to search the rest. Writes the search
-            file <workspace>/AGENTS/howtoai/cache/workbook-search.md, one tagged line per statement. The
+            file <workspace>/AGENTS/settings/cache/workbook-search.md, one tagged line per statement. The
             workspace is the nearest folder at or above the current one with dev settings. Exits 0 also
             when it cannot load, and says so, because a failing load would hide the skill.
   resolve   --workspace W [--paths P ...] [--technologies T ...] [--tags T ...] [--topics S ...]
@@ -83,7 +83,7 @@ SEP = " · "
 TAGS = ("access", "async", "build", "caching", "cli", "config", "data", "dependencies", "di", "errors", "formatting",
         "health", "http", "image", "lifecycle", "linting", "logging", "modules", "nullability", "performance", "secrets",
         "state", "strings", "style", "tests", "versions")
-STATE_FOLDER = "howtoai"  # the howtoai state folder, inside the workspace's AGENTS/ folder
+STATE_FOLDER = "settings"  # the settings folder, inside the workspace's AGENTS/ folder
 
 
 def agents_dir(ws):
@@ -98,7 +98,7 @@ def agents_dir(ws):
 
 
 def state_dir(ws, *parts):
-    """<workspace>/AGENTS/howtoai/<parts>: settings, install record, reply log, workbooks, deploy, cache."""
+    """<workspace>/AGENTS/settings/<parts>: settings, install record, reply log, workbooks, deploy, cache."""
     return os.path.join(agents_dir(ws), STATE_FOLDER, *parts)
 
 
@@ -515,7 +515,7 @@ def open_text(a):
     if not ws and not a.workspace and os.environ.get("CLAUDE_PROJECT_DIR"):
         ws = find_workspace(os.environ["CLAUDE_PROJECT_DIR"])
     if not ws:
-        return ("No dev workspace here (no AGENTS/howtoai/dev/settings.json in this folder or above it), so no workbook "
+        return ("No dev workspace here (no AGENTS/settings/dev/settings.json in this folder or above it), so no workbook "
                 "rules are loaded. If the work is in a dev workspace elsewhere, say that its rules are not loaded. The routes below still work for a workspace you name; howtoai-dev's INSTALL.md "
                 "sets a workspace up.")
     if not project_technologies(ws):

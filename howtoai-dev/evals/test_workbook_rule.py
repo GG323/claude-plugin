@@ -74,8 +74,8 @@ class Workspace(unittest.TestCase):
         self.settings({"workbooks": {"technologies": TOOLS}})
 
     def settings(self, value):
-        os.makedirs(os.path.join(self.ws, "AGENTS", "howtoai", "dev"), exist_ok=True)
-        with open(os.path.join(self.ws, "AGENTS", "howtoai", "dev", "settings.json"), "w", encoding="utf-8") as f:
+        os.makedirs(os.path.join(self.ws, "AGENTS", "settings", "dev"), exist_ok=True)
+        with open(os.path.join(self.ws, "AGENTS", "settings", "dev", "settings.json"), "w", encoding="utf-8") as f:
             f.write(value if isinstance(value, str) else json.dumps(value))
 
     def run_wb(self, *args, cwd=None):
@@ -101,7 +101,7 @@ class Open(Workspace):
 
     def test_search_file_has_every_statement_tagged_and_stays_out_of_git(self):
         self.run_wb("open", cwd=self.ws)
-        cache = os.path.join(self.ws, "AGENTS", "howtoai", "cache")
+        cache = os.path.join(self.ws, "AGENTS", "settings", "cache")
         rows = read(os.path.join(cache, "workbook-search.md")).splitlines()
         every = self.everything()
         self.assertEqual(len(rows), len(every))
@@ -112,7 +112,7 @@ class Open(Workspace):
 
     def test_search_reaches_every_id_past_reviews_cited(self):
         self.run_wb("open", cwd=self.ws)
-        rows = read(os.path.join(self.ws, "AGENTS", "howtoai", "cache", "workbook-search.md")).splitlines()
+        rows = read(os.path.join(self.ws, "AGENTS", "settings", "cache", "workbook-search.md")).splitlines()
         for sid in CITED:
             self.assertTrue(any(f"#{sid.split('.')[0]} " in r and f" {sid}" in r for r in rows), sid)
 
@@ -128,7 +128,7 @@ class Open(Workspace):
         self.settings("{ not json")
         self.assertEqual(self.run_wb("open", cwd=self.ws).returncode, 0)
         self.settings({"workbooks": {"technologies": TOOLS}})
-        with open(os.path.join(self.ws, "AGENTS", "howtoai", "cache"), "w", encoding="utf-8") as f:
+        with open(os.path.join(self.ws, "AGENTS", "settings", "cache"), "w", encoding="utf-8") as f:
             f.write("a file where the cache folder goes")
         broken = self.run_wb("open", cwd=self.ws)
         self.assertEqual(broken.returncode, 0)
@@ -200,7 +200,7 @@ class VersionCopies(Workspace):
 
     def setUp(self):
         super().setUp()
-        folder = os.path.join(self.ws, "AGENTS", "howtoai", "workbooks")
+        folder = os.path.join(self.ws, "AGENTS", "settings", "workbooks")
         os.makedirs(folder)
         base = read(os.path.join(SKILL, "workbooks", "dotnet.md")).replace("\r", "")
         for key in ("8", "9"):
@@ -237,7 +237,7 @@ class VersionCopies(Workspace):
         self.assertEqual(sorted(got), sorted(whole))
 
     def test_a_replacement_is_not_reported_untagged(self):
-        folder = os.path.join(self.ws, "AGENTS", "howtoai", "workbooks")
+        folder = os.path.join(self.ws, "AGENTS", "settings", "workbooks")
         with open(os.path.join(folder, "docker.md"), "w", encoding="utf-8", newline="\n") as f:
             f.write("# Docker workbook (project)\n\n## Contents\n\n- [Header](#header)\n\n## Header\n\n| Key | Value |\n| --- | --- |\n"
                     "| Technology | `docker` |\n| Title | Docker |\n| Layer | project |\n| Updated | 2026-11-20 |\n\n"

@@ -118,9 +118,9 @@ class DevPlugin(Fake):
         return {r["id"]: r for r in out["results"]}
 
     def install(self):
-        put(os.path.join(self.ws, "AGENTS", "howtoai", "dev", "settings.json"),
+        put(os.path.join(self.ws, "AGENTS", "settings", "dev", "settings.json"),
             '{"workbooks": {"technologies": ["csharp", "dotnet", "docker", "terraform"]}}')
-        put(os.path.join(self.ws, "AGENTS", "howtoai", "dev", "install.md"), "# record\n")
+        put(os.path.join(self.ws, "AGENTS", "settings", "dev", "install.md"), "# record\n")
         put(os.path.join(self.home, "plugins", "installed_plugins.json"), '{"plugins": {"howtoai-dev@howtoai-mods": []}}')
         put(os.path.join(self.ws, "AGENTS.md"), "# W\n\n## Installed skills\n\n- none\n")
         got = self.statuses()

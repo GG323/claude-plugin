@@ -31,7 +31,7 @@
 | Throwaway targets | {docker / none} | project settings `testing.ephemeral` | {confirmed} |
 | Test-first hook | {block / warn / off} | {schema default / project settings `testing.test_first`} | {default / asked} |
 | Build gate | {commands, or "proposed on the first build"} | project settings `build.gate` | {CI file / confirmed} |
-| Deploy | {target names, later, or never} | `AGENTS/howtoai/deploy/targets.json` | {asked} |
+| Deploy | {target names, later, or never} | `AGENTS/settings/deploy/targets.json` | {asked} |
 | Deny rules for secret env files | {rules / declined / none found / not written, and why} | `.claude/settings.json` `permissions.deny` | {asked / already set} |
 | Workbooks | {technology: base / user / project / version workbook, separated by "; "} | workbook folders | {manifests} |
 | Codebase versions | {folder: version, separated by "; ", or "none recorded"; a version implied by another, as "C# 14 (default for net10.0)"} | project `<tech>.md` Header | {manifest file} |

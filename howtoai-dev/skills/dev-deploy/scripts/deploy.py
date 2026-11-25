@@ -17,16 +17,16 @@ discover   Lists what the workspace already has for deploying: container files (
            Terraform, CI files, deploy scripts and Makefile or package.json deploy targets,
            hosting files; the deploy CLIs on PATH (with the WSL distros, where wsl is there); and the
            targets file. Reads only.
-target     The workspace's targets file, <ws>/AGENTS/howtoai/deploy/targets.json. write validates one
+target     The workspace's targets file, <ws>/AGENTS/settings/deploy/targets.json. write validates one
            entry (from --file) and, only with --write, adds or replaces it; without --write it
            prints the preview.
 gate       Checks what code can: the target exists, the work is committed (git status clean
-           apart from AGENTS/ (tooling and howtoai state), the plan folder, and the deploy files a first setup just wrote,
+           apart from AGENTS/ (tooling and the settings folder), the plan folder, and the deploy files a first setup just wrote,
            given as --new-file), and, with --change, the change is at
            stage deploy with an accepted human review, a green latest test run, and a green
            run that started at stage test since the last tests or build. Lists
            checks_run and checks_skipped.
-approve    Records one approved step in <ws>/AGENTS/howtoai/deploy/approvals.json with its exact
+approve    Records one approved step in <ws>/AGENTS/settings/deploy/approvals.json with its exact
            command and an expiry (default: the target's approval_minutes, else 30). Run it only
            after the user's yes for that step.
 use        Checks one approval right before its step runs: the exact command (after trimming)
@@ -36,7 +36,7 @@ use        Checks one approval right before its step runs: the exact command (af
 check      An HTTP check with retries: status code and optional text. Commands checks are run
            by the agent, not here.
 log        Adds a run row to the deploy log: <change>/deploy-log.md with --change, else
-           <ws>/AGENTS/howtoai/deploy/log.md; the file is created from assets/deploy-log.md.
+           <ws>/AGENTS/settings/deploy/log.md; the file is created from assets/deploy-log.md.
 self-edit  Adds a row to the deploy log's Self-edits table.
 
 Exit code 0 when the command ran (gate and check: "ok" says whether they passed); 1 with
@@ -58,7 +58,7 @@ import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.abspath(os.path.join(HERE, "..", "assets"))
-STATE_FOLDER = "howtoai"  # the howtoai state folder, inside the workspace's AGENTS/ folder
+STATE_FOLDER = "settings"  # the settings folder, inside the workspace's AGENTS/ folder
 
 
 def agents_dir(ws):
@@ -73,7 +73,7 @@ def agents_dir(ws):
 
 
 def state_dir(ws, *parts):
-    """<workspace>/AGENTS/howtoai/<parts>: settings, install record, reply log, workbooks, deploy, cache."""
+    """<workspace>/AGENTS/settings/<parts>: settings, install record, reply log, workbooks, deploy, cache."""
     return os.path.join(agents_dir(ws), STATE_FOLDER, *parts)
 
 

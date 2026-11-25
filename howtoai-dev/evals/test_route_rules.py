@@ -236,7 +236,7 @@ class WithoutHooks(unittest.TestCase):
             self.assertIn("only on a throwaway container this run created; otherwise ask", rules, skill)
 
     def test_agents_never_touch_the_reply_log(self):
-        self.assertIn("Never create, read, or write `AGENTS/howtoai/dev/replies.jsonl`", text("dev-core", "SKILL.md"))
+        self.assertIn("Never create, read, or write `AGENTS/settings/dev/replies.jsonl`", text("dev-core", "SKILL.md"))
 
     def test_unverified_approvals_are_shown_to_the_user(self):
         self.assertIn("show every unverified approval to the user in your next message", text("dev-core", "SKILL.md"))

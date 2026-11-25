@@ -1,19 +1,19 @@
 """dev-safe-target: a PreToolUse hook on Bash, PowerShell, MCP tools, Edit, Write, and MultiEdit.
 
 An approved deploy step comes first: a command that matches, character for character after
-trimming, an unexpired and unused step in <workspace>/AGENTS/howtoai/deploy/approvals.json (written by
+trimming, an unexpired and unused step in <workspace>/AGENTS/settings/deploy/approvals.json (written by
 dev-deploy after the user's yes) is marked used and passes with no decision, so the user's normal
 permission prompt still shows. Nothing here ever returns allow.
 
 Checked before everything, the approved step included: a write, edit, command, or MCP call that
-touches <workspace>/AGENTS/howtoai/dev/replies.jsonl (the dev-reply-log hook's record of real user
+touches <workspace>/AGENTS/settings/dev/replies.jsonl (the dev-reply-log hook's record of real user
 replies) is denied, in every workspace.
 
 Then, in this order (deny wins over ask, ask over warn):
   1. Deny markers (environments.deny in the dev settings, user or project): a command or MCP call
      whose text holds one is denied. Applies in every workspace whose settings name markers.
   2. hook_rules from the settings: a regex on the command or file path, with action block or warn.
-  3. Only in workspaces with project dev settings (AGENTS/howtoai/dev/settings.json):
+  3. Only in workspaces with project dev settings (AGENTS/settings/dev/settings.json):
      - Destructive commands (drops, truncates, bulk deletes, down-migrations, database resets,
        destroy, prune) ask first, unless they name a container whose latest ephemeral entry in a
        change's state is "created" (entries are appended, so a later "removed" ends it).

@@ -35,7 +35,7 @@ A dev stage, or a request to change or check a workbook, takes a route. A review
 | [Record a version](routes/record-version.md) | A code project's version is not recorded | A Codebase versions line, written only after approval |
 | [Audit](routes/audit.md) | The user or an audit asks for a check | A list in chat by kind of problem, "none found" for an empty one |
 
-A write ends with a one-line report of what changed. Loading writes only the generated search and sources files in `<workspace>/AGENTS/howtoai/cache/`. The format, layers, IDs, and tags are in [references/format.md](references/format.md). Project workbooks are in `<workspace>/AGENTS/howtoai/workbooks/`, the user's in `~/.claude/howtoai/workbooks/`.
+A write ends with a one-line report of what changed. Loading writes only the generated search and sources files in `<workspace>/AGENTS/settings/cache/`. The format, layers, IDs, and tags are in [references/format.md](references/format.md). Project workbooks are in `<workspace>/AGENTS/settings/workbooks/`, the user's in `~/.claude/howtoai/workbooks/`.
 
 ## Verify the output
 

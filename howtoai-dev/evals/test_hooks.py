@@ -32,7 +32,7 @@ class HookBase(unittest.TestCase):
         self.tmp.cleanup()
 
     def settings(self, s):
-        write(os.path.join(self.ws, "AGENTS", "howtoai", "dev", "settings.json"), json.dumps(s))
+        write(os.path.join(self.ws, "AGENTS", "settings", "dev", "settings.json"), json.dumps(s))
 
     def change(self, stage, **extra):
         st = {"id": "2026-11-19-x", "title": "x", "stage": stage, "updated": "2026-11-19T10:00:00+01:00",
@@ -128,14 +128,14 @@ class SafeTargetTests(HookBase):
     # F1 fix batch 5: the marker match stays as it is, so a written script cannot carry a marker; documents
     # go through the Write tool, which this hook does not read for markers.
     def test_a_heredoc_naming_a_marker_is_still_denied(self):
-        cmd = "cat > AGENTS/howtoai/dev/report.md <<'EOF'\n| Target | shop-prod.postgres.database.azure.com | refused |\nEOF"
+        cmd = "cat > AGENTS/settings/dev/report.md <<'EOF'\n| Target | shop-prod.postgres.database.azure.com | refused |\nEOF"
         self.assertEqual(self.hook(self.H, "Bash", command=cmd)[0], "deny")
         here = "$r=@'\n| Target | shop-prod.postgres.database.azure.com |\n'@; [IO.File]::WriteAllText('test-run-1.md', $r)"
         self.assertEqual(self.hook(self.H, "PowerShell", command=here)[0], "deny")
 
     def test_a_write_tool_document_naming_a_marker_is_allowed(self):
         body = "| Target | shop-prod.postgres.database.azure.com | refused |\n"
-        self.assertEqual(self.hook(self.H, "Write", file_path=self.path("AGENTS/howtoai/dev/report.md"), content=body)[0], None)
+        self.assertEqual(self.hook(self.H, "Write", file_path=self.path("AGENTS/settings/dev/report.md"), content=body)[0], None)
 
     # F1 fix batch 6: inline settings values that name a marker are still denied; a values file keeps the
     # command free of the marker.
@@ -178,7 +178,7 @@ class SafeTargetTests(HookBase):
                                    old_string="a", new_string="// DROP TABLE users")[0], None)
 
     def test_deny_message_says_what_why_where_and_how_to_change(self):
-        project = os.path.join(self.ws, "AGENTS", "howtoai", "dev", "settings.json")
+        project = os.path.join(self.ws, "AGENTS", "settings", "dev", "settings.json")
         user = self.env["HOWTOAI_DEV_USER_FILE"]
         d, reason = self.hook(self.H, "Bash", command="psql -h SHOP-PROD.postgres.database.azure.com")
         self.assertEqual(d, "deny")
@@ -192,14 +192,14 @@ class SafeTargetTests(HookBase):
         self.assertIn(project + " and " + user, reason, "a marker both files list names both")
 
     def test_deny_message_names_only_the_user_file(self):
-        os.remove(os.path.join(self.ws, "AGENTS", "howtoai", "dev", "settings.json"))
+        os.remove(os.path.join(self.ws, "AGENTS", "settings", "dev", "settings.json"))
         user = self.env["HOWTOAI_DEV_USER_FILE"]
         write(user, json.dumps({"environments": {"deny": ["prod-db.example.com"]}}))
         reason = self.hook(self.H, "Bash", command="psql -h prod-db.example.com")[1]
         self.assertIn("in " + user + ".", reason)
 
     def test_unconfigured_workspace_only_deny_markers(self):
-        os.remove(os.path.join(self.ws, "AGENTS", "howtoai", "dev", "settings.json"))
+        os.remove(os.path.join(self.ws, "AGENTS", "settings", "dev", "settings.json"))
         write(self.env["HOWTOAI_DEV_USER_FILE"], json.dumps({"environments": {"deny": ["prod-db.example.com"]}}))
         self.assertEqual(self.hook(self.H, "Bash", command="terraform destroy")[0], None)
         self.assertEqual(self.hook(self.H, "Bash", command="psql -h prod-db.example.com")[0], "deny")
@@ -211,7 +211,7 @@ class SafeTargetTests(HookBase):
         self.assertEqual(self.hook(self.H, "Bash", command="npm publish")[0], "warn")
 
     def approvals(self, items):
-        write(os.path.join(self.ws, "AGENTS", "howtoai", "deploy", "approvals.json"), json.dumps({"approvals": items}))
+        write(os.path.join(self.ws, "AGENTS", "settings", "deploy", "approvals.json"), json.dumps({"approvals": items}))
 
     def test_approved_deploy_step_passes_once_and_never_allows(self):
         import datetime
@@ -219,7 +219,7 @@ class SafeTargetTests(HookBase):
         cmd = "kubectl --context shop-prod.postgres.database.azure.com rollout restart deploy/shop"
         self.approvals([{"id": "A1", "command": cmd, "expires": later, "used": False}])
         self.assertEqual(self.hook(self.H, "Bash", command="  " + cmd + " ")[0], None)  # no allow, no deny
-        with open(os.path.join(self.ws, "AGENTS", "howtoai", "deploy", "approvals.json"), encoding="utf-8") as f:
+        with open(os.path.join(self.ws, "AGENTS", "settings", "deploy", "approvals.json"), encoding="utf-8") as f:
             self.assertTrue(json.load(f)["approvals"][0]["used"])
         self.assertEqual(self.hook(self.H, "Bash", command=cmd)[0], "deny")  # one use only
 
@@ -231,14 +231,14 @@ class SafeTargetTests(HookBase):
         self.approvals([{"id": "A1", "command": cmd, "expires": past, "used": False},
                         {"id": "A2", "command": cmd + " --other", "expires": later, "used": False}])
         self.assertEqual(self.hook(self.H, "Bash", command=cmd)[0], "deny")
-        write(os.path.join(self.ws, "AGENTS", "howtoai", "deploy", "approvals.json"), "{broken")
+        write(os.path.join(self.ws, "AGENTS", "settings", "deploy", "approvals.json"), "{broken")
         self.assertEqual(self.hook(self.H, "Bash", command=cmd)[0], "deny")
 
 
 class ReplyLogTests(HookBase):
     """F8-C1: the dev-reply-log hook records a hash of each user prompt; nothing else may write it."""
     H = "dev_reply_log.py"
-    LOG = "AGENTS/howtoai/dev/replies.jsonl"
+    LOG = "AGENTS/settings/dev/replies.jsonl"
 
     def prompt(self, text, cwd=None):
         data = {"hook_event_name": "UserPromptSubmit", "prompt": text, "cwd": cwd or self.ws}
@@ -259,7 +259,7 @@ class ReplyLogTests(HookBase):
         other = os.path.join(self.tmp.name, "plain")
         write(os.path.join(other, "AGENTS.md"), "# plain\n")
         self.prompt("yes", cwd=other)
-        self.assertFalse(os.path.exists(os.path.join(other, "AGENTS/howtoai")))
+        self.assertFalse(os.path.exists(os.path.join(other, "AGENTS/settings")))
 
     def test_safe_target_denies_writing_the_log(self):
         self.prompt("yes")
@@ -267,10 +267,10 @@ class ReplyLogTests(HookBase):
         self.assertEqual(self.hook("dev_safe_target.py", "Write", file_path=log, content="{}")[0], "deny")
         self.assertEqual(self.hook("dev_safe_target.py", "Edit", file_path=log, old_string="a", new_string="b")[0], "deny")
         self.assertEqual(self.hook("dev_safe_target.py", "Bash", command=f"echo x >> {self.LOG}")[0], "deny")
-        self.assertEqual(self.hook("dev_safe_target.py", "PowerShell", command="Add-Content AGENTS/howtoai/dev/replies.jsonl x")[0], "deny")
+        self.assertEqual(self.hook("dev_safe_target.py", "PowerShell", command="Add-Content AGENTS/settings/dev/replies.jsonl x")[0], "deny")
 
     def test_control_other_dev_files_are_not_denied_by_this_rule(self):
-        self.assertIsNone(self.hook("dev_safe_target.py", "Write", file_path=self.path("AGENTS/howtoai/dev/install.md"), content="x")[0])
+        self.assertIsNone(self.hook("dev_safe_target.py", "Write", file_path=self.path("AGENTS/settings/dev/install.md"), content="x")[0])
 
 
 if __name__ == "__main__":

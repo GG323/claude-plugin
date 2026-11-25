@@ -1,5 +1,5 @@
 {
- "$about": "howtoai-dev settings. Each leaf has a type, a default, and a description. User defaults live in ~/.claude/howtoai/dev-settings.json; project values in <workspace>/AGENTS/howtoai/dev/settings.json win over them. Never store secrets here: name accounts and profiles, not their credentials.",
+ "$about": "howtoai-dev settings. Each leaf has a type, a default, and a description. User defaults live in ~/.claude/howtoai/dev-settings.json; project values in <workspace>/AGENTS/settings/dev/settings.json win over them. Never store secrets here: name accounts and profiles, not their credentials.",
  "plan_folder": {"type": "string", "default": "dev-plans", "description": "Folder at the workspace root that holds one subfolder per change and INDEX.md."},
  "tracker": {
   "kind": {"type": "enum", "options": ["markdown", "jira", "github", "azure-devops"], "default": "markdown", "description": "Where work items go: Markdown files in the change folder, Jira through the Atlassian MCP, GitHub Issues through gh, or Azure DevOps Boards through its MCP server or the az CLI with the azure-devops extension."},

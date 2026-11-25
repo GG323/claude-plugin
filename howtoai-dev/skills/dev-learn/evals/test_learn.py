@@ -76,7 +76,7 @@ class LearnTests(unittest.TestCase):
         self.plans = os.path.join(self.root, "dev-plans")
         self.change = os.path.join(self.plans, "c1")
         os.makedirs(self.change)
-        self.log = os.path.join(self.root, "AGENTS", "howtoai", "dev", "lessons.md")
+        self.log = os.path.join(self.root, "AGENTS", "settings", "dev", "lessons.md")
         self.review(c2="later", x1="later")
         with open(os.path.join(self.change, "state.json"), "w", encoding="utf-8") as f:
             json.dump({"stage": "human-review", "declined": []}, f)

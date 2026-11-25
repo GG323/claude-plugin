@@ -24,12 +24,12 @@
 
 Install `howtoai-dev` for one user and one workspace, so the dev skills work the way this user and project need without any skill file edited for this install. Done means these are written, each only after a preview and the user's yes, and checked:
 
-- the user's defaults in `~/.claude/howtoai/dev-settings.json` and the project's settings in `<workspace>/AGENTS/howtoai/dev/settings.json`;
+- the user's defaults in `~/.claude/howtoai/dev-settings.json` and the project's settings in `<workspace>/AGENTS/settings/dev/settings.json`;
 - the `## Dev mode` entry in the workspace `AGENTS.md` (Git version control and dev mode, each on or off), and this plugin's one line under its `## Installed skills` section ([AUDIT.md](AUDIT.md#skills-line));
 - deny rules for secret env files in `<workspace>/.claude/settings.json`, through `update-config`;
-- workbooks and version workbooks through `dev-workbook`, and deploy targets in `AGENTS/howtoai/deploy/targets.json` through `dev-deploy`;
+- workbooks and version workbooks through `dev-workbook`, and deploy targets in `AGENTS/settings/deploy/targets.json` through `dev-deploy`;
 - in dev mode, links in `~/.claude/skills` and `~/.claude/agents` and the three hooks in `~/.claude/settings.json`; in plugin mode, the installed plugin;
-- the install record `<workspace>/AGENTS/howtoai/dev/install.md`, from [assets/install-record.md](assets/install-record.md), every row filled or "none";
+- the install record `<workspace>/AGENTS/settings/dev/install.md`, from [assets/install-record.md](assets/install-record.md), every row filled or "none";
 - the [Summary](#summary) message in chat.
 
 A need no setting covers is a plugin change through `skill-builder`; [docs/install-index.md](docs/install-index.md) says which files it touches. The install creates no tracker items (`dev-plan` makes them after approval). Only Claude Code (CLI and desktop) is verified; without hooks, the hooks' rules hold only through the skills' instructions. Rerun this file at any time ([Change a decision later](#change-a-decision-later)).
@@ -81,7 +81,7 @@ The workspace's `## Dev mode` entry in `AGENTS.md` holds two required settings, 
    Show its `diff` and, when `pointer_changed` is true, what the pointer will hold; after a yes, run it again with `--write`. When it refuses, show the `error` and ask again; never change an answer to make it pass. When the user does not approve the write, stop: the install cannot go on without both settings.
 5. **Git problems.** With Git version control on, run `DEVMODE status` again, show every sentence in `git.problems`, and fix one only after the user's yes; for a nontechnical user, say each problem in plain words, and who can fix it:
    - **Git is not installed:** give the official install source.
-   - **`AGENTS/` not in a repository:** offer `git init "<workspace>/AGENTS"` and a `.gitignore` there with `plugins/` and `howtoai/cache/`, written with the file tools after showing it; this works in a multi-repo workspace too. For a nontechnical user, offer to start change history for the AI tools folder, with no command.
+   - **`AGENTS/` not in a repository:** offer `git init "<workspace>/AGENTS"` and a `.gitignore` there with `plugins/` and `settings/cache/`, written with the file tools after showing it; this works in a multi-repo workspace too. For a nontechnical user, offer to start change history for the AI tools folder, with no command.
    - **The workspace not in a repository:** offer `git init "<workspace>"` only when the user wants the whole workspace in one repository, never when `git.layout` is `multi-repo` (the root holds the user's own repositories; its root files are `git.notes`, not problems). Never add, commit, create a remote, or push. For a nontechnical user, offer to start change history for this folder, with no command.
    - **Ignored:** show the folder, and ask whether to change that `.gitignore` or leave it. For a nontechnical user, say a folder is set to be left out of the change history, and ask whether to keep it that way.
 
@@ -127,7 +127,7 @@ Say what the lookups found as "From `<file>`: …", for the user to correct. For
 Ask with the `grilling` method, crucial items first; items the files answer are stated, not asked.
 
 - **Crucial** (asked unless a file answers them):
-  1. Production markers to deny (`environments.deny`): hosts, connection-string fragments, cloud profiles, and account names, preferring names that appear only in production. The `dev-safe-target` hook denies any command or connector (MCP) call whose text contains a marker anywhere, ignoring case; file edits are not checked. A marker that also appears in local targets, project paths, or test commands (for example a database named like the project) would block them: leave it out, and say why in the install record. Its block message names the marker, the settings file that lists it (the project's `AGENTS/howtoai/dev/settings.json`, the user's `~/.claude/howtoai/dev-settings.json`, or both), that matching rule, and that the list is changed with dev-core's Setup route or by rerunning this INSTALL; tell the user so when you ask. The safest choice: deny every production marker the files name, and nothing else; a shared target that is not production, such as a team's dev database, goes on neither list, so `dev-test` asks. For a nontechnical user, ask which live systems must never be touched, by what they are, with no setting name.
+  1. Production markers to deny (`environments.deny`): hosts, connection-string fragments, cloud profiles, and account names, preferring names that appear only in production. The `dev-safe-target` hook denies any command or connector (MCP) call whose text contains a marker anywhere, ignoring case; file edits are not checked. A marker that also appears in local targets, project paths, or test commands (for example a database named like the project) would block them: leave it out, and say why in the install record. Its block message names the marker, the settings file that lists it (the project's `AGENTS/settings/dev/settings.json`, the user's `~/.claude/howtoai/dev-settings.json`, or both), that matching rule, and that the list is changed with dev-core's Setup route or by rerunning this INSTALL; tell the user so when you ask. The safest choice: deny every production marker the files name, and nothing else; a shared target that is not production, such as a team's dev database, goes on neither list, so `dev-test` asks. For a nontechnical user, ask which live systems must never be touched, by what they are, with no setting name.
   2. Allowed test targets (`environments.allow`). The safest choice: local targets only, because any target not on the list counts as production.
   3. The project's tracker and its project, when it differs from the user's default or a sign was found: Jira project key, GitHub `owner/name`, or Azure DevOps organization URL and project, with the work item type when it is not `Task`.
   4. The plan format, when it differs from the user's default.
@@ -150,7 +150,7 @@ When the user chose "now", run [dev-deploy's Set up a target route](skills/dev-d
 ## Write and record
 
 1. **Project settings:** `DEVCORE setup --workspace "<workspace>" --values-file "<file>"` with every project decision (write the JSON to a temporary file outside the workspace with the Write tool: production markers in a command's text make `dev-safe-target` deny it), including the tracker and plan format when they equal the user's defaults, because the project file is what teammates share; preview first, and after a yes run it again with `--write`. A refusal (an unknown key, a value that looks like a secret, or `plan.publish` `tracker` with Markdown work items) is shown to the user and the value asked again. Then run step 5 of [dev-core's Setup route](skills/dev-core/SKILL.md#setup): the deny rules for secret env files, with their own yes.
-2. **Install record:** copy [assets/install-record.md](assets/install-record.md) to `<workspace>/AGENTS/howtoai/dev/install.md` and fill every placeholder (with the file tools, see Rules for the whole run); a row with nothing to say gets "none". Read the date from the system clock (`Get-Date -Format yyyy-MM-dd` or `date +%F`), never from memory. On a rerun, rewrite it in full.
+2. **Install record:** copy [assets/install-record.md](assets/install-record.md) to `<workspace>/AGENTS/settings/dev/install.md` and fill every placeholder (with the file tools, see Rules for the whole run); a row with nothing to say gets "none". Read the date from the system clock (`Get-Date -Format yyyy-MM-dd` or `date +%F`), never from memory. On a rerun, rewrite it in full.
 
 ## Verify
 
@@ -165,7 +165,7 @@ Fix a failing check now when the fix stays within the user's decisions; otherwis
 
 ## Double check with skill-builder
 
-Hand the finished install to the `skill-builder` skill (`/skill-builder` in Claude Code) on its verification-only route, with this brief: "Verify the howtoai-dev install in `<workspace>`: compare `AGENTS/howtoai/dev/install.md`, the dev settings, the results of `<plugin>/AUDIT.md`, the `AGENTS.md` dev-mode entry, the links and hooks, and the workbooks against the decisions in the install record and `<plugin>/docs/install-index.md`. Read only; report each mismatch with its file."
+Hand the finished install to the `skill-builder` skill (`/skill-builder` in Claude Code) on its verification-only route, with this brief: "Verify the howtoai-dev install in `<workspace>`: compare `AGENTS/settings/dev/install.md`, the dev settings, the results of `<plugin>/AUDIT.md`, the `AGENTS.md` dev-mode entry, the links and hooks, and the workbooks against the decisions in the install record and `<plugin>/docs/install-index.md`. Read only; report each mismatch with its file."
 
 1. Fix each mismatch that stays within the user's decisions, then hand it the same brief again. Stop after two rounds.
 2. A mismatch that would change a decision, or needs a dev skill file changed, goes to the user first; a skill file change then runs as a `skill-builder` change to the `howtoai-dev` plugin, with its own plan.

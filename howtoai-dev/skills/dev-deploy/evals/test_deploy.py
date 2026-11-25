@@ -79,7 +79,7 @@ class DeployTests(unittest.TestCase):
     def test_target_preview_then_write_and_show(self):
         code, res = run("target", "write", "--workspace", self.ws, "--file", self.entry_file(self.entry))
         self.assertEqual((code, res["written"]), (0, False))
-        self.assertFalse(os.path.exists(os.path.join(self.ws, "AGENTS", "howtoai", "deploy", "targets.json")))
+        self.assertFalse(os.path.exists(os.path.join(self.ws, "AGENTS", "settings", "deploy", "targets.json")))
         self.assertTrue(self.add_target()[1]["written"])
         self.assertEqual(run("target", "show", "--workspace", self.ws, "--name", "local-k8s")[1]["target"]["name"], "local-k8s")
         self.assertIsNone(run("target", "show", "--workspace", self.ws, "--name", "prod")[1]["target"])
@@ -214,7 +214,7 @@ class DeployTests(unittest.TestCase):
         t = "2026-11-21T10:00:00+01:00"
         run("approve", "--workspace", self.ws, "--target", "local-k8s", "--step", "apply",
             "--command", "kubectl apply -f deploy/k8s/", "--now", t)
-        path = os.path.join(self.ws, "AGENTS", "howtoai", "deploy", "approvals.json")
+        path = os.path.join(self.ws, "AGENTS", "settings", "deploy", "approvals.json")
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
         data["approvals"][0]["used"] = "2026-11-21T10:01:00+01:00"
@@ -260,7 +260,7 @@ class DeployTests(unittest.TestCase):
                         "--quote", "targets.json step apply", "--change-text", "image tag from the build, level 1",
                         "--route", "target entry", "--status", "proposed")
         self.assertEqual(code, 0, res)
-        with open(os.path.join(self.ws, "AGENTS", "howtoai", "deploy", "log.md"), encoding="utf-8") as f:
+        with open(os.path.join(self.ws, "AGENTS", "settings", "deploy", "log.md"), encoding="utf-8") as f:
             text = f.read()
         self.assertLess(text.index("2026-11-21 11:00"), text.index("2026-11-21 10:00"))  # newest first
         self.assertNotIn("{", text)

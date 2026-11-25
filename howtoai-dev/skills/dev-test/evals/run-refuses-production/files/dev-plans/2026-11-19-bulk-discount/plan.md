@@ -2,7 +2,7 @@
 
 Change `2026-11-19-bulk-discount` · Size: Small · Status: approved on 2026-11-19
 
-Workbook IDs (for example `dotnet.testing.001`) refer to statements resolved by `dev-workbook`; sources are marked confirmed or inferred. Settings: `AGENTS/howtoai/dev/settings.json`.
+Workbook IDs (for example `dotnet.testing.001`) refer to statements resolved by `dev-workbook`; sources are marked confirmed or inferred. Settings: `AGENTS/settings/dev/settings.json`.
 
 ## Goal
 

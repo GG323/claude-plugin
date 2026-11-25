@@ -26,7 +26,7 @@ One Markdown file per technology, named `<technology>.md`, where `<technology>` 
 | --- | --- | --- | --- |
 | base | the skill's `workbooks/` | The full workbook, shipped with the plugin | `001`, `002`, … |
 | user | `~/.claude/howtoai/workbooks/` | The user's own preferences across projects | `u001`, `u002`, … |
-| project | `<workspace>/AGENTS/howtoai/workbooks/` | The project's choices, kept in its git | `p001`, `p002`, … |
+| project | `<workspace>/AGENTS/settings/workbooks/` | The project's choices, kept in its git | `p001`, `p002`, … |
 
 A user or project file uses the same layout but holds only the sections it adds to; it may leave the others out. Project wins over user, and user wins over base.
 

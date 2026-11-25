@@ -103,7 +103,7 @@ class WorkbookTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory(prefix="workbook-test-")
         t = self.tmp.name
         self.base, self.user, self.ws = os.path.join(t, "base"), os.path.join(t, "user"), os.path.join(t, "ws")
-        for d in (self.base, self.user, os.path.join(self.ws, "AGENTS", "howtoai", "workbooks")):
+        for d in (self.base, self.user, os.path.join(self.ws, "AGENTS", "settings", "workbooks")):
             os.makedirs(d)
         with open(os.path.join(self.base, "demo.md"), "w", encoding="utf-8") as f:
             f.write(BASE)
@@ -113,7 +113,7 @@ class WorkbookTests(unittest.TestCase):
         self.tmp.cleanup()
 
     def write(self, layer, lines, header=""):
-        d = self.user if layer == "user" else os.path.join(self.ws, "AGENTS", "howtoai", "workbooks")
+        d = self.user if layer == "user" else os.path.join(self.ws, "AGENTS", "settings", "workbooks")
         with open(os.path.join(d, "demo.md"), "w", encoding="utf-8") as f:
             f.write(overlay(layer, lines, header))
 
@@ -202,7 +202,7 @@ class WorkbookTests(unittest.TestCase):
         self.assertEqual(res["overrides"][0]["id"], "demo.patterns.001")
 
     def test_skeleton_and_no_overwrite(self):
-        out_path = os.path.join(self.ws, "AGENTS", "howtoai", "workbooks", "python.md")
+        out_path = os.path.join(self.ws, "AGENTS", "settings", "workbooks", "python.md")
         code, out = run("skeleton", "--tech", "python", "--title", "Python", "--layer", "project", "--out", out_path, "--date", "2026-03-01")
         self.assertEqual(code, 0)
         code, v = run("validate", out_path)
@@ -240,7 +240,7 @@ class WorkbookTests(unittest.TestCase):
         return run(*args, *(["--write"] if write else []), *self.dirs)
 
     def make_version(self, key):
-        out_path = os.path.join(self.ws, "AGENTS", "howtoai", "workbooks", f"demo@{key}.md")
+        out_path = os.path.join(self.ws, "AGENTS", "settings", "workbooks", f"demo@{key}.md")
         return run("skeleton", "--tech", "demo", "--title", f"Demo {key}", "--layer", "project", "--out", out_path,
                    "--version-key", key, "--copy-base", "--date", "2026-02-01", *self.dirs), out_path
 
@@ -372,14 +372,14 @@ class NoSkillsAndAgentsSection(unittest.TestCase):
             return f.read()
 
     def test_skeleton_writes_no_section(self):
-        path = os.path.join(self.ws, "AGENTS", "howtoai", "workbooks", "python.md")
+        path = os.path.join(self.ws, "AGENTS", "settings", "workbooks", "python.md")
         self.assertEqual(run("skeleton", "--tech", "python", "--title", "Python", "--layer", "project", "--out", path)[0], 0)
         self.assertNotIn("Skills and agents", self.text(path))
         self.assertTrue(run("validate", path)[1]["ok"])
 
     def test_copy_base_drops_a_legacy_section(self):
         self.write_base(BASE + self.LEGACY)
-        path = os.path.join(self.ws, "AGENTS", "howtoai", "workbooks", "demo@0.md")
+        path = os.path.join(self.ws, "AGENTS", "settings", "workbooks", "demo@0.md")
         code, out = run("skeleton", "--tech", "demo", "--title", "Demo 0", "--layer", "project", "--out", path,
                         "--version-key", "0", "--copy-base", *self.dirs)
         self.assertEqual(code, 0, out)
@@ -396,7 +396,7 @@ class NoSkillsAndAgentsSection(unittest.TestCase):
         self.write_base(BASE + self.LEGACY)
         self.assertTrue(run("validate", os.path.join(self.base, "demo.md"))[1]["ok"])
         self.write("project", ["- **demo.patterns.p001** · Demo runs on Linux. · source: `ci.yml` · confirmed: project, 2026-02-01"])
-        path = os.path.join(self.ws, "AGENTS", "howtoai", "workbooks", "demo.md")
+        path = os.path.join(self.ws, "AGENTS", "settings", "workbooks", "demo.md")
         with open(path, "a", encoding="utf-8") as f:
             f.write(self.LEGACY)
         self.assertTrue(run("validate", path)[1]["ok"], run("validate", path)[1])

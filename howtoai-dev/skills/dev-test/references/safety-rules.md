@@ -38,7 +38,7 @@ Only files a test run loads decide the verdict: test settings, `.env.test`, `.ru
 ## What the hooks check
 
 - **`dev-test-first`** (Edit, Write, MultiEdit, NotebookEdit), only while the file's workspace has a change at `tests-first`, `build`, or `test`: non-test files are denied at `tests-first` (`testing.test_first`: `block`, `warn`, or `off`); at `build` it warns when the change has no red-check run; CI files are denied at `tests-first` and `test`.
-- **`dev-safe-target`** (Bash, PowerShell, MCP tools, Edit, Write, MultiEdit): deny markers are denied wherever the dev settings set them, user-level settings included; `hook_rules` block or warn. In workspaces with project dev settings, destructive commands and destructive migration edits ask first; a migration edit passes once the plan approved it and it carries the comment `howtoai-dev: destructive-confirmed`. A step `dev-deploy` approved in `AGENTS/howtoai/deploy/approvals.json` (the exact command, unexpired and unused) passes once; `dev-deploy` checks the same approval first with `deploy.py use`.
+- **`dev-safe-target`** (Bash, PowerShell, MCP tools, Edit, Write, MultiEdit): deny markers are denied wherever the dev settings set them, user-level settings included; `hook_rules` block or warn. In workspaces with project dev settings, destructive commands and destructive migration edits ask first; a migration edit passes once the plan approved it and it carries the comment `howtoai-dev: destructive-confirmed`. A step `dev-deploy` approved in `AGENTS/settings/deploy/approvals.json` (the exact command, unexpired and unused) passes once; `dev-deploy` checks the same approval first with `deploy.py use`.
 - Neither calls a model, and both fail open on their own errors, so the scripts and instructions stay in force when a hook cannot run.
 
 ## Without hooks
@@ -51,5 +51,5 @@ Hooks run only in Claude Code with the plugin installed. These are your own chec
 - **Destructive migrations:** a migration that drops, truncates, or renames only after the user's yes, recorded with its `paths`.
 - **Tests first:** at stage `tests-first`, edit only files matching `testing.test_globs`, test data, and the change folder; `DEVCORE` refuses the move to `build` when git shows other files changed since then, and records it as unchecked without git.
 - **CI files:** never edited at stages `tests-first` and `test`.
-- **Reply log:** never create, read, or write `AGENTS/howtoai/dev/replies.jsonl`; an approval recorded without it is unverified, and you show it to the user in your next message.
+- **Reply log:** never create, read, or write `AGENTS/settings/dev/replies.jsonl`; an approval recorded without it is unverified, and you show it to the user in your next message.
 - **Deploy steps:** `DEPLOY use` before each step, which refuses a used, expired, unknown, or changed approval.

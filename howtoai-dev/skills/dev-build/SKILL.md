@@ -44,7 +44,7 @@ Stage 4 of `howtoai-dev`. **Build** (after `dev-test`'s red check): the smallest
 - **Destructive migrations need a yes.** A migration that drops, truncates, or renames needs the user's yes, recorded with its `paths` as `append.approvals`, before you write it.
 - **The project's own commands.** The gate runs only the commands saved in `build.gate`, through `BUILD gate`; the tests run through `dev-test`. Never ad-hoc commands.
 - **Numbers from scripts.** Hunks, trace, gate, and test results come from `BUILD` and `dev-test`, never from your own reading of a diff or log.
-- **No commits.** Never commit, push, branch, or open a pull request; `dev-deploy` commits. Outside the working tree and the change folder, write only the gate settings in `<workspace>/AGENTS/howtoai/dev/settings.json` after the user approves them, and the git objects of the snapshot (no commit, branch, or index change).
+- **No commits.** Never commit, push, branch, or open a pull request; `dev-deploy` commits. Outside the working tree and the change folder, write only the gate settings in `<workspace>/AGENTS/settings/dev/settings.json` after the user approves them, and the git objects of the snapshot (no commit, branch, or index change).
 - **State** goes through `DEVCORE`: each workbook use as `append.receipts`, each approval (gate settings, a pre-existing gate failure, a protected path) as `append.approvals`, each finished run as `append.builds`, and the stage.
 - **Chat:** one line per step, every question as its own message, no raw JSON. The closing report gives the result, the hunks and what they trace to, the gate, the Skipped or unchecked lines, and the next stage.
 

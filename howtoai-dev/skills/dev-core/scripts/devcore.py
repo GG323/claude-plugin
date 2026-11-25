@@ -12,12 +12,12 @@ Usage (Python 3, standard library only; every command prints one JSON object):
 root        Finds the workspace root: the nearest folder at or above --cwd (default: the current
             folder) that holds AGENTS.md or CLAUDE.md.
 settings    Merges the schema defaults, the user file (default ~/.claude/howtoai/dev-settings.json),
-            and the project file (<workspace>/AGENTS/howtoai/dev/settings.json). Prints the merged values,
+            and the project file (<workspace>/AGENTS/settings/dev/settings.json). Prints the merged values,
             the source of each top-level key, and whether the project is configured.
 setup       Validates --values (a JSON object of project settings), or the same JSON read from the
             --values-file F (UTF-8), against the schema. Give exactly one of the two. Without
             --write it prints the file it would write (a preview); with --write it writes
-            <workspace>/AGENTS/howtoai/dev/settings.json, or with --scope user the user defaults file.
+            <workspace>/AGENTS/settings/dev/settings.json, or with --scope user the user defaults file.
             Values that look like secrets are refused.
 new-change  Creates <workspace>/<plan_folder>/<date>-<slug>/state.json and rebuilds INDEX.md.
             An existing folder gets a -2, -3, ... suffix. The date comes from the system clock
@@ -29,17 +29,17 @@ state       Prints a change's state.json. With --patch it applies the patch firs
                "increment": {"review": 1}}
             Stage changes are recorded in history. The index is rebuilt after every write.
             An approval with "by": "user" needs "reply", the user's reply word for word. When
-            <workspace>/AGENTS/howtoai/dev/replies.jsonl exists (written by the dev-reply-log hook on each
+            <workspace>/AGENTS/settings/dev/replies.jsonl exists (written by the dev-reply-log hook on each
             user prompt, as a sha256 of the normalized text, never the text), the reply must match an
             entry newer than the change's last user approval, or the patch is refused. Without that
             log the approval is recorded with "unverified": true and a warning is printed.
             A move from tests-first to build is refused when git shows files changed since the
-            tests-first stage outside testing.test_globs, the plan folder, and AGENTS/ (tooling and howtoai state); without
+            tests-first stage outside testing.test_globs, the plan folder, and AGENTS/ (tooling and the settings folder); without
             git the move is recorded with "unchecked" and a warning.
 index       Rebuilds <workspace>/<plan_folder>/INDEX.md in full from every state.json.
 
 Exit code 0 on success; 1 with {"ok": false, "error": "..."} on any error. Nothing is written
-outside <workspace>/<plan_folder>/ and <workspace>/AGENTS/howtoai/dev/.
+outside <workspace>/<plan_folder>/ and <workspace>/AGENTS/settings/dev/.
 """
 
 import argparse
@@ -167,7 +167,7 @@ def merge(base, over):
     return result
 
 
-STATE_FOLDER = "howtoai"  # the howtoai state folder, inside the workspace's AGENTS/ folder
+STATE_FOLDER = "settings"  # the settings folder, inside the workspace's AGENTS/ folder
 
 
 def agents_dir(ws):
@@ -182,7 +182,7 @@ def agents_dir(ws):
 
 
 def state_dir(ws, *parts):
-    """<workspace>/AGENTS/howtoai/<parts>: settings, install record, reply log, workbooks, deploy, cache."""
+    """<workspace>/AGENTS/settings/<parts>: settings, install record, reply log, workbooks, deploy, cache."""
     return os.path.join(agents_dir(ws), STATE_FOLDER, *parts)
 
 
