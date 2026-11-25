@@ -209,6 +209,15 @@ class RouteRules(unittest.TestCase):
         self.assertIn("`dev-safe-target`", step)
         self.assertNotIn("--values '", step)
 
+    def test_the_build_gate_and_the_plan_templates_follow_dev_core(self):
+        gate = self.line(text("dev-build", "routes", "build.md"), "3. After a yes, preview `DEVCORE setup")
+        self.assertIn("--values-file", gate)
+        self.assertIn("Write tool", gate)
+        self.assertNotIn("--values '", gate)
+        step = self.line(text("dev-plan", "stages", "setup.md"), "3. Copy `dev-core`'s `plan.md` and `questions.md`")
+        self.assertIn("with the file tools", step)
+        self.assertIn("plan-folder-contract", step)
+
 
 class WithoutHooks(unittest.TestCase):
     """No-hook batch: every hook check has its own instruction first, so the rules hold where hooks don't run."""
@@ -227,7 +236,7 @@ class WithoutHooks(unittest.TestCase):
             self.assertIn("only on a throwaway container this run created; otherwise ask", rules, skill)
 
     def test_agents_never_touch_the_reply_log(self):
-        self.assertIn("Never create, read, or write `.howtoai/dev/replies.jsonl`", text("dev-core", "SKILL.md"))
+        self.assertIn("Never create, read, or write `AGENTS/howtoai/dev/replies.jsonl`", text("dev-core", "SKILL.md"))
 
     def test_unverified_approvals_are_shown_to_the_user(self):
         self.assertIn("show every unverified approval to the user in your next message", text("dev-core", "SKILL.md"))
@@ -250,7 +259,6 @@ class WithoutHooks(unittest.TestCase):
 
     def test_the_safety_rules_name_the_hook_as_the_second_layer(self):
         t = text(*self.SAFETY)
-        self.assertIn("- [Without hooks](#without-hooks)", t)
         self.assertIn("\n## Without hooks\n", t)
         self.assertNotIn("when it is built", t)
         table = t.split("## The rules and their layers", 1)[1].split("\n## ", 1)[0]

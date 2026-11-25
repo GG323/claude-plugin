@@ -1,14 +1,5 @@
 # Recall past work
 
-## Contents
-
-- [When to use this stage](#when-to-use-this-stage)
-- [Find the knowledge store](#find-the-knowledge-store)
-- [Search past work](#search-past-work)
-- [Write the recall note](#write-the-recall-note)
-- [Choose the next stage](#choose-the-next-stage)
-- [Skills and agents](#skills-and-agents)
-
 ## When to use this stage
 
 Recall is the first stage for every request to `skill-builder`: a new target skill, a change, or a reported problem. It looks at what earlier runs learned so that this run reuses what worked and does not repeat what failed. [Test](test.md) returns problems it finds straight to [Plan](plan.md) without Recall, because the recall note from the start of the process still applies.
@@ -31,7 +22,7 @@ If either file is missing, stop and ask the user to restore it or give its new l
 The levels **covers**, **partly covers**, and **related**, and the marks (**anthropic**, **curated**, **reviewed**, **local**, **unaudited**), are defined in `skill-finder`, which every search below uses; judge against the request at this stage, and against the drafted design in [Plan](plan.md#decide-the-design).
 
 1. **Registry.** Search the registry for target skills (skills, tools, and procedures) with the same name, a similar purpose, or the same location. For each matching `active` row, check that its path exists on disk; a path is relative to the HowToAI workspace root, starts with `~`, or is absolute, as the registry's Format section states. When its Notes carry a template stamp ([item 11](../references/skill-types.md#every-target-skill)) older than the current design (the date `skill-design`'s house design or the client profile last changed), put a template rebuild offer in the recall note.
-   - **Path missing, copy found:** look for a folder of the same name in the personal skills folder `~/.claude/skills/` and in the workspace's skills folders (for example, `.claude/skills/` or `SKILLS/`). If exactly one is found, put it in the recall note as the possible new path; it replaces the row's path only if step 3 decides it is the user's own, and Learn then rewrites the row. If more than one is found, ask the user which one is the skill, grouped with the recall note's one line.
+   - **Path missing, copy found:** look for a folder of the same name in the personal skills folder `~/.claude/skills/` and in the workspace's skills folders (for example, `AGENTS/skills/`, `.claude/skills/`, or `SKILLS/`). If exactly one is found, put it in the recall note as the possible new path; it replaces the row's path only if step 3 decides it is the user's own, and Learn then rewrites the row. If more than one is found, ask the user which one is the skill, grouped with the recall note's one line.
    - **Path missing, no copy found:** tell the user in one line that the registered skill is no longer on disk, treat the request as a new target skill, and put the row in the recall note, so Learn sets it to `retired` with the reason "missing from disk".
 2. **Skill search.** For a new target skill, run the `skill-finder` skill (for example, `/skill-finder`) with the request as the need, every time, even when step 1 found a match, because an existing skill elsewhere may fit better; first tell the user in one line that the search takes a few minutes. For a change, a reported problem, or a supplied change plan, skip it: the target skill already exists. The registry search in step 1 and the lessons search in step 5 still run, read-only, for a supplied change plan too. `skill-finder` searches the user's own skills (installed, workspace, and the build destination's folder) and every approved marketplace and list (skills, plugins, agents, commands, hooks, mods, and MCP servers), and returns its candidate table. Never replace it with a keyword search of catalogs: that missed most fitting candidates in earlier runs (L-114). Recall never downloads, copies, or installs a match.
    - A connector or MCP server that the target skill could use instead of being replaced by it goes in the recall note as a tool, not a candidate; if the plan installs it, it is vetted like any candidate.
@@ -71,11 +62,3 @@ Check the rows in order and take the first that matches. "Covers" and "partly co
 | Only checking that a third-party skill, tool, or procedure works, with no change named | Go to [Plan](plan.md) with it as verification only; Build has `skill-finder` vet it, report-only, and nothing is copied or adapted |
 | A change to, or a problem with, a third-party skill, tool, or procedure, installed or not (a plugin's skill, a vendored or synced skill, a downloaded agent or hook) | Go to [Plan](plan.md) with the request as adapting that candidate, so [Build](build.md#before-writing) vets it before any file changes. Its installed files are never edited in place |
 | A new target skill, or remaking one | [Plan](plan.md), with the candidate table in the recall note; Plan's [Reuse decision](plan.md#decide-the-design) puts the candidates to the user against the drafted design |
-
-## Skills and agents
-
-- [skill-builder](../SKILL.md) — rules and vocabulary this stage applies.
-- [Learn](learn.md) — maintains the files this stage searches.
-- [Plan](plan.md) — the next stage, which uses the recall note.
-- `skill-finder` — the skill search in [Search past work](#search-past-work).
-- No dedicated recall agent is required.

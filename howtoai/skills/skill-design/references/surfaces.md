@@ -1,13 +1,5 @@
 # Surfaces
 
-## Contents
-
-- [What this file is](#what-this-file-is)
-- [Surface table](#surface-table)
-- [Token checklist](#token-checklist)
-- [Templates, not runtime](#templates-not-runtime)
-- [Skills and agents](#skills-and-agents)
-
 ## What this file is
 
 How Build applies the design tokens on each surface, and how Review checks them. HowToAI makes skills, tools (agents, plugins, mods, hooks, commands, MCP servers, connectors), and procedures; any of them can produce one of these surfaces, and the same reference applies to all. The values come from [design-tokens.json](../assets/design-tokens.json), shown on the [design reference](design-reference.html), whose surface guidance says what each surface looks like. A client profile's overrides, or a studio design exported as a profile, replace the house values where they set them ([Use the chosen design](../stages/source.md#use-the-chosen-design)).
@@ -44,9 +36,3 @@ Every HowToAI skill or tool that produces a page or report ships its own templat
 - `skill-design` builds that template, and rebuilds it when the design reference gets a new version or the client's design changes ([stages/redesign.md](../stages/redesign.md)). The outputs never call `skill-design` at runtime; a review of a rendered output during testing is a check, not a dependency.
 - Each template carries a stamp near its top, in the surface's comment form (an HTML or CSS comment, a TSX comment, a document property): `built from skill-design design-reference v<N> (<date>)`, `built from client profile <path> (<date>)` for a client template, or `built from studio design <slug> v<N> (<date>)` for one built to a studio design. `<N>` and `<date>` are the `version` and `date` that `tokens.py show` prints. `skill-builder` repeats the stamp in its registry row's Notes and compares it in Recall.
 - Each build or rebuild adds a row to [state/design-log.md](../state/design-log.md), which [stages/redesign.md](../stages/redesign.md) reads.
-
-## Skills and agents
-
-- [skill-design](../SKILL.md) - the skill this reference belongs to; [rules.md](rules.md) - the rules these checks apply.
-- `dataviz` - chart colors; `pptx`, `docx`, `pdf` - build and render those formats; `plugin-authoring` - builds mods.
-- `skill-builder` - stamps templates in its plans (`references/skill-types.md` item 11) and runs the design pass in Test.

@@ -313,7 +313,7 @@ def load_agenticskills(src: dict) -> list[dict]:
             loc = {"repo": f"https://github.com/{gh[0]}", "path": "", "ref": "HEAD"}
         e = entry(src["id"], link.split("/")[-1], f"{name}: {desc}", kind=kind, mark="curated",
                   author=by.group(1) if by else None, homepage=base + link,
-                  install=(f"npx skills add {npx.group(1)} (sends telemetry unless DISABLE_TELEMETRY=1), or copy its SKILL.md folder into ~/.claude/skills/" if npx else "See the page for setup"),
+                  install=(f"npx skills add {npx.group(1)} (sends telemetry unless DISABLE_TELEMETRY=1), or copy its SKILL.md folder into AGENTS/skills/ and link it with devmode.py link" if npx else "See the page for setup"),
                   loc=loc)
         return e, None
 

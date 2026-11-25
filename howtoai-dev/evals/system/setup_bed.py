@@ -40,7 +40,7 @@ WORKSPACE = {
 
 ## Skills and agents
 
-- `howtoai-dev` - the dev process (plan, tests first, build, review, deploy, learn): start every code change here with `dev-plan`. Settings in `.howtoai/dev/settings.json`, install record in `.howtoai/dev/install.md`.
+- `howtoai-dev` - the dev process (plan, tests first, build, review, deploy, learn): start every code change here with `dev-plan`. Settings in `AGENTS/howtoai/dev/settings.json`, install record in `AGENTS/howtoai/dev/install.md`.
 """,
 }
 
@@ -490,7 +490,7 @@ def with_workbooks(agents):
     audit = (Path(__file__).resolve().parents[2] / "AUDIT.md").read_text(encoding="utf-8")
     section = audit.split("\n## Workbooks text\n", 1)[1].split("```markdown\n", 1)[1].split("```", 1)[0]
     names = SETTINGS["workbooks"]["technologies"]
-    value = "{json:.howtoai/dev/settings.json#workbooks/technologies}"
+    value = "{json:AGENTS/howtoai/dev/settings.json#workbooks/technologies}"
     section = section.replace(value, ", ".join(names[:-1]) + ", and " + names[-1])
     entry, heading = "- [Skills and agents](#skills-and-agents)\n", "## Skills and agents\n"
     agents = agents.replace(entry, "- [Workbooks](#workbooks)\n" + entry, 1)
@@ -511,7 +511,7 @@ def build(out, fresh=False):
     if not fresh:
         settings = json.dumps(SETTINGS, indent=1) + "\n"
         write_tree(workspace, {
-            ".howtoai/dev/settings.json": settings,
+            "AGENTS/howtoai/dev/settings.json": settings,
             ".claude/settings.json": json.dumps(CLAUDE_SETTINGS, indent=1) + "\n",
         })
     write_tree(out, {"answer-key.json": json.dumps(ANSWER_KEY, indent=1) + "\n"})

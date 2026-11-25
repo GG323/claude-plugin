@@ -20,16 +20,25 @@ Commands
       [--git-version-control on|off] [--write]
       Previews the Dev mode entry in <workspace>/AGENTS.md and the pointer; writes both only
       with --write. Folders are relative to the workspace: source default AGENTS, plugins
-      default <source>/plugins. An option left out keeps the entry's current value; without
-      one, --git-version-control is required. Never runs git init, add, or commit.
-  link --source <skill folder or agent .md file> [--replace-link] [--write]
-      Previews the global link for one skill (<claude-dir>/skills/<name>) or agent
-      (<claude-dir>/agents/<name>.md); creates it only with --write. Never replaces a real
-      folder or file; replaces an existing link only with --replace-link. On Windows a skill
-      gets a directory junction and an agent a symbolic link.
-  unlink --dest <path in <claude-dir>/skills or /agents> [--write]
-      Previews removing one global link; removes it only with --write. Removes only the link,
-      never its target, and never a real folder or file.
+      default <source>/plugins. The plugins folder may instead be the absolute path of an
+      existing howtoai-mods clone (shared with the workspace that owns it; the pointer then
+      stays on that workspace). An option left out keeps the entry's
+      current value; without one, --git-version-control is required. Never runs git init,
+      add, or commit. A workspace root with no repository whose direct subfolders hold
+      repositories is a multi-repo layout: its root files are notes, not Git problems.
+  link --source <skill folder or agent .md file> [--into global|workspace] [--workspace <path>]
+      [--harness claude|agents|copilot] [--replace-link] [--write]
+      Previews the link for one skill (<root>/skills/<name>) or agent (<root>/agents/<name>.md);
+      creates it only with --write. <root> is <claude-dir> (global, the default), ~/.agents or
+      ~/.copilot, or <workspace>/.claude, .agents, .copilot with --into workspace (a skill that
+      belongs to that workspace only). Never replaces a real folder or file; replaces an
+      existing link only with --replace-link. On Windows a skill gets a directory junction and
+      an agent a symbolic link. Refuses a source inside a harness folder: harness folders hold
+      only links, and the files live in an AGENTS/ folder.
+  unlink --dest <link in a harness folder's skills/ or agents/> [--write]
+      Previews removing one link (global or in a workspace's .claude, .agents, .copilot);
+      removes it only with --write. Removes only the link, never its target, and never a real
+      folder or file.
   check-deps
       Whether the tools and skills the howtoai plugin needs are present.
   agents-md --workspace <path> [--replace-baseline] [--write]
@@ -66,6 +75,7 @@ REPARSE_MOUNT_POINT = 0xA0000003
 BASELINE_HEADING = "Markdown conventions"
 DEVMODE_HEADING = "Dev mode"
 SETTINGS = (("git_version_control", "Git version control"), ("dev_mode", "Dev mode"))
+HARNESS_FOLDERS = (".claude", ".agents", ".copilot")
 LABEL = re.compile(r"^- \*\*(Git version control|Dev mode|Source folder|Plugins folder):\*\*\s*(.+?)\s*$")
 
 
@@ -191,6 +201,48 @@ def check_relative(name, value):
     return v.strip("/")
 
 
+def is_marketplace_clone(path):
+    return os.path.isfile(os.path.join(path, ".claude-plugin", "marketplace.json")) and \
+        os.path.isdir(os.path.join(path, "howtoai"))
+
+
+def check_plugins_folder(value):
+    """A folder inside the workspace (relative), or an existing howtoai-mods clone anywhere (absolute)."""
+    if not os.path.isabs(os.path.expanduser(value)):
+        return check_relative("--plugins-folder", value)
+    path = os.path.normpath(os.path.abspath(os.path.expanduser(value)))
+    if not is_marketplace_clone(path):
+        raise BadArgs("--plugins-folder given as an absolute path must be an existing clone of the howtoai-mods "
+                      "marketplace (with .claude-plugin/marketplace.json and howtoai/), so it can be shared with "
+                      "another workspace: %s" % value)
+    return path.replace("\\", "/")
+
+
+def harness_root(a, workspace=None):
+    """The folder a link goes into: <home>/.<harness> (global), or <workspace>/.<harness>."""
+    name = "." + a.harness
+    if workspace:
+        return os.path.join(workspace, name)
+    return a.claude_dir if a.harness == "claude" else os.path.join(os.path.dirname(a.claude_dir), name)
+
+
+def in_harness_folder(source):
+    """True for <...>/<harness folder>/skills/<name> or <...>/<harness folder>/agents/<name>.md."""
+    parent = os.path.dirname(source)
+    return os.path.basename(parent).lower() in ("skills", "agents") and \
+        os.path.basename(os.path.dirname(parent)).lower() in HARNESS_FOLDERS
+
+
+def nested_repos(ws):
+    """Direct subfolders of the workspace that hold their own .git (folder or file)."""
+    try:
+        names = sorted(os.listdir(ws))
+    except OSError:
+        return []
+    return [os.path.join(ws, n) for n in names
+            if os.path.isdir(os.path.join(ws, n)) and os.path.exists(os.path.join(ws, n, ".git"))]
+
+
 def read_agents(ws):
     path = os.path.join(ws, "AGENTS.md")
     if not os.path.isfile(path):
@@ -206,7 +258,9 @@ def label_value(raw):
         raw = m.group(1).strip()
         if raw.startswith("<") and raw.endswith(">"):
             raw = raw[1:-1]
-    return raw.strip("`").strip().replace("\\", "/").strip("/")
+    raw = raw.strip("`").strip().replace("\\", "/")
+    # a leading "/" is dropped (relative folders), unless the value is an absolute shared clone
+    return raw.rstrip("/") if is_marketplace_clone(raw.rstrip("/") or "/") else raw.strip("/")
 
 
 def parse_entry(lines):
@@ -265,7 +319,8 @@ def resolved_paths(ws, setting):
     src = os.path.normpath(os.path.join(ws, setting["source_folder"]))
     plugins = os.path.normpath(os.path.join(ws, setting["plugins_folder"]))
     return {"workspace": ws, "source": src, "skills": os.path.join(src, "skills"), "agents": os.path.join(src, "agents"),
-            "docs": os.path.join(src, "docs"), "plugins": plugins}
+            "docs": os.path.join(src, "docs"), "plugins": plugins,
+            "plugins_shared": not inside(plugins, ws)}
 
 
 def repo_root(path):
@@ -290,12 +345,17 @@ def git_health(ws, setting):
     if setting["dev_mode"]:
         paths = resolved_paths(ws, setting)
         targets += [(key, paths[key], True) for key in ("skills", "agents", "docs", "plugins")]
-    repos = {}
+    repos, notes = {}, []
+    subrepos = [] if repo_root(ws) else nested_repos(ws)
     for key, path, is_folder in targets:
         root = repo_root(path)
         repos[key] = root
-        if not root:
+        if not root and subrepos and inside(path, ws):
+            notes.append("%s is at the workspace root, outside its repositories, so it stays local: %s" % (key, path))
+        elif not root:
             problems.append("%s is not in a Git repository: %s" % (key, path))
+        elif key == "plugins" and not os.path.isdir(path):
+            notes.append("plugins is not cloned yet, so its own repository is checked after the clone: %s" % path)
         elif git and not same(path, root):
             probe = os.path.join(os.path.realpath(path), ".devmode-probe") if is_folder else os.path.realpath(path)
             r = subprocess.run([git, "-c", "core.fsmonitor=false", "-C", root, "check-ignore", "-q", "--",
@@ -304,7 +364,8 @@ def git_health(ws, setting):
                 problems.append("%s is ignored by the repository %s: %s" % (key, root, path))
             elif r.returncode != 1:
                 problems.append("%s could not be checked in %s: %s" % (key, root, r.stderr.strip()))
-    return {"ok": not problems, "problems": problems, "repos": repos}
+    return {"ok": not problems, "problems": problems, "notes": notes, "repos": repos,
+            "layout": "multi-repo" if subrepos else "single-repo", "nested_repos": subrepos}
 
 
 def load_setting(a, workspace=None):
@@ -343,14 +404,14 @@ def cmd_status(a):
            "pointer_path": pointer_path(a.claude_dir), "pointer": pointer,
            "howtoai_root": HOWTOAI_ROOT, "git": git_health(ws, setting), "paths": paths, "links": links, "counts": counts}
     if paths:
-        res["exists"] = {k: os.path.isdir(v) for k, v in paths.items()}
+        res["exists"] = {k: os.path.isdir(v) for k, v in paths.items() if isinstance(v, str)}
     if needs:
         res.update(error=needs_error(needs), needs_setting=needs)
     out(res, 1 if needs else 0)
 
 
 def md_link(rel):
-    rel = rel.replace("\\", "/").strip("/") + "/"
+    rel = rel.replace("\\", "/").rstrip("/") + "/"  # rstrip only: an absolute shared plugins folder keeps its root
     return "[%s](%s)" % (rel, "<%s>" % rel if " " in rel else rel)
 
 
@@ -359,13 +420,13 @@ def devmode_block(on, src, plugins, git):
     git_line = "- **Git version control:** " + ("on" if git else "off")
     if on:
         text = ("Dev mode is on: the installed and created skills, agents, and tools are kept in this workspace's "
-                "files, under version control, and the global folders `~/.claude/skills/` and `~/.claude/agents/` hold "
-                "only links to them (a directory junction or symbolic link per skill, a symbolic link per agent)."
-                + git_text)
+                "files, under version control, and the global folders `~/.claude/skills/` and `~/.claude/agents/`, like "
+                "this workspace's `.claude`, `.agents`, and `.copilot` folders, hold only links to them (a directory "
+                "junction or symbolic link per skill, a symbolic link per agent)." + git_text)
         return ["## " + DEVMODE_HEADING, "", text, "",
                 git_line, "- **Dev mode:** on", "- **Source folder:** " + md_link(src), "- **Plugins folder:** " + md_link(plugins)]
     text = ("Dev mode is off: the installed skills, agents, and tools come from normal plugin installs, and created "
-            "ones are saved in the usual `.claude` folders." + git_text)
+            "ones are saved in this workspace's `AGENTS/` folder, with links in its `.claude`, `.agents`, and `.copilot` folders." + git_text)
     return ["## " + DEVMODE_HEADING, "", text, "", git_line, "- **Dev mode:** off"]
 
 
@@ -392,7 +453,7 @@ def cmd_set(a):
     prev = parse_entry(before)
     src = check_relative("--source-folder", a.source_folder) if a.source_folder else (prev or {}).get("source_folder", "AGENTS")
     if a.plugins_folder:
-        plugins = check_relative("--plugins-folder", a.plugins_folder)
+        plugins = check_plugins_folder(a.plugins_folder)
     elif prev and not a.source_folder:
         plugins = prev["plugins_folder"]
     else:
@@ -405,12 +466,15 @@ def cmd_set(a):
         raise Refused(needs_error(needs), needs_setting=needs)
     git = wanted["git_version_control"]
     lines, act = place(list(before), devmode_block(on, src, plugins, git), DEVMODE_HEADING,
-                       after=("Workspace layout",), before=(BASELINE_HEADING, "Skills and agents"))
+                       after=("Workspace layout",), before=(BASELINE_HEADING, "Installed skills"))
     setting = {"git_version_control": git, "dev_mode": on, "source_folder": src, "plugins_folder": plugins}
     old_pointer = read_pointer(a.claude_dir)
     pointed = ws
-    if not on and isinstance(old_pointer, dict) and holds_valid_setting(old_pointer.get("workspace")):
-        pointed = old_pointer["workspace"]  # dev mode off never takes another workspace's pointer
+    shared = not inside(os.path.join(ws, plugins), ws)
+    if (not on or shared) and isinstance(old_pointer, dict) and holds_valid_setting(old_pointer.get("workspace")) \
+            and not same(old_pointer["workspace"], ws):
+        # dev mode off, or dev mode on with another workspace's clone, never takes that workspace's pointer
+        pointed = old_pointer["workspace"]
     pointer = {"workspace": pointed, "howtoai_root": HOWTOAI_ROOT, "updated": a.as_of or datetime.date.today().isoformat()}
     pointer_changed = old_pointer is None or {k: v for k, v in old_pointer.items() if k != "updated"} != \
         {k: v for k, v in pointer.items() if k != "updated"}
@@ -421,7 +485,7 @@ def cmd_set(a):
            "diff": "\n".join(difflib.unified_diff(before, lines, "AGENTS.md", "AGENTS.md (new)", lineterm="")) if changed else "",
            "pointer_path": pointer_path(a.claude_dir), "pointer": pointer, "pointer_changed": pointer_changed,
            "git": git_health(ws, setting), "paths": resolved_paths(ws, setting)}
-    res["exists"] = {k: os.path.isdir(v) for k, v in res["paths"].items()}
+    res["exists"] = {k: os.path.isdir(v) for k, v in res["paths"].items() if isinstance(v, str)}
     res["written"] = False
     if a.write:
         if changed:
@@ -438,19 +502,31 @@ def cmd_set(a):
 
 def cmd_link(a):
     source = os.path.realpath(os.path.abspath(os.path.expanduser(a.source)))
+    into_ws = None
+    if a.into == "workspace":
+        if not a.workspace:
+            raise BadArgs("--into workspace needs --workspace <path>")
+        into_ws = os.path.abspath(os.path.expanduser(a.workspace))
+    root = harness_root(a, into_ws)
     if os.path.isdir(source):
         if not os.path.isfile(os.path.join(source, "SKILL.md")):
             raise Refused("%s is not a skill folder: it has no SKILL.md" % source)
-        kind, dest = "skill", os.path.join(a.claude_dir, "skills", os.path.basename(source))
+        kind, dest = "skill", os.path.join(root, "skills", os.path.basename(source))
     elif os.path.isfile(source) and source.lower().endswith(".md"):
-        kind, dest = "agent", os.path.join(a.claude_dir, "agents", os.path.basename(source))
+        kind, dest = "agent", os.path.join(root, "agents", os.path.basename(source))
     else:
         raise Refused("The source must be a skill folder (with SKILL.md) or an agent .md file: %s" % source)
-    ws, _, setting, _, needs = load_setting(a)
-    if needs:
+    if in_harness_folder(source):
+        raise Refused("%s is in a harness folder (%s). Harness folders hold only links: keep the skill or agent in "
+                      "an AGENTS/ folder (AGENTS/skills/<name>, AGENTS/agents/<name>.md) and link it from there."
+                      % (source, ", ".join(HARNESS_FOLDERS)), in_harness_folder=True)
+    ws, _, setting, _, needs = load_setting(a, into_ws)
+    if needs and not into_ws:  # a workspace link needs no Dev mode entry in that workspace
         raise Refused(needs_error(needs), needs_setting=needs)
-    paths = resolved_paths(ws, setting)
+    paths = resolved_paths(ws, setting) or (
+        {"source": os.path.join(into_ws, "AGENTS"), "plugins": os.path.join(into_ws, "AGENTS", "plugins")} if into_ws else None)
     res = {"ok": True, "write": bool(a.write), "kind": kind, "source": source, "dest": dest,
+           "into": a.into, "harness": a.harness,
            "link": "junction" if (kind == "skill" and IS_WINDOWS) else "symlink"}
     if paths:
         res["in_source"] = any(inside(source, p) for p in (paths["source"], paths["plugins"]) if os.path.exists(p))
@@ -485,8 +561,9 @@ def cmd_link(a):
 def cmd_unlink(a):
     dest = os.path.abspath(os.path.expanduser(a.dest))
     roots = [os.path.join(a.claude_dir, "skills"), os.path.join(a.claude_dir, "agents")]
-    if os.path.normcase(os.path.dirname(dest)) not in [os.path.normcase(r) for r in roots]:
-        raise Refused("Only links directly in %s or %s are removed: %s" % (roots[0], roots[1], dest))
+    if os.path.normcase(os.path.dirname(dest)) not in [os.path.normcase(r) for r in roots] and not in_harness_folder(dest):
+        raise Refused("Only links directly in a harness folder's skills/ or agents/ (global %s or %s, or a "
+                      "workspace's .claude, .agents, or .copilot) are removed: %s" % (roots[0], roots[1], dest))
     if not os.path.lexists(dest):
         out({"ok": True, "write": bool(a.write), "dest": dest, "action": "none", "state": "nothing there", "written": False})
     target = link_target(dest)
@@ -667,7 +744,7 @@ def cmd_agents_md(a):
                           "or change the reference in skill-audit.")
     else:
         block["state"] = "missing" if not cur else ("matches" if trim(lines[cur[1]:cur[2]]) == ref else "differs")
-        lines, block["action"] = place(lines, ref, BASELINE_HEADING, before=("Skills and agents",))
+        lines, block["action"] = place(lines, ref, BASELINE_HEADING, before=("Installed skills",))
     changed = lines != before
     res = {"ok": True, "write": bool(a.write), "agents_md": path, "blocks": [block], "changed": changed,
            "diff": "\n".join(difflib.unified_diff(before, lines, "AGENTS.md", "AGENTS.md (new)", lineterm="")) if changed else ""}
@@ -697,6 +774,9 @@ def main():
     s.add_argument("--write", action="store_true")
     l = sub.add_parser("link")
     l.add_argument("--source", required=True)
+    l.add_argument("--into", choices=["global", "workspace"], default="global")
+    l.add_argument("--workspace")
+    l.add_argument("--harness", choices=["claude", "agents", "copilot"], default="claude")
     l.add_argument("--replace-link", action="store_true")
     l.add_argument("--write", action="store_true")
     u = sub.add_parser("unlink")

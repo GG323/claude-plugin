@@ -118,16 +118,16 @@ class DevPlugin(Fake):
         return {r["id"]: r for r in out["results"]}
 
     def install(self):
-        put(os.path.join(self.ws, ".howtoai", "dev", "settings.json"),
+        put(os.path.join(self.ws, "AGENTS", "howtoai", "dev", "settings.json"),
             '{"workbooks": {"technologies": ["csharp", "dotnet", "docker", "terraform"]}}')
-        put(os.path.join(self.ws, ".howtoai", "dev", "install.md"), "# record\n")
+        put(os.path.join(self.ws, "AGENTS", "howtoai", "dev", "install.md"), "# record\n")
         put(os.path.join(self.home, "plugins", "installed_plugins.json"), '{"plugins": {"howtoai-dev@howtoai-mods": []}}')
-        put(os.path.join(self.ws, "AGENTS.md"), "# W\n\n## Skills and agents\n\n- none\n")
+        put(os.path.join(self.ws, "AGENTS.md"), "# W\n\n## Installed skills\n\n- none\n")
         got = self.statuses()
         self.assertEqual((got["D1"]["status"], got["D3"]["status"]), ("fail", "fail"))
         self.assertIn("csharp, dotnet, docker, and terraform", got["D1"]["text"])
         put(os.path.join(self.ws, "AGENTS.md"),
-            f"# W\n\n{got['D1']['text']}\n\n## Skills and agents\n\n{got['D3']['text']}\n")
+            f"# W\n\n{got['D1']['text']}\n\n## Installed skills\n\n{got['D3']['text']}\n")
 
     def test_applying_the_text_it_gives_makes_a_fresh_install_pass(self):
         self.install()

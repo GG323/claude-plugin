@@ -1,16 +1,5 @@
 # Choose the design source
 
-## Contents
-
-- [When this stage runs](#when-this-stage-runs)
-- [Look for a design already in place](#look-for-a-design-already-in-place)
-- [Decide the source](#decide-the-source)
-- [Questions for a client with their own design](#questions-for-a-client-with-their-own-design)
-- [Write or update the client profile](#write-or-update-the-client-profile)
-- [Use the chosen design](#use-the-chosen-design)
-- [Go to the mode](#go-to-the-mode)
-- [Skills and agents](#skills-and-agents)
-
 ## When this stage runs
 
 First in every run, from [Before you start](../SKILL.md#before-you-start), in both modes. It settles which design the output is built to or judged against: the studio's default design (normally the house design, the [design reference](../references/design-reference.html) and its [tokens](../assets/design-tokens.json)), a client design from the studio, a client profile, or the project's own style. The studio and its database are described in [The design studio](../SKILL.md#the-design-studio). This applies to every surface the skill covers, from a page to a slide deck or a mod. Judging a client's page against the house look would turn their deliberate choices into false findings, so this is decided before anything else.
@@ -84,9 +73,3 @@ Build and Review read the chosen design's spec, not only the shipped house files
 ## Go to the mode
 
 Build mode: read [stages/build.md](build.md). Review mode: read [stages/review.md](review.md). Read only that file.
-
-## Skills and agents
-
-- [skill-design](../SKILL.md) - the skill this stage belongs to.
-- [design-reference.html](../references/design-reference.html) and [design-tokens.json](../assets/design-tokens.json) - the house design.
-- [scripts/design_studio.py](../scripts/design_studio.py) - `list`, `show`, `import`, and `export` for studio designs.

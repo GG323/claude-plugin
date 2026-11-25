@@ -85,7 +85,7 @@
    "Documents and files: OneDrive folders may be read-only while syncing; failures are reported, not skipped.",
    "Data: the column check runs before any total is computed."
   ],
-  "placement": "Personal skills folder `~/.claude/skills/weekly-sales-report`, because it uses your own OneDrive and Gmail rather than one project's files.",
+  "placement": "This workspace's `AGENTS/skills/weekly-sales-report`, linked from `.claude/skills/weekly-sales-report`, the default place; it goes in the main development workspace's `AGENTS/` with a global link only if you ask for it in every workspace.",
   "effort": "A bundled Python script does the totals; the main agent writes the email text at normal effort.",
   "design": "Internal output (Excel and email), so no page design is needed and no design review applies.",
   "files": [

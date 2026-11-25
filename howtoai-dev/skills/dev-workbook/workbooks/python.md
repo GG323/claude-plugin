@@ -14,7 +14,6 @@
 - [Performance](#performance)
 - [Deployment and operations](#deployment-and-operations)
 - [Our situation](#our-situation)
-- [Skills and agents](#skills-and-agents)
 
 ## Header
 
@@ -85,7 +84,3 @@ Sources:
 ## Our situation
 
 - none yet
-
-## Skills and agents
-
-- `dev-workbook` - keeps this workbook; the dev skills read it through `workbook.py resolve`.

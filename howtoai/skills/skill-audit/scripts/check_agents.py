@@ -169,10 +169,6 @@ class Check:
         for i, text in h2:
             if slug(text) not in listed:
                 self.find("W3", i, "Section '%s' is missing from the contents list." % text, text)
-        if "skills-and-agents" not in listed:
-            self.find("W3", contents[0], "The contents list has no 'Skills and agents' entry.", "Contents")
-        if h2 and h2[-1][1].strip().lower() != "skills and agents":
-            self.find("W3", h2[-1][0], "'Skills and agents' is not the last section.", h2[-1][1])
 
     def links(self, d, path):
         contents = d.section("Contents") or (0, 0)
@@ -218,18 +214,20 @@ class Check:
     def skills_list(self, d):
         installed = installed_skills(self.global_dir)
         installed.update(installed_skills(os.path.join(self.workspace, ".claude")))
-        section = d.section("Skills and agents")
-        if section is None:
+        # The list is optional; when the workspace keeps one, it stays in sync.
+        heading = "Installed skills" if d.section("Installed skills") is not None else None
+        if heading is None:
             return installed
+        section = d.section(heading)
         listed = {}
         for i in range(*section):
             m = re.match(r"^\s*[-*]\s+\[?`([^`]+)`", d.lines[i]) or re.match(r"^\s*[-*]\s+\[([^\]`]+)\]", d.lines[i])
             if m:
                 listed[m.group(1).strip()] = i
         for name in sorted(set(installed) - set(listed)):
-            self.find("W4", section[0], "Installed but not listed: `%s`." % name, "Skills and agents")
+            self.find("W4", section[0], "Installed but not listed: `%s`." % name, heading)
         for name in sorted(set(listed) - set(installed)):
-            self.find("W4", listed[name], "Listed but not installed: `%s`; propose removal." % name, "Skills and agents")
+            self.find("W4", listed[name], "Listed but not installed: `%s`; propose removal." % name, heading)
         return installed
 
     def layout(self, d):

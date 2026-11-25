@@ -1,21 +1,10 @@
 # Build a page
 
-## Contents
-
-- [When this stage runs](#when-this-stage-runs)
-- [Read the brief](#read-the-brief)
-- [Write the copy, then plan the sections](#write-the-copy-then-plan-the-sections)
-- [Build from the house starter](#build-from-the-house-starter)
-- [Check the page](#check-the-page)
-- [Deliver](#deliver)
-- [Log the run](#log-the-run)
-- [Skills and agents](#skills-and-agents)
-
 ## When this stage runs
 
 From [stages/source.md](source.md) in build mode, with the design source decided; for a studio design, use the profile exported there ([Use the chosen design](source.md#use-the-chosen-design)). Before the first output of a run, read [references/rules.md](../references/rules.md) and [references/surfaces.md](../references/surfaces.md) in full, and the [design reference](../references/design-reference.html) for the look and its surface guidance; the values come from [design-tokens.json](../assets/design-tokens.json). Run `py -3 "${CLAUDE_SKILL_DIR}/scripts/tokens.py" show` and note the reference version and date.
 
-The output is HTML unless the brief names another surface (slide deck, Word document, mod, email); for another surface, follow its row in the [surface table](../references/surfaces.md#surface-table) in place of the HTML steps below, and keep the copy, check, and log steps. When the output is a template for another skill or tool, it is built once and filled by that tool's own script, as [Templates, not runtime](../references/surfaces.md#templates-not-runtime) sets out.
+The output is HTML unless the brief names another surface (slide deck, Word document, mod, email); for another surface, follow its row in the [surface table](../references/surfaces.md#surface-table) in place of the HTML steps below (build slide decks with the `pptx` skill, Word documents with `docx`, and mods with `plugin-authoring`), and keep the copy, check, and log steps. When the output is a template for another skill or tool, it is built once and filled by that tool's own script, as [Templates, not runtime](../references/surfaces.md#templates-not-runtime) sets out.
 
 ## Read the brief
 
@@ -63,12 +52,3 @@ Save the file where the user asked, or next to the brief's material. Publish it 
 ## Log the run
 
 Append one row to [state/design-log.md](../state/design-log.md) (create it from the header there if it is missing): the date from the system clock, the task in a few words, the output's path, its surface, the reference version from `tokens.py show`, the client profile path, the studio design as `studio:<slug> v<N>`, or `none`, and the verdict (`Approve`, or `Block` with the open `HIGH` count). For a rebuilt template, update its existing row instead of adding a second one.
-
-## Skills and agents
-
-- [skill-design](../SKILL.md) - the output contract this stage delivers to.
-- [scripts/page.py](../scripts/page.py) - `new`, `check`, and `adherence`; [scripts/tokens.py](../scripts/tokens.py) - `show` for the reference version.
-- [references/surfaces.md](../references/surfaces.md) - how each surface applies the tokens.
-- `pptx`, `docx` - slide decks and Word documents; `plugin-authoring` - mods.
-- `dataviz` - charts.
-- `artifact-design` - the page contract for published artifacts.

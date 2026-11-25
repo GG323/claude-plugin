@@ -1,23 +1,10 @@
 # Propose
 
-## Contents
-
-- [Steps](#steps)
-- [Skills and agents](#skills-and-agents)
-
 ## Steps
 
-`WORKBOOK` is the command [SKILL.md](../SKILL.md#routes) defines.
+For a new or corrected fact from a dev step, a review finding, `dev-learn`, or the user: one statement in the right workbook and layer, written only after a clear yes. `WORKBOOK` is the command [SKILL.md](../SKILL.md#routes) defines.
 
-For a new or corrected fact from a dev step, a review finding, `dev-learn`, or the user.
-
-1. Check it is technology, not process, before anything else: would it still be true outside this dev process? If it says when, in what order, or with whose approval something happens, it is process, even when it is the user's own preference ("always ask me before changing the Dockerfile"). Hand it to the `dev-learn` skill by name with the user's words, the technology, and why it is process (an enforceable one may become a hook rule in the dev settings), and tell the user where it went. When `dev-learn` is not installed, tell the user the rule was not recorded and give them its text to keep. Skip steps 2 to 4.
-2. Decide the workbook and layer. The workbook is the technology the fact is about (a base image is a Docker fact, even for a .NET app). The layer is **project** for this project's choices and facts (the default) or **user** for the user's own preferences across projects. Base workbooks change only through `skill-builder` when the plugin is built.
-3. Preview it: `WORKBOOK propose --workspace "<workspace>" --tech <name> --section <slug> --text "<one or two sentences>" --source "<link or file>" [--level MUST|SHOULD|"MUST NOT"] [--tags <tags>] [--layer project|user] [--replaces <ID>]`. For a fact from the project's own files, the source is the file name in backticks, for example `` `Dockerfile` ``. A replacement keeps the replaced statement's level unless `--level` gives another. Give it one to three tags from [format.md](../references/format.md#tags), so a search finds it. The preview gives the new ID, likely duplicates, and process wording. For a duplicate, propose a replacement of that ID instead; for flagged wording, recheck step 1. The first write to a project or user workbook creates it with only the sections it uses.
+1. **Technology, not process**, checked first: would it still be true outside this dev process? If it says when, in what order, or with whose approval something happens, it is process, even when it is the user's own preference ("always ask me before changing the Dockerfile"). Hand it to the `dev-learn` skill by name with the user's words, the technology, and why it is process (an enforceable one may become a hook rule in the dev settings), and tell the user where it went. When `dev-learn` is not installed, tell the user the rule was not recorded and give them its text to keep. Skip steps 2 to 4.
+2. **Workbook and layer.** The workbook is the technology the fact is about (a base image is a Docker fact, even for a .NET app). The layer is **project** for this project's choices and facts (the default) or **user** for the user's own preferences across projects. Base workbooks change only through `skill-builder` when the plugin is built. A fact true only for one version goes to that version's project workbook, `--tech <name>@<key>`, once [Create](create.md#steps) has made it; a choice that holds for every version goes to `--tech <name>`.
+3. **Preview:** `WORKBOOK propose --workspace "<workspace>" --tech <name> --section <slug> --text "<one or two sentences>" --source "<link or file>" [--level MUST|SHOULD|"MUST NOT"] [--tags <tags>] [--layer project|user] [--replaces <ID>]`. For a fact from the project's own files, the source is the file name in backticks, for example `` `Dockerfile` ``. A replacement keeps the replaced statement's level unless `--level` gives another. Give one to three tags from [format.md](../references/format.md#tags), so a search finds it. The preview gives the new ID, likely duplicates, and process wording: for a duplicate, propose a replacement of that ID instead; for flagged wording, recheck step 1. The first write to a project or user workbook creates it with only the sections it uses.
 4. Show the user the statement line (and, for a replacement, the old text) and ask "Add this to the <layer> <technology> workbook?". After a clear yes, run the same command with `--write` (and `--allow-process-wording` only when the user agrees the flagged words describe the technology). Secrets are always refused.
-
-A fact true only for one version goes to that version's project workbook: `--tech <name>@<key>`, once [Create](create.md#steps) has made it. A choice that holds for every version goes to `--tech <name>`.
-
-## Skills and agents
-
-- `dev-workbook` - this route's skill; `dev-learn` sends technology fixes here and receives process instructions this route refuses.

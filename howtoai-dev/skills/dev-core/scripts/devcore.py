@@ -12,12 +12,12 @@ Usage (Python 3, standard library only; every command prints one JSON object):
 root        Finds the workspace root: the nearest folder at or above --cwd (default: the current
             folder) that holds AGENTS.md or CLAUDE.md.
 settings    Merges the schema defaults, the user file (default ~/.claude/howtoai/dev-settings.json),
-            and the project file (<workspace>/.howtoai/dev/settings.json). Prints the merged values,
+            and the project file (<workspace>/AGENTS/howtoai/dev/settings.json). Prints the merged values,
             the source of each top-level key, and whether the project is configured.
 setup       Validates --values (a JSON object of project settings), or the same JSON read from the
             --values-file F (UTF-8), against the schema. Give exactly one of the two. Without
             --write it prints the file it would write (a preview); with --write it writes
-            <workspace>/.howtoai/dev/settings.json, or with --scope user the user defaults file.
+            <workspace>/AGENTS/howtoai/dev/settings.json, or with --scope user the user defaults file.
             Values that look like secrets are refused.
 new-change  Creates <workspace>/<plan_folder>/<date>-<slug>/state.json and rebuilds INDEX.md.
             An existing folder gets a -2, -3, ... suffix. The date comes from the system clock
@@ -29,17 +29,17 @@ state       Prints a change's state.json. With --patch it applies the patch firs
                "increment": {"review": 1}}
             Stage changes are recorded in history. The index is rebuilt after every write.
             An approval with "by": "user" needs "reply", the user's reply word for word. When
-            <workspace>/.howtoai/dev/replies.jsonl exists (written by the dev-reply-log hook on each
+            <workspace>/AGENTS/howtoai/dev/replies.jsonl exists (written by the dev-reply-log hook on each
             user prompt, as a sha256 of the normalized text, never the text), the reply must match an
             entry newer than the change's last user approval, or the patch is refused. Without that
             log the approval is recorded with "unverified": true and a warning is printed.
             A move from tests-first to build is refused when git shows files changed since the
-            tests-first stage outside testing.test_globs, the plan folder, and .howtoai/; without
+            tests-first stage outside testing.test_globs, the plan folder, and AGENTS/ (tooling and howtoai state); without
             git the move is recorded with "unchecked" and a warning.
 index       Rebuilds <workspace>/<plan_folder>/INDEX.md in full from every state.json.
 
 Exit code 0 on success; 1 with {"ok": false, "error": "..."} on any error. Nothing is written
-outside <workspace>/<plan_folder>/ and <workspace>/.howtoai/dev/.
+outside <workspace>/<plan_folder>/ and <workspace>/AGENTS/howtoai/dev/.
 """
 
 import argparse
@@ -167,8 +167,27 @@ def merge(base, over):
     return result
 
 
+STATE_FOLDER = "howtoai"  # the howtoai state folder, inside the workspace's AGENTS/ folder
+
+
+def agents_dir(ws):
+    """The workspace's AGENTS/ folder in the case it exists in (Agents/ counts), else <ws>/AGENTS."""
+    try:
+        for name in os.listdir(ws):
+            if name.lower() == "agents" and os.path.isdir(os.path.join(ws, name)):
+                return os.path.join(ws, name)
+    except OSError:
+        pass
+    return os.path.join(ws, "AGENTS")
+
+
+def state_dir(ws, *parts):
+    """<workspace>/AGENTS/howtoai/<parts>: settings, install record, reply log, workbooks, deploy, cache."""
+    return os.path.join(agents_dir(ws), STATE_FOLDER, *parts)
+
+
 def project_file(ws):
-    return os.path.join(ws, ".howtoai", "dev", "settings.json")
+    return state_dir(ws, "dev", "settings.json")
 
 
 def user_file(arg):
@@ -266,7 +285,11 @@ def new_change(ws, title, slug, date, now, user_arg=None):
             "index": index, "changes": count}
 
 
-REPLY_LOG = os.path.join(".howtoai", "dev", "replies.jsonl")
+REPLY_LOG = os.path.join("AGENTS", STATE_FOLDER, "dev", "replies.jsonl")  # as shown to users
+
+
+def reply_log(ws):
+    return state_dir(ws, "dev", "replies.jsonl")
 
 
 def reply_hash(text):
@@ -291,7 +314,7 @@ def check_user_approval(entry, state, ws):
     if not isinstance(reply, str) or not reply.strip():
         raise Fail('an approval "by": "user" needs "reply", the user\'s reply word for word: '
                    "ask, wait for the answer, then record it")
-    log = os.path.join(ws, REPLY_LOG) if ws else None
+    log = reply_log(ws) if ws else None
     if not log or not os.path.isfile(log):
         entry["unverified"] = True
         entry["at"] = now_iso()  # the real clock here too
@@ -324,7 +347,7 @@ def check_user_approval(entry, state, ws):
 
 def tests_first_changes(state, ws, user_arg):
     """Files git shows changed since the tests-first stage outside the test globs, the plan folder, and
-    .howtoai/; None when git cannot tell."""
+    AGENTS/; None when git cannot tell."""
     since = _when(next((h["at"] for h in reversed(state.get("history", [])) if h.get("stage") == "tests-first"), ""))
     git = ["git", "-c", "core.quotepath=off", "-c", f"safe.directory={ws}", "-C", ws]
     try:
@@ -336,7 +359,7 @@ def tests_first_changes(state, ws, user_arg):
     if since is None or top.returncode or status.returncode:
         return None
     settings, _ = load_settings(ws, user_arg)
-    keep = (".howtoai/", settings["plan_folder"] + "/")
+    keep = ("AGENTS/", settings["plan_folder"] + "/")
     globs = settings["testing"]["test_globs"]
     found, parts = [], iter(status.stdout.split("\0"))
     for part in parts:
@@ -346,7 +369,7 @@ def tests_first_changes(state, ws, user_arg):
             next(parts, None)  # a rename or copy is followed by its old path
         path = os.path.join(top.stdout.strip(), part[3:])
         rel = os.path.relpath(path, ws).replace(os.sep, "/")
-        if rel.startswith("../") or rel.startswith(keep) or any(
+        if rel.startswith("../") or rel.startswith(keep) or rel.lower().startswith("agents/") or any(
                 fnmatch.fnmatch(rel, g) or fnmatch.fnmatch("/" + rel, g) for g in globs):
             continue
         if not os.path.exists(path) or os.path.getmtime(path) > since.timestamp():

@@ -1,15 +1,5 @@
 # Check brief
 
-## Contents
-
-- [Start the checker](#start-the-checker)
-- [Your role](#your-role)
-- [Inputs](#inputs)
-- [The checks](#the-checks)
-- [Return](#return)
-- [Rerun](#rerun)
-- [Skills and agents](#skills-and-agents)
-
 ## Start the checker
 
 [Test](../stages/test.md#check) runs the checks below through a **checker**: a fresh built-in general-purpose subagent (in Claude Code, the Agent tool's `general-purpose` type), not a custom agent file. It starts without this conversation, so it judges the files as they are, not what the author meant them to say. This file is the only copy of the check list; Test and the checker both read it here.
@@ -59,7 +49,7 @@ The numbers stay fixed, so the main agent can ask for a rerun by number.
 5. **Output contract.** The output contract separates the deliverable from its report and states audience, format, and delivery. A document-like deliverable has a fixed structure, presentation, and format per the [standardized-output defaults](../SKILL.md#output-contract), or the approved plan's reason for departing from them.
 6. **Stages.** If the workflow is split into stages, the files follow [Split the workflow into stages](../stages/build.md#split-the-workflow-into-stages): `SKILL.md` holds the overview, the shared rules, and the sections that rule keeps there; each stage file owns its own instructions and handoffs; and no instructions are split across files.
 7. **One name per thing.** The instructions use one name per thing, following the stage, section, and step terms in [Vocabulary](../SKILL.md#vocabulary).
-8. **Feedback.** The target has the **Feedback** section, last before `Skills and agents`, sending changes to `skill-builder` by name.
+8. **Feedback.** The target has the **Feedback** section, as the last section, sending changes to `skill-builder` by name.
 9. **State and sources.** Planned `state/` has defined seeding and update/prune rules; source links and paths are reachable, or the target asks the user when they fail.
 10. **Requirements.** Every requirement the plan applied from [skill-types.md](skill-types.md) is written where [Build](../stages/build.md#instructions) places it, including privacy: no credentials, tokens, or real personal data in the target's files, examples, or test cases.
 11. **Test cases.** Existing test cases in `evals/` follow [test-cases.md](test-cases.md), including case and grader names.
@@ -88,9 +78,3 @@ Return one table with a row for every check you were asked to run, then two shor
 ## Rerun
 
 When the main agent sends check numbers to run again after its fixes, run only those checks on the current files and return the same table for them.
-
-## Skills and agents
-
-- [Test](../stages/test.md#check) — starts the checker, fixes what fails, and sends failed checks back here for a rerun.
-- The checker is the harness's built-in general-purpose subagent; no custom agent definition is required.
-- [skill-builder](../SKILL.md), [Build](../stages/build.md), [skill-types.md](skill-types.md), and [test-cases.md](test-cases.md) — the rules the checks compare the target with.

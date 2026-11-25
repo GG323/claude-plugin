@@ -1,18 +1,5 @@
 # Markdown conventions reference
 
-## Contents
-
-- [Markdown conventions](#markdown-conventions)
-  - [Markdown structure](#markdown-structure)
-  - [Links and sources](#links-and-sources)
-  - [Instruction flow](#instruction-flow)
-- [Extended conventions](#extended-conventions)
-  - [Naming](#naming)
-  - [Vocabulary](#vocabulary)
-  - [Rules with reasons and examples](#rules-with-reasons-and-examples)
-- [Which version applies](#which-version-applies)
-- [Skills and agents](#skills-and-agents)
-
 ## Markdown conventions
 
 These conventions apply to every Markdown file in this workspace, including `AGENTS.md`, skills, agents, and tool documentation, both when reading and when writing them.
@@ -22,7 +9,7 @@ These conventions apply to every Markdown file in this workspace, including `AGE
 Every Markdown file starts with its title, followed by a `## Contents` section before the main body. Where the format requires frontmatter (for example, a Claude Code `SKILL.md`), the frontmatter comes first, then the title and the contents list.
 
 - The contents list links every major section and stays in sync with the headings. In short documents it is short, but it is never omitted.
-- The contents list includes a `Skills and agents` entry. That section is the last section of the file and lists the relevant skills and agents, or states that none apply.
+- Exception: an agent-read file of a skill or agent (a `SKILL.md`, its routes, stages, and references, or an agent definition) under 100 lines has no Contents list. The user decided this on 2026-11-24, to keep agent context small.
 - Heading levels show how sections relate: one `#` title, each subsection nested one level under its parent, and no skipped levels.
 - A line starting with `///` is a note for AI agents in files that are primarily user work docs, such as how to work with the file. Agents follow it; the `command-pane` Today pane hides it (and `<!-- -->` blocks), so it never shows as a task.
 
@@ -75,7 +62,7 @@ Instruction files that describe a procedure use these words, one meaning each:
 | Rule | Reason | Example |
 | --- | --- | --- |
 | Title, then `## Contents` | A reader and an agent see the structure before the detail. | `# Invoice summary`, then `## Contents` |
-| `Skills and agents` is the last section | One fixed place shows every dependency. | "- `xlsx` — reads the workbook back." |
+| Short agent-read skill and agent files have no Contents list | Every line loads into the agent's context, and a short file is read whole anyway. | A 40-line `stages/plan.md` starts with its title and goes straight to the steps. |
 | Web information links to the live page | A local copy goes stale without warning. | `[skills docs](https://code.claude.com/docs/en/skills)` |
 | Own files are linked; everything else is code | A global skill runs in every workspace, so a link to another folder breaks. | `[Plan](stages/plan.md)`, but `` `skill-creator` `` |
 | A jump has a link; consecutive sections have none | Agents read in order; an unlinked jump is missed, and a needless link invites skipping. | `If no AGENTS.md exists, go to [Create AGENTS.md](#create-agentsmd).` |
@@ -88,6 +75,3 @@ Instruction files that describe a procedure use these words, one meaning each:
 - For the global folder, which has no `AGENTS.md`, the section above applies.
 - The extended conventions apply in both cases, because `AGENTS.md` does not carry them.
 
-## Skills and agents
-
-- [skill-audit](../SKILL.md) owns this file and checks files against it; [checks.md](checks.md) says how. Its workspace audit copies the `Markdown conventions` section into `AGENTS.md`.

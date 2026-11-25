@@ -1,12 +1,5 @@
 # Skill index
 
-## Contents
-
-- [When this stage runs](#when-this-stage-runs)
-- [Rebuild the index](#rebuild-the-index)
-- [Record the result](#record-the-result)
-- [Skills and agents](#skills-and-agents)
-
 ## When this stage runs
 
 This stage rebuilds the search index that `skill-finder` ships with, so searches for existing skills, plugins, and tools stay current. It runs after [Workspace audit](workspace-audit.md) in every scheduled and on-request run. When the user asks only to rebuild or refresh the skill index, it is the only stage. It changes no audited file; it writes only `skill-finder`'s `index/` folder, the one exception to the read-only rule.
@@ -24,10 +17,3 @@ This stage rebuilds the search index that `skill-finder` ships with, so searches
 1. Write the skill index line: "Skill index: N entries, M plugin repositories read this run, K still unread; failed sources: ... (or none)", or the skipped result. [Report](report.md) puts it in the chat summary and the run log.
 2. The rebuilt index reaches other users only when `skill-finder`'s `index/` folder is committed in its repository. Say so in an on-request run; never commit in a scheduled run.
 3. When the skill index was the only stage requested, end the run here with the skill index line as the summary. Skip the Report stage. Otherwise, pass the run folder and the skill index line to the Report stage: read [stages/report.md](report.md).
-
-## Skills and agents
-
-- [skill-audit](../SKILL.md) — the rules this stage follows.
-- [Plugin audit](plugin-audit.md) — the stage before this one; [Report](report.md) — the next stage.
-- `skill-finder` — owns the index and the script this stage runs.
-- No agents are required.

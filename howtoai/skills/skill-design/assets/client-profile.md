@@ -7,7 +7,6 @@ Written by `skill-design` with the user's approval. It records only where this c
 - [Decisions](#decisions)
 - [Font links](#font-links)
 - [Token overrides](#token-overrides)
-- [Skills and agents](#skills-and-agents)
 
 - **Source of truth:** <house | client design at <path or link> | house with client brand>
 - **Updated:** <YYYY-MM-DD>
@@ -45,7 +44,3 @@ Only tokens that change. `page.py new --profile` appends this block after the ho
   /* --accent: #5fd3a8; */
 }
 ```
-
-## Skills and agents
-
-- `skill-design` - writes and reads this profile; Build and Review use it in place of the house design reference.

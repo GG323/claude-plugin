@@ -1,16 +1,5 @@
 # Review a page
 
-## Contents
-
-- [When this stage runs](#when-this-stage-runs)
-- [Resolve the scope](#resolve-the-scope)
-- [Recon the page's own style](#recon-the-pages-own-style)
-- [Inspect](#inspect)
-- [Rank and write the report](#rank-and-write-the-report)
-- [After the report](#after-the-report)
-- [Log the run](#log-the-run)
-- [Skills and agents](#skills-and-agents)
-
 ## When this stage runs
 
 From [stages/source.md](source.md) in review mode, with the design source decided; for a studio design, use the profile exported there ([Use the chosen design](source.md#use-the-chosen-design)). Read [references/rules.md](../references/rules.md) and [references/surfaces.md](../references/surfaces.md) in full. When the output is judged against the house design or a client profile, also read the [design reference](../references/design-reference.html) and run `py -3 "${CLAUDE_SKILL_DIR}/scripts/tokens.py" show` for its version and date; the values come from [design-tokens.json](../assets/design-tokens.json). For a surface that is not HTML (slide deck, Word document, mod), review it by its row in the [surface table](../references/surfaces.md#surface-table): render or screenshot it where possible, otherwise use the [token checklist](../references/surfaces.md#token-checklist) and say so in Scope. A review changes nothing: it reads, renders, and reports, and edits only when the user then asks for the fixes.
@@ -47,10 +36,3 @@ Identify the stack (plain HTML, a framework, Tailwind), its tokens, and its comp
 ## Log the run
 
 Append one row to [state/design-log.md](../state/design-log.md) (create it from the header there if it is missing): the date from the system clock, `review` and what was reviewed, the output's path, its surface, the reference version it was judged against (or `own style`), the client profile path, the studio design as `studio:<slug> v<N>`, or `none`, and the verdict. When the output already has a row (a template), update that row's verdict and date instead.
-
-## Skills and agents
-
-- [skill-design](../SKILL.md) - the skill this stage belongs to.
-- [scripts/page.py](../scripts/page.py) - `check` and `adherence`; [scripts/tokens.py](../scripts/tokens.py) - `show`.
-- [references/surfaces.md](../references/surfaces.md) - how each surface is checked.
-- `interfaces:better-interface` - optional second review.

@@ -7,18 +7,6 @@ allowed-tools: Bash(py -3 "${CLAUDE_SKILL_DIR}/scripts/*" *) Bash(uv run --no-pr
 
 # Skill audit
 
-## Contents
-
-- [The process](#the-process)
-- [Before you start](#before-you-start)
-- [Rules for every stage](#rules-for-every-stage)
-- [Output](#output)
-- [Verify the output](#verify-the-output)
-- [Common failures](#common-failures)
-- [What it can't do](#what-it-cant-do)
-- [Feedback](#feedback)
-- [Skills and agents](#skills-and-agents)
-
 ## The process
 
 One run audits every target: the global folder and each workspace, or, in candidate mode, the one candidate folder. The stages run in this order, each over all targets. Read only the file for the current stage.
@@ -96,15 +84,3 @@ Before publishing, `render_report.py render` validates the run file and stops on
 ## Feedback
 
 If the user asks to change how this skill works or reports a problem with it, use the `skill-builder` skill (for example, `/skill-builder`) to plan and apply the change. If `skill-builder` is unavailable, agree the change with the user first, keep it as small as the problem needs, and check the skill afterwards.
-
-## Skills and agents
-
-- [stages/discover.md](stages/discover.md), [stages/tool-audit.md](stages/tool-audit.md), [stages/instruction-audit.md](stages/instruction-audit.md), [stages/workspace-audit.md](stages/workspace-audit.md), [stages/plugin-audit.md](stages/plugin-audit.md), [stages/report.md](stages/report.md), [stages/skill-index.md](stages/skill-index.md) — this skill's stages.
-- `skill-finder` — its index is rebuilt in [Skill index](stages/skill-index.md); it also runs this skill in candidate mode on an isolated candidate folder when it vets a skill, tool, or procedure before install, reuse, or adaptation, and judges the result.
-- [references/markdown-conventions.md](references/markdown-conventions.md) and [references/checks.md](references/checks.md) — the conventions and the checks.
-- [scripts/find_workspaces.py](scripts/find_workspaces.py), [scripts/check_md.py](scripts/check_md.py), [scripts/check_config.py](scripts/check_config.py), [scripts/check_agents.py](scripts/check_agents.py), [scripts/check_plugins.py](scripts/check_plugins.py), [scripts/render_report.py](scripts/render_report.py) — the bundled scripts; [assets/report-template.html](assets/report-template.html) — the report page.
-- [state/run-log.md](state/run-log.md), [state/exceptions.md](state/exceptions.md), [state/exclusions.md](state/exclusions.md) — run state.
-- `skill-builder` — recommended in the report for findings that need it, and maintains this skill, as described in [Feedback](#feedback).
-- `/skill-doctor` and `/doctor` — Claude Code's built-in commands, recommended in the report.
-- `artifact-design` — loaded before publishing where the harness asks for it.
-- No custom agent definition is needed; the review subagents are task-scoped.

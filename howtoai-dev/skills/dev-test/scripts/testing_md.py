@@ -39,7 +39,7 @@ SECRET = re.compile(r"((password|pwd|secret|token|apikey|api_key|accountkey|shar
 FIELDS = [("run", "Run"), ("environment", "Environment detected"), ("data", "Test data used"),
           ("results", "Results"), ("coverage", "Coverage"), ("flaky", "Flaky tests"),
           ("gaps", "Known implementation gaps"), ("untested", "Untested neighbours")]
-SKIP_DIRS = {".git", "bin", "obj", "node_modules", ".venv", "venv", "__pycache__", "dev-plans", ".howtoai"}
+SKIP_DIRS = {".git", "bin", "obj", "node_modules", ".venv", "venv", "__pycache__", "dev-plans"}
 
 
 class Fail(Exception):
@@ -127,7 +127,7 @@ def load_globs(ws, user_file):
 def test_dirs(ws, globs):
     found = set()
     for root, dirs, files in os.walk(ws):
-        dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+        dirs[:] = [d for d in dirs if d not in SKIP_DIRS and not (root == ws and d.lower() == "agents")]
         rel = os.path.relpath(root, ws).replace("\\", "/")
         for f in files:
             if f == "TESTING.md":

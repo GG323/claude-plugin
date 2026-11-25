@@ -12,7 +12,6 @@
   - [Run and fix](#run-and-fix)
   - [Design pass](#design-pass)
   - [Save and deliver](#save-and-deliver)
-- [Skills and agents](#skills-and-agents)
 
 ## Check and design tests
 
@@ -61,7 +60,7 @@ Offer checks only when no test adds useful evidence.
 
 ### How tests run
 
-**Test copy.** Tests run against a copy of the target skill in the personal skills folder, `~/.claude/skills/<name>/` (on Windows `%USERPROFILE%\.claude\skills\<name>\`), so the skill is discoverable and `${CLAUDE_SKILL_DIR}` points to a real installed folder. Other kinds go where the harness discovers them: a subagent in `~/.claude/agents/`, a plugin through `claude --plugin-dir <plugin-directory>`, and a hook, settings change, or MCP configuration where the approved plan or the `update-config` handoff put it. Before the first test, sync the target skill's current files into that folder, replacing an earlier copy of the same skill. Sync again after every fix round, because fixes are made in the source files. Before each sync, delete any `__pycache__` folder in the source files, because it is not part of the skill. Skip the copy when the target skill already lives in, or is linked into, that folder. If the folder holds a different skill with the same name, stop and return to [Plan](plan.md).
+**Test copy.** Tests run against a copy of the target skill in the personal skills folder, `~/.claude/skills/<name>/` (on Windows `%USERPROFILE%\.claude\skills\<name>\`), so the skill is discoverable and `${CLAUDE_SKILL_DIR}` points to a real installed folder. Other kinds go where the harness discovers them: a subagent in `~/.claude/agents/`, a plugin through `claude --plugin-dir <plugin-directory>`, and a hook, settings change, or MCP configuration where the approved plan or the `update-config` handoff put it. Before the first test, sync the target skill's current files into that folder, replacing an earlier copy of the same skill. Sync again after every fix round, because fixes are made in the source files. Before each sync, delete any `__pycache__` folder in the source files, because it is not part of the skill. Skip the copy when the target skill already lives in, or is linked into, that folder, or is linked into the workspace's `.claude/skills/` (or `.agents/`, `.copilot/`), which the harness already discovers for the workspace the tests run in; a second copy would load it twice. If the folder holds a different skill with the same name, stop and return to [Plan](plan.md).
 
 **Test outputs.** All of this run's test outputs go in `<run>/` in the [sandbox](../SKILL.md#vocabulary), unless the plan names another place; `<run>` is the time Test started, as `<YYYYMMDD-HHMM>`, read from the system clock. Each test writes only inside its own subfolder, `<run>/<test-id>/`, and a rerun in a fix round writes in a new one (`<test-id>-r2`), so this run's outputs stay apart from earlier runs, earlier rounds, Build's `baseline/` copy, and Plan's probes. New test cases and their input files wait in `<run>/cases/<case-name>/`, in the layout of [references/test-cases.md](../references/test-cases.md), until [Save and deliver](#save-and-deliver) saves the approved ones in `evals/`. [Learn](learn.md#clean-up) deletes the sandbox after delivery, so the delivery report must carry the test evidence.
 
@@ -172,13 +171,3 @@ When the target's deliverable, or something it produces (a page, report, dashboa
 
    Suggest refining it after real use.
 5. Go to [Learn](learn.md).
-
-## Skills and agents
-
-- [skill-builder](../SKILL.md) — rules, vocabulary, and feature definitions checked here.
-- [Plan](plan.md) — receives problems that change the approved plan, and repeated failures the user chooses to revise; [Learn](learn.md) — the next stage after delivery.
-- [references/check-brief.md](../references/check-brief.md) — the check list and the checker's brief; [references/skill-types.md](../references/skill-types.md) and [references/test-cases.md](../references/test-cases.md) — the requirements checked here and the test-case format; `grilling` — the wording by technical level the delivery follows.
-- The checker and the test subagents are the harness's built-in general-purpose subagents; no custom agent definition is required.
-- `skill-design` — reviews one HTML test output in [Design pass](#design-pass).
-- `update-config` — places a hook or settings change that Test then checks and tests where it put it.
-- The local scheduled-tasks tools and `schedule` — create a scheduled procedure's unattended run in [Save and deliver](#save-and-deliver).

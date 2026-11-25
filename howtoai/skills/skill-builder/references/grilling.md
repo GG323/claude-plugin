@@ -1,15 +1,5 @@
 # Grilling the request
 
-## Contents
-
-- [What grilling is for](#what-grilling-is-for)
-- [Crucial items](#crucial-items)
-- [Default items](#default-items)
-- [What the items mean for each kind](#what-the-items-mean-for-each-kind)
-- [Safest choices](#safest-choices)
-- [Run the method](#run-the-method)
-- [Skills and agents](#skills-and-agents)
-
 ## What grilling is for
 
 Grilling finds the details the target skill cannot be built without, before the plan is drafted. It works the same for a skill, a tool (subagent, hook, mod, plugin, connector workflow), and an automated process. It covers the five standard questions: from where and to where, from what and to what, the goal, how much thinking is needed, and the steps with the goal of each.
@@ -39,7 +29,7 @@ An item is answered only when the request or the conversation says it, or the pr
 | **Schedule** (only for a scheduled trigger) | Monday 08:00 in the user's time zone, read from the system clock | "Runs every Monday at 8:00." |
 | **Name and trigger phrases** | A short hyphenated name from the goal; triggers from the user's own words | "Named `weekly-report`; starts when you say 'make my weekly report'." |
 | **Language and tone** | The language of the request; the tone of the user's examples, else plain and friendly | "Written in English, plain and friendly." |
-| **Placement** | The project folder when it uses this project's files; personal (`~/.claude`) otherwise; the plugin only for the HowToAI pack | "Available in this project only." |
+| **Placement** | This workspace's `AGENTS/` folder, linked from its `.claude/` (and `.agents/` or `.copilot/` when used); global, in every workspace (the main development workspace's `AGENTS/`, linked globally) or a plugin only when the user asks for it; the plugin only for the HowToAI pack | "Saved in this workspace's AGENTS folder; available in this workspace only." |
 | **Look** (HTML pages only) | The HowToAI house design from `skill-design`, unless a client's own design is found | "Uses the HowToAI page design." |
 
 ## What the items mean for each kind
@@ -63,12 +53,3 @@ When the user will not decide a crucial item, the method recommends its safest c
 Run the `grilling` skill's method with the items above: look up first, ask in rounds of at most four numbered questions with recommended answers, word them for the user's technical level, and hand over answers, defaults, and open items to [Plan](../stages/plan.md#grill-the-request). When `grilling` is unavailable, follow the same rules from this summary and say so in the plan's notes.
 
 The Reuse decision is not part of grilling; the plan asks it.
-
-## Skills and agents
-
-- [skill-builder](../SKILL.md) — the rules this file applies, including **Infer, then ask**.
-- [Plan](../stages/plan.md#grill-the-request) — runs the method with these items and drafts the plan from the answers.
-- [skill-types.md](skill-types.md) — requirements behind the thinking-effort and side-effect items.
-- `grilling` — the shared question method, including the wording by technical level.
-- `skill-design` — the house design behind the **Look** default.
-- No dedicated agent is required.

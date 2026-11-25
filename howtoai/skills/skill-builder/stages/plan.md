@@ -10,7 +10,6 @@
 - [Draft the plan](#draft-the-plan)
 - [Get approval before building](#get-approval-before-building)
 - [Supplied change plan](#supplied-change-plan)
-- [Skills and agents](#skills-and-agents)
 
 ## Start from the request
 
@@ -84,7 +83,7 @@ Apply the rules in [SKILL.md](../SKILL.md) to decide the items below. For a chan
 - **Skill type and requirements** — read [references/skill-types.md](../references/skill-types.md). Identify the target skill's type or types, then decide each applicable requirement from its [Every target skill](../references/skill-types.md#every-target-skill) section and from each matching type section.
 - **Thinking effort** — for each step, a script, a cheap subagent, the main agent, or high effort, per item 10 of [Every target skill](../references/skill-types.md#every-target-skill).
 - **Look** — for a deliverable people look at, an `assets/` template built once with `skill-design` (house or client design) and filled each run, per item 11; or, for a surface `skill-design` does not cover, the format skill and a note that no design review runs.
-- **Placement** — the location for the target's kind in [Deliverable kinds](../references/skill-types.md#deliverable-kinds). Default: the project folder when it uses this workspace's files, personal (`~/.claude/`) otherwise, and a plugin only for the HowToAI pack; state the default and its reason in the plan. In dev mode, a personal target's place is the source folder, and the plan names both that path and the link Build creates.
+- **Placement** — the location for the target's kind in [Deliverable kinds](../references/skill-types.md#deliverable-kinds). Default: the current workspace's `AGENTS/` folder with a link from its `.claude/` (and `.agents/` or `.copilot/` when used), as [Default place](../references/skill-types.md#deliverable-kinds) says; global (the main development workspace's `AGENTS/` with a global link) or a plugin only when the user asks for it explicitly, and a plugin only for the HowToAI pack. State the place and its reason in the plan, and name both the file path and each link Build creates.
 - **Automation** — whether existing code or an official integration should handle any repeatable, deterministic part. Account for access, cost, data handling, and side effects. Prefer the project's stack; if none is set and a script is justified, default to Python when available.
 - **Output contract** — deliverable, audience, format, delivery, and success check, per [Output contract](../SKILL.md#output-contract). For a document-like deliverable, also decide its standard structure, which data goes in tables or charts, and its format, starting from the [standardized-output defaults](../SKILL.md#output-contract) and giving the reason for any departure.
 - **Memory and sources** — whether `references/`, `assets/`, `examples/`, or persistent `state/` are needed, and which links or paths the target skill relies on, per [Working memory and sources](../SKILL.md#working-memory-and-sources). For existing reference files, decide whether they stay in place or move into the target skill's `references/` folder.
@@ -103,7 +102,7 @@ Write the plan as `plan.json` in the [sandbox](../SKILL.md#vocabulary), using th
 - **Questions for you** (`questions`): the questions still open, numbered. Numbers are stable: a revised plan keeps every number already given, adds new questions after the highest, and keeps answered ones with their answer.
 - **Technical details** (`details`):
   - The route; the target skill's type or types, and each requirement applied from [references/skill-types.md](../references/skill-types.md), in a few words each.
-  - Placement (project or personal, and why), harness constraints, thinking effort, and look and design.
+  - Placement (the workspace's `AGENTS/` with a workspace link by default, or the place the user asked for, and why), harness constraints, thinking effort, and look and design.
   - Supporting folders and files, with their purpose, including stage files under `stages/` when the workflow is split; for `state/`, its seeding and update/prune rules.
   - Lessons applied from the recall note, by ID, and the past failures this plan avoids; installs, with their license.
   - Under `notes`: the name, description, and trigger phrases; the [output contract](../SKILL.md#output-contract), including the standard shape and default format of a document-like deliverable; source links or paths, how access is checked, and what happens if they fail, with source and destination paths for any relocated files; automation or integrations; the idea-generation model, if used (count, reference/original split, model choice, and **Choose one** criteria), or a one-line note that it is not used and why; for an existing one, what to keep, change, or remove, and any dependent updates; for a problem, the diagnosis.
@@ -151,16 +150,3 @@ Entered from [Start from the request](#start-from-the-request) when another skil
    - **Applies, with a gap:** the change is within the cause but leaves a case open (for example, a list that reads as closed). Keep the supplied wording, and name the gap as a note in the approval message, so the user can approve it as is or ask for a change.
 3. **Write the plan.** A change that fits in a few lines is a small change: its plan is a short list in the approval message with the target file and place, the cause and its evidence, the exact change, the calling skill, any gap from step 2, and "no new actions, access, or installs". Otherwise write `plan.json` as [Draft the plan](#draft-the-plan) says, with no Reuse decision. Either way, name the calling skill and the evidence in the summary, and record the calling skill in the plan's notes so [Learn](learn.md) puts it in the registry row.
 4. Go to [Get approval before building](#get-approval-before-building). A plain "yes" approves the supplied change; a requested edit updates the plan as that section says.
-
-## Skills and agents
-
-- [skill-builder](../SKILL.md) — rules and vocabulary this stage applies.
-- [Recall](recall.md) and [Test](test.md) — the stages that lead here.
-- [Build](build.md) — the next stage after [Get approval before building](#get-approval-before-building).
-- [references/grilling.md](../references/grilling.md) — the crucial and default items asked in [Grill the request](#grill-the-request); `grilling` — the shared question method that asks them; [references/skill-types.md](../references/skill-types.md) — the deliverable kinds and requirements behind the route and the design.
-- [scripts/render_plan.py](../scripts/render_plan.py) — renders `plan.json` into the plan page from the template [assets/plan.html](../assets/plan.html); [examples/plan-sample.json](../examples/plan-sample.json) — a filled plan; used in [Draft the plan](#draft-the-plan) and [Get approval before building](#get-approval-before-building).
-- `artifact-design` — loaded before the plan page is published as an artifact, where the harness asks for it.
-- `skill-design` — builds, once, the template that [Decide the design](#decide-the-design) plans for the **Look**; it also built the plan page's template.
-- `update-config` and `plugin-authoring` — write hooks, settings, and mods for the routes chosen in [Choose the route](#choose-the-route); Build hands the work to them.
-- `skill-finder` — searched again in the [Reuse decision](#decide-the-design) when the drafted design adds a central step; vets and installs a reuse candidate, as planned in [Inspect the target context](#inspect-the-target-context).
-- No dedicated planning agent is required.

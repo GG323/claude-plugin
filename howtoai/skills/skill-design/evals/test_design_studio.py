@@ -148,7 +148,7 @@ class TestStore(StoreCase):
         self.assertEqual(name, "DESIGN.md")
         self.assertTrue(md.startswith("# HowToAI house"))
         self.assertIn("## Contents", md)
-        self.assertIn("## Skills and agents", md)
+        self.assertNotIn("Skills and agents", md)
         self.assertGreater(len(DS.export(h, "design-md", True, SKILL)[0]), len(md))
         tw = DS.export(h, "tailwind", True, SKILL)[0]
         self.assertIn("@theme {", tw)

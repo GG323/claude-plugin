@@ -19,7 +19,6 @@ compatibility: Needs file read and edit access to the workspace (Claude Code, Cl
 - [Common failures](#common-failures)
 - [What it can't do](#what-it-cant-do)
 - [Feedback](#feedback)
-- [Skills and agents](#skills-and-agents)
 
 ## Before you start
 
@@ -33,7 +32,7 @@ compatibility: Needs file read and edit access to the workspace (Claude Code, Cl
 ### Read the context
 
 1. Read each plan doc the map names that this dump could touch, in full: its sections, subsections, wording style (for example `Next:`, `Open:`, `Possible:`, `Test:` prefixes), and existing items. Items should land next to related work, so the existing plan is the main guide to placement.
-2. Note the plan doc's own conventions: title, `## Contents` list, and a last `Skills and agents` section, if it has them. New sections go before that last section. If the plan doc already breaks them (for example a section after `Skills and agents`, or a heading missing from `## Contents`), list that under **Plan doc issues** in the preview and offer to fix it as its own change; do not fix it silently, because the user may have left it there on purpose.
+2. Note the plan doc's own conventions: title and `## Contents` list, if it has them. If the plan doc already breaks them (for example a heading missing from `## Contents`), list that under **Plan doc issues** in the preview and offer to fix it as its own change; do not fix it silently, because the user may have left it there on purpose.
 
 ### Sort the dump
 
@@ -62,7 +61,7 @@ Write nothing until the user answers. If they change a placement, update the pre
 
 1. Apply only the approved changes, editing each plan doc in place. A git-tracked or OneDrive file keeps its history, so no backup copy is needed; for a file in neither, copy it to `<name>.bak` first.
 2. Add each item as a bullet under its section, after related items. Keep the plan doc's conventions: when a new section is added, add it to the `## Contents` list at the matching level; keep heading levels nested without skips.
-3. A plan doc that does not exist yet (a separate project's `TODO.md` the map says is created on first use) is created only with approval, with a title, a `## Contents` list, the new sections, and a last `## Skills and agents` section saying none apply, when the workspace's Markdown conventions ask for that shape.
+3. A plan doc that does not exist yet (a separate project's `TODO.md` the map says is created on first use) is created only with approval, with a title, a `## Contents` list, and the new sections, when the workspace's Markdown conventions ask for that shape.
 4. Never write a separate project's items into another project's plan doc, because mixed plans are hard to untangle later.
 
 ## Output
@@ -101,9 +100,3 @@ Before the report, reread each changed plan doc: every approved item appears onc
 ## Feedback
 
 If the user asks to change how this skill works or reports a problem with it, use the `skill-builder` skill (for example, `/skill-builder`) to plan and apply the change. If `skill-builder` is unavailable, agree the change with the user first, keep it as small as the problem needs, and check the skill afterwards.
-
-## Skills and agents
-
-- `skill-builder` - builds and maintains this skill; send changes there, as described in [Feedback](#feedback).
-- `docx` - reads a brain dump given as a Word file.
-- No agents are required.

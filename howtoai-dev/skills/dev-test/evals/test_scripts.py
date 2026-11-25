@@ -38,7 +38,7 @@ class Base(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory(prefix="devtest-")
         self.ws = os.path.join(self.tmp.name, "ws")
         write(os.path.join(self.ws, "AGENTS.md"), "# ws\n")
-        write(os.path.join(self.ws, ".howtoai", "dev", "settings.json"), json.dumps(SETTINGS))
+        write(os.path.join(self.ws, "AGENTS", "howtoai", "dev", "settings.json"), json.dumps(SETTINGS))
         self.user = os.path.join(self.tmp.name, "user.json")
 
     def tearDown(self):
@@ -113,7 +113,7 @@ class TargetsTests(Base):
         self.assertEqual((res["verdict"], res["skipped"][0]["file"]), ("ask", "src/Api/appsettings.json"))
 
     def test_bad_settings_fail(self):
-        write(os.path.join(self.ws, ".howtoai", "dev", "settings.json"), '{"environments": {"allow": "x"}}')
+        write(os.path.join(self.ws, "AGENTS", "howtoai", "dev", "settings.json"), '{"environments": {"allow": "x"}}')
         code, res = self.classify()
         self.assertEqual(code, 1)
 
@@ -267,7 +267,7 @@ class AddOnlyTests(Base):
         ))
 
     def test_denied_json_number_is_production(self):
-        write(os.path.join(self.ws, ".howtoai", "dev", "settings.json"),
+        write(os.path.join(self.ws, "AGENTS", "howtoai", "dev", "settings.json"),
               json.dumps({"environments": {"allow": [], "deny": ["123456789012"]}}))
         self.expect("refused", ({"appsettings.json": json.dumps({"AccountId": 123456789012})},))
 
@@ -315,7 +315,7 @@ class AddOnlyTests(Base):
 class HostLayerTests(Base):
     def classify_file(self, rel, text, allow=("localhost",), extra=()):
         items = [{"name": "item", "kind": "local", "match": {"host": host}} for host in allow]
-        write(os.path.join(self.ws, ".howtoai", "dev", "settings.json"),
+        write(os.path.join(self.ws, "AGENTS", "howtoai", "dev", "settings.json"),
               json.dumps({"environments": {"allow": items, "deny": []}}))
         path = os.path.join(self.ws, *rel.split("/"))
         write(path, text)
@@ -405,7 +405,7 @@ class HostListTests(Base):
             with self.subTest(text=text):
                 self.assertEqual(self.classify_file("compose.yml", text)["verdict"], "ask")
         prod = SETTINGS["environments"]["deny"][0]
-        write(os.path.join(self.ws, ".howtoai", "dev", "settings.json"), json.dumps(SETTINGS))
+        write(os.path.join(self.ws, "AGENTS", "howtoai", "dev", "settings.json"), json.dumps(SETTINGS))
         path = os.path.join(self.ws, "compose.yml")
         write(path, "servers:\n  - localhost:9092 # dev\n  - " + prod + ":9092\n")
         res = run("targets.py", "classify", "--workspace", self.ws, "--user-file", self.user, "--environ", "{}")[1]
@@ -422,7 +422,7 @@ class HostListTests(Base):
 
     def test_an_unnamed_allow_item_prints_no_value(self):
         value = "user@box.acme;Zq9Secretzz"
-        write(os.path.join(self.ws, ".howtoai", "dev", "settings.json"),
+        write(os.path.join(self.ws, "AGENTS", "howtoai", "dev", "settings.json"),
               json.dumps({"environments": {"allow": [{"kind": "local", "match": {"host": value}}], "deny": []}}))
         write(os.path.join(self.ws, "appsettings.json"), json.dumps({"Host": value}))
         res = run("targets.py", "classify", "--workspace", self.ws, "--user-file", self.user, "--environ", "{}")[1]

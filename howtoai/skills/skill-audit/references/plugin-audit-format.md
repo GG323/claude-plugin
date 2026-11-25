@@ -1,14 +1,5 @@
 # Plugin audit format
 
-## Contents
-
-- [Where the file goes](#where-the-file-goes)
-- [Checks table](#checks-table)
-- [Kinds](#kinds)
-- [Text to install](#text-to-install)
-- [Limits](#limits)
-- [Skills and agents](#skills-and-agents)
-
 ## Where the file goes
 
 Any plugin, skill, agent, tool, or mod can ship audit checks.
@@ -47,7 +38,7 @@ A `## Checks` section holds one table with the columns ID, Scope, Applies, Kind,
 
 ## Text to install
 
-`#<block>` names a heading in the same file, with the text in a fenced block under it. Inside the block, `{json:.howtoai/<tool>/settings.json#<key/key>}` becomes that setting's list of short lowercase names; no other file or value can be filled in.
+`#<block>` names a heading in the same file, with the text in a fenced block under it. Inside the block, `{json:AGENTS/howtoai/<tool>/settings.json#<key/key>}` becomes that setting's list of short lowercase names; no other file or value can be filled in.
 
 Text to install holds no word that starts with `@` (also not in backticks), and no hidden characters. `section` and `line` install only into the workspace's `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`, or `.claude/CLAUDE.md`.
 
@@ -61,8 +52,3 @@ A check past a limit is reported as invalid, never as passed.
 - Each file gets 5 seconds in its own process. A file that runs out is stopped, and the others still run.
 - One tool gets 16 files and 10 seconds in all, and the whole run 60 seconds, each tool's first file before any tool's second. The rest are reported as not run.
 - In a command, put each placeholder inside double quotes, so paths with spaces, `( ) &`, or `'` work.
-
-## Skills and agents
-
-- `skill-audit` - reads this format with `scripts/check_plugins.py`.
-- `skill-builder` - writes an `AUDIT.md` with the tool it builds, when that tool needs setup.

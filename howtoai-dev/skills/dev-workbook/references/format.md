@@ -13,11 +13,10 @@
   - [Tags](#tags)
 - [Overrides and conflicts](#overrides-and-conflicts)
 - [What does not belong](#what-does-not-belong)
-- [Skills and agents](#skills-and-agents)
 
 ## What a workbook is
 
-A workbook is the technology documentation for one language or tool: facts, best practices, commands, and the user's and the project's situation with it. Every statement would still be true outside the dev process. `scripts/workbook.py` parses this format, so the headings, table rows, and statement syntax below are exact.
+The technology documentation for one language or tool: facts, best practices, commands, and the user's and the project's situation with it. Every statement would still be true outside the dev process. `scripts/workbook.py` parses this format, so the headings, table rows, and statement syntax below are exact.
 
 ## File and layers
 
@@ -27,18 +26,18 @@ One Markdown file per technology, named `<technology>.md`, where `<technology>` 
 | --- | --- | --- | --- |
 | base | the skill's `workbooks/` | The full workbook, shipped with the plugin | `001`, `002`, … |
 | user | `~/.claude/howtoai/workbooks/` | The user's own preferences across projects | `u001`, `u002`, … |
-| project | `<workspace>/.howtoai/workbooks/` | The project's choices, kept in its git | `p001`, `p002`, … |
+| project | `<workspace>/AGENTS/howtoai/workbooks/` | The project's choices, kept in its git | `p001`, `p002`, … |
 
 A user or project file uses the same layout but holds only the sections it adds to; it may leave the others out. Project wins over user, and user wins over base.
 
 ### Version workbooks
 
-Code projects can use different versions of one technology, for example one on .NET 8 and one on .NET 10, and each version gets its own workbook file.
+Code projects on different versions of one technology (.NET 8 and .NET 10) each get the workbook for their version.
 
-- **Name.** `<technology>@<version key>.md`, for example `dotnet@8.md` or `csharp@12.md`. The key is lowercase letters, digits, dots, and hyphens, and the Header repeats it as `Version key`.
-- **Content.** It is a full workbook for that one version, with every section and its own Versions and Supported until. Its statement IDs are the technology's own (`dotnet.patterns.001`). A copy of the general workbook keeps its IDs, so the user's and project's overrides still match.
-- **Place.** It goes in the base folder when the plugin ships it, or in the project folder when it is made for a codebase. It never goes in the user folder. New statements in a project copy use `p` numbers.
-- **When it is used.** The general `<technology>.md` covers the versions in its Header. A version workbook is used only for the code projects whose [Codebase versions](#header) line names it. In `resolve` it takes the base's place, and the user's and project's `<technology>.md` overlays still apply on top, because their choices hold for every version.
+- **Name.** `<technology>@<version key>.md`, for example `dotnet@8.md`. The key is lowercase letters, digits, dots, and hyphens, and the Header repeats it as `Version key`.
+- **Content.** A full workbook for that one version, with every section and its own Versions and Supported until. Its statement IDs are the technology's own (`dotnet.patterns.001`); a copy of the general workbook keeps them, so the user's and project's overrides still match.
+- **Place.** The base folder when the plugin ships it, or the project folder when it is made for a codebase; never the user folder. New statements in a project copy use `p` numbers.
+- **Use.** The general `<technology>.md` covers the versions in its Header. A version workbook is used only for the code projects whose [Codebase versions](#header) line names it: in `resolve` it takes the base's place, and the user's and project's `<technology>.md` overlays still apply on top.
 
 ## Layout
 
@@ -48,8 +47,7 @@ In this order, with these exact headings:
 2. `## Contents` - links to every section below.
 3. `## Header`
 4. `## Load when`
-5. The ten topic sections, in the order of [Topic sections](#topic-sections).
-6. `## Skills and agents` - "`dev-workbook` - keeps this workbook; the dev skills read it through `workbook.py resolve`."
+5. The ten topic sections, in the order of [Topic sections](#topic-sections), and nothing after them.
 
 ## Header
 
@@ -85,15 +83,7 @@ Sources:
   - `src/Worker/` · .NET 10 · workbook: `dotnet` · supported until 2028-11-14 · source: `src/Worker/Worker.csproj` · checked 2026-11-20
   ```
 
-  Each line gives:
-  - the code project's folder, or `./` for the whole repository;
-  - the version as the project's files state it;
-  - the workbook that covers it: the general one, or a version workbook;
-  - its end-of-support date, or `unknown`;
-  - the file that states the version;
-  - the date it was read.
-
-  A path belongs to the deepest folder that holds it. The codebase's version decides which statements apply, so a passed date means an upgrade is due at some point, not that the code is wrong. `record-version` writes these lines.
+  The folder is `./` for the whole repository, the version is as the project's files state it, and the date is `unknown` when no support date is known. A path belongs to the deepest folder that holds it. The codebase's version decides which statements apply, so a passed date means an upgrade is due at some point, not that the code is wrong. `record-version` writes these lines.
 - **Version command** is optional: a read-only command that prints the installed version. Audit runs it only with the user's go-ahead.
 - **Updated** is the date the file last changed, from the system clock.
 - Every source a statement cites is listed here with the date it was last opened. A secondary source names its license.
@@ -163,8 +153,3 @@ A new tag changes this list and `TAGS` in `scripts/workbook.py` together. A stat
 ## What does not belong
 
 Process instructions never go in a workbook: when to test, what to ask the user, approvals, review rounds, stage order, or what a skill does next. They live in the skills; `dev-learn` routes changes to them through `skill-builder`. A statement that only makes sense inside this dev process is a process instruction.
-
-## Skills and agents
-
-- `dev-workbook` - owns this format and every workbook; `scripts/workbook.py` parses it.
-- `dev-learn` - receives process instructions that do not belong here.

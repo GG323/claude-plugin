@@ -18,7 +18,6 @@ compatibility: Proposing the new session needs the session tools of the Claude d
 - [Common failures](#common-failures)
 - [What it can't do](#what-it-cant-do)
 - [Feedback](#feedback)
-- [Skills and agents](#skills-and-agents)
 
 ## Before you start
 
@@ -117,8 +116,3 @@ Add a second line only when the check found a next step that needs something lef
 ## Feedback
 
 If the user asks to change how this skill works or reports a problem with it, use the `skill-builder` skill (for example, `/skill-builder`) to plan and apply the change. If `skill-builder` is unavailable, agree the change with the user first, keep it as small as the problem needs, and check the skill afterwards.
-
-## Skills and agents
-
-- `skill-builder` - builds and maintains this skill; send changes there, as described in [Feedback](#feedback).
-- `command-pane` - the mod whose Handover button runs this skill without instructions.

@@ -17,7 +17,6 @@ description: The shared method for asking the user the decisions a task cannot g
 - [Output contract](#output-contract)
 - [Common failures](#common-failures)
 - [Feedback](#feedback)
-- [Skills and agents](#skills-and-agents)
 
 ## What it does
 
@@ -102,10 +101,3 @@ Stop when no crucial item is open and every default is stated. Do not ask for a 
 ## Feedback
 
 Send requested changes or reported problems to the `skill-builder` skill (`/skill-builder` in Claude Code), not by file path. If `skill-builder` is unavailable, agree the change with the user first, keep it as small as the problem needs, and check the skill afterwards.
-
-## Skills and agents
-
-- `skill-builder` - calls this method with its items in Plan; also changes this skill.
-- `dev-plan` and `dev-core` (the `howtoai-dev` plugin) - call it for the software plan and the dev setup.
-- `command-pane` - writes the **User settings** block that sets the wording.
-- A fresh read-only subagent may run large lookups; no dedicated agent is required.

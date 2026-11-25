@@ -1,16 +1,5 @@
 # Report
 
-## Contents
-
-- [Entry and inputs](#entry-and-inputs)
-- [Find recurring findings](#find-recurring-findings)
-- [Render and publish](#render-and-publish)
-- [Update the log](#update-the-log)
-- [Propose and fix](#propose-and-fix)
-- [Summarize in chat](#summarize-in-chat)
-- [Return a candidate result](#return-a-candidate-result)
-- [Skills and agents](#skills-and-agents)
-
 ## Entry and inputs
 
 Entered from [Skill index](skill-index.md) with the run folder, whose `report.json` now holds every verified finding, or, in a candidate run, from [Instruction audit](instruction-audit.md).
@@ -51,7 +40,7 @@ In a scheduled run, skip the Propose and fix section and go to [Summarize in cha
 
 1. **Propose.** In one message, give the chat summary described in [Summarize in chat](#summarize-in-chat) and ask which findings to fix (by number), which to defer, and which to accept as exceptions. Findings marked "Use `skill-builder`" are not offered as fixes: name them and recommend running `skill-builder` with those findings as evidence. Findings marked "Needs your decision" need the user's answer first. Then wait for the answer; if none comes, every finding stays open and the log already shows it.
 2. **Fix.** Apply only the approved fixes, and leave everything else in each file as it is:
-   - Mechanical fixes (an anchor, a contents entry, a heading level, a link turned into code, a missing Feedback section with the standard text and a `skill-builder` entry under Skills and agents) are applied directly.
+   - Mechanical fixes (an anchor, a contents entry, a heading level, a link turned into code, a missing Feedback section with the standard text) are applied directly.
    - **W1:** a difference is resolved only in the direction the user chose. If the reference should change, change [references/markdown-conventions.md](../references/markdown-conventions.md) only with that approval.
    - **W4:** a missing skill or agent is added as `` - `name` - <one line from its description> ``; a listed one that is not installed is removed only with approval.
    - **W5 without `AGENTS.md`:** with a yes, copy the draft from the run folder into the workspace as `AGENTS.md`, then list its placeholders as open.
@@ -77,13 +66,3 @@ End a candidate run by returning to `skill-finder`, which judges the candidate, 
 5. The checks that did not run, with the reason.
 
 Propose no fixes and ask nothing: the pass-or-fail rule and the question to the user belong to `skill-finder`.
-
-## Skills and agents
-
-- [skill-audit](../SKILL.md) — the overview, rules, and output contract.
-- [scripts/render_report.py](../scripts/render_report.py) — renders the report and updates the run log; [assets/report-template.html](../assets/report-template.html) — the page it fills.
-- `skill-builder` — recommended for findings with the action "Use `skill-builder`".
-- `artifact-design` — loaded before publishing where the harness asks for it.
-- `/skill-doctor` and `/doctor` — recommended in the report and the summary.
-- `skill-finder` — receives the result of a candidate run in [Return a candidate result](#return-a-candidate-result).
-- Previous stage: [Skill index](skill-index.md). This is the last stage.

@@ -9,7 +9,6 @@ description: Writes a short greeting for a new team member from their name and r
 
 - [Steps](#steps)
 - [Feedback](#feedback)
-- [Skills and agents](#skills-and-agents)
 
 ## Steps
 
@@ -20,7 +19,3 @@ description: Writes a short greeting for a new team member from their name and r
 ## Feedback
 
 Send changes to `skill-builder`.
-
-## Skills and agents
-
-- None.

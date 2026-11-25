@@ -788,13 +788,14 @@ def export_design_md(d: dict, extended: bool) -> str:
     L += ["- [Colors](#colors)", "- [Typography](#typography)", "- [Spacing and shape](#spacing-and-shape)"]
     L += ["- [Components](#components)"] if has_components else []
     L += ["- [Guidance per surface](#guidance-per-surface)"] if has_surfaces else []
-    L += ["- [Guidelines](#guidelines)", "- [Skills and agents](#skills-and-agents)", "", "## Overview", ""]
+    L += ["- [Guidelines](#guidelines)", "", "## Overview", ""]
     if d["description"]:
         L += [d["description"], ""]
     who = {"house": "The HowToAI house design.", "client": f"Client design for {d['client'] or d['name']}.",
            "reference": "A reference design."}[d["kind"]]
     L += [f"- {who}", f"- Design studio slug `{d['slug']}`, version {d['version']} ({s['date']}).",
-          "- Every page ships light and dark themes; use the tokens, never raw values."]
+          "- Every page ships light and dark themes; use the tokens, never raw values.",
+          f"- `skill-design` builds and reviews outputs in this design: `design_studio.py show {d['slug']}` prints its tokens."]
     if d["source_url"]:
         L.append(f"- Source: <{d['source_url']}>")
     if has_principles:
@@ -848,8 +849,7 @@ def export_design_md(d: dict, extended: bool) -> str:
             L.pop()
     L += ["", "## Guidelines", "", "### Do", ""] + ([f"- {x}" for x in d["guidelines"]["do"]] or ["- Not recorded."])
     L += ["", "### Don't", ""] + ([f"- {x}" for x in d["guidelines"]["dont"]] or ["- Not recorded."])
-    L += ["", "## Skills and agents", "",
-          f"- `skill-design` - builds and reviews outputs in this design: `design_studio.py show {d['slug']}` prints its tokens.", ""]
+    L += [""]
     return "\n".join(L)
 
 
@@ -914,7 +914,7 @@ def export_profile(d: dict, root: Path) -> str:
          "## Contents", "", "- [Decisions](#decisions)"]
     if fonts_changed:
         L.append("- [Font links](#font-links)")
-    L += ["- [Token overrides](#token-overrides)", "- [Skills and agents](#skills-and-agents)", "",
+    L += ["- [Token overrides](#token-overrides)", "",
           f"- **Source of truth:** client design in the HowToAI design studio (`{d['slug']}`, v{d['version']})"
           + (f", from {d['source_url']}" if d["source_url"] else ""),
           f"- **Updated:** {d['spec']['date']}", "- **Themes:** light and dark",
@@ -934,8 +934,7 @@ def export_profile(d: dict, root: Path) -> str:
     L += ["}"]
     if dark:
         L += _theme_blocks(dark)
-    L += ["```", "", "## Skills and agents", "",
-          "- `skill-design` - writes and reads this profile; Build and Review use it in place of the house design reference.", ""]
+    L += ["```", ""]
     return "\n".join(L)
 
 

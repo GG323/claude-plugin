@@ -1,16 +1,5 @@
 # Redesign outputs
 
-## Contents
-
-- [When this stage runs](#when-this-stage-runs)
-- [Find the outdated outputs](#find-the-outdated-outputs)
-- [Ask for approval](#ask-for-approval)
-- [Rebuild each template](#rebuild-each-template)
-- [Review each rebuild](#review-each-rebuild)
-- [Update the stamp and the log](#update-the-stamp-and-the-log)
-- [Report](#report)
-- [Skills and agents](#skills-and-agents)
-
 ## When this stage runs
 
 From [The stages](../SKILL.md#the-stages) when the user asks to redesign, restyle, or update earlier outputs to the current design reference, usually after a new reference version (`tokens.py apply`) or a client profile change. It rebuilds the templates that skills and tools ship (pages, reports, dashboards, decks, documents, mod panes and bands), never their runtime outputs, as [Templates, not runtime](../references/surfaces.md#templates-not-runtime) sets out. It works on templates in other skills' and tools' folders, so nothing is changed before the user approves the list.
@@ -33,7 +22,7 @@ When the list is empty, say that every logged output is at version `<N>`, and sk
 For each approved row, one at a time:
 
 1. Copy the template to `<name>.<YYYY-MM-DD>.<ext>` next to it, with the date from the system clock, before changing it.
-2. Rebuild it to the current reference by its surface's row in the [surface table](../references/surfaces.md#surface-table), keeping its structure, placeholders, and every hook its script fills, so the script still works unchanged. With a client profile, apply its overrides as [Build from the house starter](build.md#build-from-the-house-starter) does.
+2. Rebuild it to the current reference by its surface's row in the [surface table](../references/surfaces.md#surface-table) (deck templates with the `pptx` skill, document templates with `docx`, mod templates with `plugin-authoring`), keeping its structure, placeholders, and every hook its script fills, so the script still works unchanged. With a client profile, apply its overrides as [Build from the house starter](build.md#build-from-the-house-starter) does.
 3. When the template's markup must change in a way its script depends on, change the script too, and say so in the report. A template that belongs to a skill or tool under `skill-builder` is changed within that tool's files only; its registry row is updated in [Update the stamp and the log](#update-the-stamp-and-the-log).
 
 ## Review each rebuild
@@ -51,10 +40,3 @@ For each approved row, one at a time:
 ## Report
 
 In chat: the current version; the rows found outdated; the rows rebuilt, each with its verdict, check counts, and backup copy path; the rows skipped or declined; scripts changed; and every check marked **Not verified**.
-
-## Skills and agents
-
-- [skill-design](../SKILL.md) - the skill this stage belongs to; [stages/build.md](build.md) and [stages/review.md](review.md) - how a rebuild is built and checked.
-- [scripts/tokens.py](../scripts/tokens.py) - `show`; [scripts/page.py](../scripts/page.py) - `check` and `adherence`.
-- `skill-builder` - owns the registry of skills and tools whose templates are rebuilt.
-- `pptx`, `docx`, `plugin-authoring` - rebuild deck, document, and mod templates.

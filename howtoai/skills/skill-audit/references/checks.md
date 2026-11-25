@@ -13,7 +13,6 @@
 - [Workspace audit checks](#workspace-audit-checks)
 - [Plugin audit checks](#plugin-audit-checks)
 - [Suggested actions](#suggested-actions)
-- [Skills and agents](#skills-and-agents)
 
 ## How to read this file
 
@@ -36,12 +35,12 @@ These apply to every tool and instruction file in a `.claude` folder, plus a wor
 
 | ID | Check | How |
 | --- | --- | --- |
-| S1 | Frontmatter, when the format needs it (`SKILL.md`, agent files), comes first; the `#` title follows; `## Contents` is the next section. | Scripted |
+| S1 | Frontmatter, when the format needs it (`SKILL.md`, agent files), comes first; the `#` title follows; `## Contents` is the next section, except in an agent-read file of a skill or agent (a `SKILL.md`, its routes, stages, and references, or an agent definition) under 100 lines, which needs none. | Scripted |
 | S2 | Exactly one `#` heading, and no heading level is skipped. | Scripted |
 | S3 | Every contents entry resolves to a heading, and every `##` heading appears in the contents list. Nested entries for `###` headings are optional. | Scripted |
-| S4 | The contents list has a `Skills and agents` entry, and that section is the last section of the file. | Scripted |
 | S5 | Heading levels match how sections relate: each subsection sits under the section it belongs to. | Review |
-| S6 | The `Skills and agents` section lists the skills and agents the file uses (a skill named anywhere in the file, including Feedback, counts as used), or states that none apply. | Review |
+
+S4 and S6 were retired on 2026-11-24 and are no longer run.
 
 ### Links and sources
 
@@ -81,7 +80,7 @@ Applies to skill, agent, and command files.
 | --- | --- | --- |
 | D1 | Frontmatter parses, has `name` and `description`, `name` matches the folder, and `description` is at most 1,024 characters, the [Agent Skills specification](https://agentskills.io/specification) limit. | Scripted |
 | D2 | `SKILL.md` body is under 500 lines, and every other instruction file in the skill is linked directly from `SKILL.md` (one level deep, per the [skill authoring best practices](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices)). | Scripted |
-| D3 | Every user-made skill except `skill-builder` has a Feedback section that sends changes to `skill-builder`, placed last before `Skills and agents`. | Scripted |
+| D3 | Every user-made skill except `skill-builder` has a Feedback section that sends changes to `skill-builder`, placed as the last section. | Scripted |
 | D4 | Across all tools of one target: duplicate or overlapping responsibilities, and gaps (work no tool covers that the others hand to it). Both are suggestions; the audit never forces a merge. Conflicting instructions are I3. | Review |
 
 ## Instruction audit checks
@@ -108,8 +107,8 @@ These apply to a workspace's `AGENTS.md`.
 | --- | --- | --- |
 | W1 | A `Markdown conventions` section exists and matches the reference's section word for word. A difference is shown side by side, and neither copy changes until the user chooses which wins. | Scripted |
 | W2 | Under 200 lines, as the [Claude Code memory docs](https://code.claude.com/docs/en/memory) recommend. Paragraphs over 80 words and bullets over 50 words (outside the conventions section) are flagged for a shorter rewrite. | Scripted |
-| W3 | The structure and link rules: the `#` title first, then `## Contents`; every `##` section in the contents list and every entry resolving; `Skills and agents` listed and last; one `#` heading and no skipped levels; relative links resolving, with forward slashes, inside the workspace; web links responding. | Scripted |
-| W4 | The `Skills and agents` section lists every skill and agent installed in the global folder and in the workspace's `.claude` folder, named as code, and nothing that is not installed. | Scripted |
+| W3 | The structure and link rules: the `#` title first, then `## Contents`; every `##` section in the contents list and every entry resolving; one `#` heading and no skipped levels; relative links resolving, with forward slashes, inside the workspace; web links responding. | Scripted |
+| W4 | When the workspace keeps an `Installed skills` section, it lists every skill and agent installed in the global folder and in the workspace's `.claude` folder, named as code, and nothing that is not installed. The section is optional. | Scripted |
 | W5 | A `Project` section gives the purpose, who the work is for, the deliverables, and the target environments, followed by a `Best-practice references` list of live links. Missing facts get `[TO FILL: …]` placeholders. | Review |
 | W6 | Lean and consistent: always-needed project facts and conventions only (a section a tool's `AUDIT.md` installs counts as one); no rule stated twice; detailed procedures left to tools; rules written as plain statements; one name per thing. | Review |
 | W7 | A `## Workspace layout` section lists every top-level folder and root Markdown file (except `AGENTS.md` and names starting with `.` or `_`), each with a relative link and a one-line purpose, and nothing that is no longer on disk. | Scripted (sync) and review (purposes) |
@@ -133,7 +132,3 @@ Every finding carries one suggested action, so the user knows who acts on it:
 | **Use `skill-builder`** | A broken or contradictory procedure, missing files, a change to what a tool does or how its workflow runs, or an overlap between tools. | The audit changes nothing; the report recommends running `skill-builder` with the finding as evidence. |
 | **Needs your decision** | A fact or choice only the user can give, such as a project purpose or which of two copies wins. | The report shows a `[TO FILL: …]` placeholder or the choice; the audit applies the answer once given. |
 
-## Skills and agents
-
-- [skill-audit](../SKILL.md) runs these checks; its scripts run the scripted ones.
-- `skill-builder` — recommended in the report for findings with the action "Use `skill-builder`".

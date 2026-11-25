@@ -40,6 +40,7 @@ EXCEPTIONS = os.path.join(SKILL_DIR, "state", "exceptions.md")
 # skill that owns them; an added title or contents list would break them.
 FIXED_FORMAT_DIRS = {"evals", "state", "assets"}
 SKILL_MAX_LINES = 500
+SHORT_AGENT_FILE_LINES = 100  # an agent-read skill or agent file under this needs no Contents list
 DESCRIPTION_MAX = 1024  # Agent Skills specification
 WEB_TIMEOUT = 15  # seconds; official docs answer well within this
 
@@ -275,6 +276,8 @@ class Audit:
             self.find("S1", path, 0, "Frontmatter is required here and must come first.")
         if not d.headings or not body or d.headings[0][0] != body[0] or d.headings[0][1] != 1:
             self.find("S1", path, body[0] if body else 0, "The file does not start with its # title.")
+        elif self.short_agent_file(path, d):
+            pass  # an agent-read skill or agent file under 100 lines needs no Contents list
         elif len(d.headings) < 2 or d.headings[1][1] != 2 or d.headings[1][2].strip().lower() != "contents":
             self.find("S1", path, d.headings[0][0], "The title is not followed by a ## Contents section.")
         h1 = [h for h in d.headings if h[1] == 1]
@@ -286,8 +289,6 @@ class Audit:
                 self.find("S2", path, i, "Heading level skipped: '%s' is level %d under level %d." % (text, lvl, prev), text)
             prev = lvl
         h2 = [(i, t) for i, lvl, t in d.headings if lvl == 2 and t.strip().lower() != "contents"]
-        if h2 and h2[-1][1].strip().lower() != "skills and agents":
-            self.find("S4", path, h2[-1][0], "'Skills and agents' is not the last section.", h2[-1][1])
         contents = d.section("Contents")
         if contents is None:
             return  # S1 already reports the missing contents list
@@ -300,8 +301,16 @@ class Audit:
         for i, text in h2:
             if slug(text) not in listed:
                 self.find("S3", path, i, "Section '%s' is missing from the contents list." % text, text)
-        if "skills-and-agents" not in listed:
-            self.find("S4", path, contents[0], "The contents list has no 'Skills and agents' entry.", "Contents")
+
+    def short_agent_file(self, path, d):
+        """A file an agent reads as part of a skill or agent (SKILL.md, its routes,
+        stages, and references, or an agent definition) under 100 lines."""
+        if len(d.lines) >= SHORT_AGENT_FILE_LINES:
+            return False
+        parts = os.path.relpath(path, self.global_dir).split(os.sep)
+        if self.candidate:
+            return self.skill_root(path) is not None or "agents" in parts[:-1]
+        return parts[0] in ("skills", "agents")
 
     def check_links(self, path, root):
         d = self.doc(path)
@@ -457,7 +466,7 @@ class Audit:
             "excluded": excluded,
             "findings": kept,
             "accepted_exceptions": waived,
-            "checks_run": ["S1", "S2", "S3", "S4", "L1", "L2", "L4", "D1", "D2", "D3", "I2"]
+            "checks_run": ["S1", "S2", "S3", "L1", "L2", "L4", "D1", "D2", "D3", "I2"]
                           + ([] if self.args.no_web or self.candidate else ["L3"]),
             "skipped_checks": self.skipped_checks,
             "counts": count_by_check(kept),

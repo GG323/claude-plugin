@@ -11,7 +11,6 @@
   - [Connector fixtures](#connector-fixtures)
 - [Trigger requests](#trigger-requests)
 - [Running saved test cases](#running-saved-test-cases)
-- [Skills and agents](#skills-and-agents)
 
 ## Why save test cases
 
@@ -153,7 +152,3 @@ Save approved trigger tests as `evals/trigger-queries.json`, a list of requests 
 
 - **By the main agent:** sync the test copy, give each test case's prompt and input files to a test subagent, then grade the results against the graders, as [Test](../stages/test.md#how-tests-run) does for any test.
 - **By the user:** with Claude Code v2.1.269 or later, from the test copy's folder in `~/.claude/skills/`, `claude plugin eval . --allow-tools Write,Edit,Bash` (add `--scaffold` when a test case has input files). These are real, billed model runs, so offer the command rather than running it unasked.
-
-## Skills and agents
-
-- [skill-builder](../SKILL.md) — the skill this reference belongs to; used by [Test](../stages/test.md#run-and-deliver).

@@ -2,7 +2,7 @@
 
 Silent unless the edited file's workspace has a howtoai-dev change at stage tests-first, build,
 or test (when several do, the most recently updated of those counts). Then:
-  - The plan folder, .howtoai/, and files matching testing.test_globs are always allowed.
+  - The plan folder, AGENTS/ (tooling and the howtoai state folder), and files matching testing.test_globs are always allowed.
   - CI files (.github/workflows/, azure-pipelines.yml, .gitlab-ci.yml, Jenkinsfile, in any folder) are denied at
     stage tests-first and test: tests never pass by changing CI.
   - Any other file at stage tests-first: denied when testing.test_first is block, a warning when
@@ -48,7 +48,7 @@ def check(data):
         return None
     s = common.settings(dc, ws)
     plan_folder = s.get("plan_folder", "dev-plans")
-    if r.startswith(plan_folder + "/") or r.startswith(".howtoai/"):
+    if r.startswith(plan_folder + "/") or r.lower().startswith("agents/"):
         return None
     stage, cid = st.get("stage"), st.get("id", "?")
     if CI.search(r):

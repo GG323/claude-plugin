@@ -3,7 +3,6 @@
 ## Contents
 
 - [Checks](#checks)
-- [Skills and agents](#skills-and-agents)
 
 ## Checks
 
@@ -19,7 +18,3 @@
 | H6 | workspace | `contains {workspace}/AGENTS.md :: ## Dev mode` | import | `{workspace}` | `@AGENTS.md` | Add the line `@AGENTS.md` to the workspace's CLAUDE.md: beside a CLAUDE.md, AGENTS.md does not load without it. |
 | H7 | workspace | `contains {workspace}/AGENTS.md :: ## Dev mode` | command | `py -3 -I -B "{plugin}/scripts/devmode.py" status --workspace "{workspace}"` | exit 0, both settings valid, links and Git are fine | Follow the fix each problem names in INSTALL.md. |
 | H8 | global | `exists {global}/scheduled-tasks/skill-audit-weekly` | allow | `{global}/settings.json` | `Skill(skill-audit) or Skill(howtoai:skill-audit)` | Follow INSTALL.md's Allow the weekly audit: show the user the exact line, which the user adds. |
-
-## Skills and agents
-
-- `skill-audit` - runs these checks and owns the Markdown conventions text.

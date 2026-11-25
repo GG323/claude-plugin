@@ -55,7 +55,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DEVCORE = os.path.join(HERE, "..", "..", "dev-core", "scripts", "devcore.py")
 
 SKIP_DIRS = {".git", "bin", "obj", "node_modules", ".venv", "venv", "__pycache__", "dist", "build",
-             ".vs", ".idea", "dev-plans", ".howtoai"}
+             ".vs", ".idea", "dev-plans"}
 CONFIG_GLOBS = ["appsettings*.json", "*.runsettings", "launchSettings.json", ".env.test", ".env.testing",
                 ".env.example", "docker-compose*.yml", "docker-compose*.yaml", "compose*.yml", "compose*.yaml"]
 CI_GLOBS = [".github/workflows/*.yml", ".github/workflows/*.yaml", "azure-pipelines.yml", ".gitlab-ci.yml"]
@@ -106,7 +106,7 @@ def load_devcore():
 
 def walk_files(ws):
     for root, dirs, files in os.walk(ws):
-        dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+        dirs[:] = [d for d in dirs if d not in SKIP_DIRS and not (root == ws and d.lower() == "agents")]
         for f in files:
             rel = os.path.relpath(os.path.join(root, f), ws).replace("\\", "/")
             yield rel, f

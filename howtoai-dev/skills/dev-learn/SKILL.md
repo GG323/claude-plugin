@@ -6,35 +6,26 @@ compatibility: Needs Python 3 (standard library only) and the dev-core, dev-work
 
 # Dev learn
 
-## Contents
+## Goal
 
-- [What it does](#what-it-does)
-- [Before you start](#before-you-start)
-- [Routes](#routes)
-- [Core rules](#core-rules)
-- [Output contract](#output-contract)
-- [Verify the output](#verify-the-output)
-- [Common failures](#common-failures)
-- [What it can't do](#what-it-cant-do)
-- [Feedback](#feedback)
-- [Skills and agents](#skills-and-agents)
+Stage 8 of `howtoai-dev`, after each human review: find why the round's Critical, Major, declined, and repeated findings got through, and fix each cause once, where it lives, so the next change does not repeat it.
 
-## What it does
-
-`dev-learn` is stage 8 of the `howtoai-dev` process. After each review round it asks why the round's serious, declined, and repeated findings got through, and fixes the cause once, where the cause lives, so the next change does not repeat it. It writes `learn-<round>.md` in the change folder, keeps the project lessons log that `dev-plan` reads at setup, and hands each fix the user approves to the skill that owns that file. It never changes product code, and it does not change the change's stage.
+- `<change folder>/learn-<round>.md`, from `dev-core`'s [learn template](../dev-core/assets/templates/learn.md) in its own fixed shape: one row per collected finding, then a Drift section with at least one bullet ("none found" when clean).
+- Lesson lines in `<workspace>/AGENTS/howtoai/dev/lessons.md` (the [lesson](../dev-core/assets/templates/lesson.md) format), which `dev-plan` reads at setup.
+- Each fix the user approves, handed to its owner: `dev-workbook`, `dev-core`'s Setup (hook rules), or `skill-builder`.
 
 ## Before you start
 
-1. **Commands.** Call these by their paths relative to this skill's folder (`python3 -I -B` instead of `py -3 -I -B` outside Windows):
+1. **Commands**, by path from this skill's folder (`python3 -I -B` instead of `py -3 -I -B` outside Windows):
    - `DEVCORE` = `py -3 -I -B "${CLAUDE_SKILL_DIR}/../dev-core/scripts/devcore.py"`
    - `WORKBOOK` = `py -3 -I -B "${CLAUDE_SKILL_DIR}/../dev-workbook/scripts/workbook.py"` (workbooks are read through its `resolve`, never by path)
    - `LEARN` = `py -3 -I -B "${CLAUDE_SKILL_DIR}/scripts/learn.py"`
    - `TESTINGMD` = `py -3 -I -B "${CLAUDE_SKILL_DIR}/../dev-test/scripts/testing_md.py"`
 
-   Each prints one JSON object; `"ok": false` carries the error, which you report before stopping that step. Without Python 3, stop and say the learn step needs it.
-2. **The change and round.** The change folder `dev-review` hands on, or the one the user names; the round is the highest `review-<n>.md` in it unless the user names one. Read the state with `DEVCORE state "<change folder>"`; never edit `state.json` by hand.
-3. **The workspace and the log.** `DEVCORE root --cwd "<change folder>"` gives the workspace; the lessons log is `<workspace>/.howtoai/dev/lessons.md`, created by the first lesson. The plan folder is the change folder's parent.
-4. **The method.** Read `dev-core`'s [self-edit and root-cause method](../dev-core/references/self-edit.md): its stage table, its fix levels, and its change plan are the rules this skill applies.
+   `"ok": false` carries the error, which you report before stopping that step. Without Python 3, stop and say the learn step needs it.
+2. **The change and round:** the change folder `dev-review` hands on, or the one the user names; the round is the highest `review-<n>.md` in it unless the user names one. Read it with `DEVCORE state "<change folder>"`; never edit `state.json` by hand.
+3. **The workspace and log:** `DEVCORE root --cwd "<change folder>"` gives the workspace; the lessons log is `<workspace>/AGENTS/howtoai/dev/lessons.md`, created by the first lesson.
+4. **The method:** read `dev-core`'s [self-edit and root-cause method](../dev-core/references/self-edit.md). Its stage table, fix levels, and change plan are the rules this skill applies.
 
 ## Routes
 
@@ -44,24 +35,16 @@ compatibility: Needs Python 3 (standard library only) and the dev-core, dev-work
 | No `review-<n>.md` in the change folder | Stop: there is no review round to learn from; hand on to `dev-review` |
 | The user asks only to see or tidy the lessons log | Show it; remove a lesson only when the user says it is settled, with `LEARN lesson remove` |
 
-## Core rules
+## Rules
 
-- **Lowest level first.** A fix lands at the lowest level that resolves it: a workbook or another reference file, then a goldfish, then a skill file. A skill file change needs evidence, in the record and the change plan, that neither lower level can resolve it; without that evidence, propose the lower level.
+- **Lowest level first.** A fix lands at the lowest level that resolves it: a workbook or another reference file, then a goldfish, then a skill file. A skill file change needs evidence, in the record and the change plan, that neither lower level can resolve it; without that evidence, propose the lower level. Technology facts always go to `dev-workbook`.
 - **Evidence, not opinion.** Every root cause quotes the instruction, statement, or test that let the problem through, with its file and line, or names where the missing one belongs.
-- **The user approves each fix.** Records (the learn record and lesson lines) are written without asking; every fix is proposed with a recommendation and goes to its owner only after the user's yes for that fix. This skill edits no workbook, skill, agent, or settings file itself.
+- **The user approves each fix.** Records (the learn record and lesson lines) are written without asking. Every fix is proposed with a recommendation and goes to its owner only after the user's yes for that fix. This skill edits no workbook, skill, agent, or settings file itself; without `skill-builder`, a process change stays in the learn record as proposed.
 - **One problem, one cause.** The IDs under one number of the review's Problems list are one cause: one root cause, one lesson, and one repeat, with a record row for each ID.
-- **Settled lessons leave the log.** A lesson whose fix is applied, or whose fix is declined, is removed from the log with its copies. The learn record keeps the history, and `LEARN collect` reads earlier learn records, so a problem that comes back after its fix is still found.
-- **Repeats come first.** A finding that matches an open lesson raises its count; one that matches an applied fix means the fix did not hold. Both are listed first in the proposal, with the stronger fix recommended.
+- **Settled lessons leave the log.** A lesson whose fix is applied or declined is removed with its copies; lesson lines are written only by `LEARN lesson`. The learn record keeps the history, and `LEARN collect` reads earlier records, so a problem that comes back after its fix is still found.
+- **Repeats come first.** A finding that matches an open lesson raises its count; one that matches an applied fix means the fix did not hold. Both are listed first, with the stronger fix recommended.
+- **Stay in your lane.** Never change product code or docs, or the change's stage: drift items and fix-later findings become work items through `dev-review` and `dev-plan`. Never judge a finding again: the review's scores and the user's choices stand. The only write outside the change folder is the lessons log.
 - **Never blocks the change.** The fix-now hand-on and the deploy do not wait for the learn step's approvals.
-
-## Output contract
-
-- **Audience:** the developer running the change; `dev-plan` reads the lessons log at its next setup.
-- **Deliverables:**
-  - `<change folder>/learn-<round>.md`, copied from `dev-core`'s [learn template](../dev-core/assets/templates/learn.md) and kept in its shape (exempt from the workspace's title and contents rules): one table row per collected finding, then a Drift section with at least one bullet ("none found" when clean).
-  - Lines in `<workspace>/.howtoai/dev/lessons.md` in the [lesson](../dev-core/assets/templates/lesson.md) format, written only by `LEARN lesson`.
-- **Report:** one chat message: "Learn round <n>: <c> findings collected (<r> repeats), <p> fixes proposed, <d> drift items", then the proposal list, then what the user approves. After the hand-ons, one line per fix with where it landed.
-- **Writes outside the change folder:** the lessons log only. Fixes are written by `dev-workbook`, `dev-core`'s Setup, or `skill-builder`.
 
 ## Verify the output
 
@@ -71,27 +54,13 @@ compatibility: Needs Python 3 (standard library only) and the dev-core, dev-work
 
 ## Common failures
 
-| Symptom | Cause | Fix |
-| --- | --- | --- |
-| Every root cause is `build` | The build is the last stage that touched the code, so it looks guilty | Ask which stage's rules or facts would have caught it; `build` only when the plan, tests, and workbooks were right |
-| A skill file change is proposed for a technology fact | The fact was found in a skill's step | Technology facts go to `dev-workbook`; the step already consults the workbook |
-| `collect` finds no repeats although the problem is familiar | The earlier lesson was settled and removed | Read `applied_fixes` in its output: a match there means the fix did not hold |
-| `check` says a settled lesson is still in the log | The row was set to applied before the lesson was removed | `LEARN lesson remove` with that ID, then check again |
-
-## What it can't do
-
-- It does not fix product code or docs: drift items and fix-later findings become work items through `dev-review` and `dev-plan`.
-- It does not judge a finding again: the review round's scores and the user's choices stand.
-- A process change runs through `skill-builder`; without it, the change plan stays in the learn record as proposed.
+| Symptom | Fix |
+| --- | --- |
+| Every root cause is `build` | Ask which stage's rules or facts would have caught it; `build` only when the plan, tests, and workbooks were right |
+| A skill file change is proposed for a technology fact | It goes to `dev-workbook`; the skill step already consults the workbook |
+| `collect` finds no repeats although the problem is familiar | The lesson was settled and removed: read `applied_fixes` in its output; a match there means the fix did not hold |
+| `check` says a settled lesson is still in the log | `LEARN lesson remove` with that ID, then check again |
 
 ## Feedback
 
-Send requested changes or reported problems to the `skill-builder` skill (`/skill-builder` in Claude Code), not by file path. Technology facts go to `dev-workbook`. If `skill-builder` is unavailable, agree the change with the user first, keep it as small as the problem needs, and check the skill afterwards.
-
-## Skills and agents
-
-- [Learn](routes/learn.md) - the route; [scripts/learn.py](scripts/learn.py) - collect, lesson, and check.
-- `dev-core` - state, Setup for hook rules, the learn and lesson templates, and the self-edit and root-cause method.
-- `dev-workbook` - takes technology facts through Propose; `skill-builder` - takes process changes as a supplied change plan.
-- `dev-review` - hands on after each human review; `dev-plan` - reads the lessons log at setup.
-- No agents are used.
+Changes to this skill go to `skill-builder`, not by file path; technology facts go to `dev-workbook`. Without `skill-builder`, agree the change with the user first and keep it small.

@@ -1,16 +1,5 @@
 # Build the skill
 
-## Contents
-
-- [Before writing](#before-writing)
-- [Hand off or skip writing](#hand-off-or-skip-writing)
-- [Metadata and discovery](#metadata-and-discovery)
-- [Instructions](#instructions)
-- [Split the workflow into stages](#split-the-workflow-into-stages)
-- [Supporting files](#supporting-files)
-- [Placement and saving](#placement-and-saving)
-- [Skills and agents](#skills-and-agents)
-
 ## Before writing
 
 - Confirm the user explicitly approved the final plan. If approval is missing or the plan changed materially, return to [Plan](plan.md).
@@ -59,11 +48,11 @@ Write the workflow, decision points, and meaningful edge cases without spelling 
 - **Flow:** write instructions to be read top to bottom. Add an explicit link to the next section only where the flow branches or jumps — choosing between routes, skipping ahead, returning to an earlier section, or moving to another file. Do not add "continue to" links between consecutive sections. When a route skips the sections that follow it, say so explicitly at the end of that route, for example "Skip the Hand off section". Keep each instruction in the section that acts on it; a section must not describe a branch it does not lead to.
 - **References:** what the target skill may link depends on where it lives.
   - Every target skill links its own files and sections with relative Markdown links, for example to `stages/review.md` or to `#output` in the same file.
-  - A project skill (in a workspace's `.claude/skills/`) may also link that workspace's files, such as `../../../Job posts/`, because they belong to the same workspace.
-  - A personal or plugin skill runs in every workspace, so it names workspace paths as code instead of linking them.
+  - A workspace skill (in a workspace's `AGENTS/skills/`, linked from its `.claude/skills/`) may also link that workspace's files, such as `../../../Job posts/` from `AGENTS/skills/<name>/`, because they belong to the same workspace.
+  - A global or plugin skill runs in every workspace, so it names workspace paths as code instead of linking them.
   - Other skills, tools, commands, and infrastructure artifacts are always quoted as code, for example `update-config`, `ffmpeg`, or `.claude/skills/`.
 - **Bundled scripts:** a relative `scripts/...` path fails when the user's working directory is elsewhere, so call every bundled script through the skill's own folder. For Claude Code, write `${CLAUDE_SKILL_DIR}`, which Claude Code replaces with the folder holding the skill's `SKILL.md`, quoted and with the interpreter from the startup check, for example `py -3 "${CLAUDE_SKILL_DIR}/scripts/tidy.py" plan "<folder>"`. A matching frontmatter rule such as `allowed-tools: Bash(py -3 "${CLAUDE_SKILL_DIR}/scripts/tidy.py" *)` lets those exact commands run without a permission prompt; add it only for scripts that are safe to run unprompted. For other harnesses, add one sentence saying that paths under `scripts/` are relative to the skill's folder. Python scripts call `sys.stdout.reconfigure(encoding="utf-8")` themselves, because on Windows the default console encoding crashes on names like "Jānis" and `py -3 -I` ignores `PYTHONIOENCODING`. A script that needs a package installed with `pip install --user` is called without `-I`, which hides user-site packages. Scripts that use today's date take an optional "as of" date, so tests can fix it.
-- Place the **Feedback** section last before `Skills and agents`, as described in [Feedback note for target skills](../SKILL.md#feedback-note-for-target-skills).
+- Place the **Feedback** section last, as described in [Feedback note for target skills](../SKILL.md#feedback-note-for-target-skills).
 
 ## Split the workflow into stages
 
@@ -92,18 +81,9 @@ Link each supporting file from `SKILL.md` with a relative path and a note on whe
 
 ## Placement and saving
 
-- Save the target where the approved plan says, at the location for its kind in [Deliverable kinds](../references/skill-types.md#deliverable-kinds). The plan's default: the project folder when the target uses this workspace's files, personal (`~/.claude/`) otherwise, and a plugin only for the HowToAI pack.
-- In [dev mode](../references/skill-types.md#deliverable-kinds), save a personal skill or subagent in the source folder, then link it into the personal folder: run `py -3 -I -B "<howtoai_root>/scripts/devmode.py" link --source "<skill folder or agent file>"`, check that its `action` is `create` or `none`, and run it again with `--write`; the approved plan names the link, so it needs no second approval. A refusal (a real folder or file, or another link, at that path) is a destination conflict.
+- Save the target where the approved plan says, at the location for its kind in [Deliverable kinds](../references/skill-types.md#deliverable-kinds). The plan's default: the current workspace's `AGENTS/skills/<name>/` or `AGENTS/agents/<name>.md`; the main development workspace's `AGENTS/` or a plugin only when the user asked for it. Never write a file into a harness folder (`.claude/`, `.agents/`, `.copilot/`).
+- Then link it, as [Default place](../references/skill-types.md#deliverable-kinds) says: run `py -3 -I -B "<howtoai_root>/scripts/devmode.py" link --source "<skill folder or agent file>"` with `--into workspace --workspace "<workspace>"` for a workspace target (and once per `--harness` the workspace uses), or without `--into` for a target linked globally; check that its `action` is `create` or `none`, and run it again with `--write`. The approved plan names the links, so they need no second approval. A refusal (a real folder or file, or another link, at that path) is a destination conflict.
 - If the approved plan stores the target skill outside a discovery path, [Test](test.md#how-tests-run) syncs a copy into the personal skills folder for testing, and the delivery says where that copy is.
 - Change only authorized files. If the destination conflicts with an existing skill or file, stop, leave it untouched, and return to [Plan](plan.md).
 - Move existing reference files only as the approved plan specifies.
 - Keep package-level documentation outside the target skill's folder, and create it only when requested or required by the target repository.
-
-## Skills and agents
-
-- [skill-builder](../SKILL.md) — rules and vocabulary this stage applies; [skill types](../references/skill-types.md) — the requirements it writes.
-- [Plan](plan.md) — source of the approved plan; [Test](test.md) — the next stage.
-- `skill-finder` — vets and installs a reuse candidate in [Before writing](#before-writing).
-- `update-config` and `plugin-authoring` — write hooks, settings, and mods in [Hand off or skip writing](#hand-off-or-skip-writing).
-- `skill-design` — makes the template the plan chose, in [Instructions](#instructions).
-- No dedicated build agent is required.

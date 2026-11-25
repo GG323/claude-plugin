@@ -11,7 +11,6 @@
 - [House principles](#house-principles)
 - [Components](#components)
 - [The generic look to avoid](#the-generic-look-to-avoid)
-- [Skills and agents](#skills-and-agents)
 
 ## Evidence, not taste
 
@@ -147,9 +146,3 @@ These mark an output as template or "AI-made"; replace each with the house patte
 | "Unlock", "Elevate", "Seamless", "Learn more" | Plain nouns and verb-plus-object buttons |
 | Three identical feature tiles with icons | Content that differs gets layouts that differ |
 | Fade-in on scroll | Content visible on load |
-
-## Skills and agents
-
-- [skill-design](../SKILL.md) - applies these rules in its build, review, and redesign stages.
-- [design-reference.html](design-reference.html) and [design-tokens.json](../assets/design-tokens.json) - the reference and its values; [surfaces.md](surfaces.md) - how each surface applies and checks them.
-- `interfaces:better-interface` - a deeper, optional second review with its own rule set.

@@ -2,13 +2,13 @@
 
 Python 3, standard library only. Every command prints one JSON object (resolve can print Markdown).
 Format: references/format.md in this skill. Layers: base (this skill's workbooks/), user
-(~/.claude/howtoai/workbooks/), project (<workspace>/.howtoai/workbooks/); project wins over user, user
+(~/.claude/howtoai/workbooks/), project (<workspace>/AGENTS/howtoai/workbooks/); project wins over user, user
 over base. Every command takes --base-dir and --user-dir to replace the default folders (tests use them).
 
   open      [--workspace W]
             What the skill prints when it loads, with no arguments from the caller: every MUST and MUST
             NOT of the workspace's workbooks, the tags, and how to search the rest. Writes the search
-            file <workspace>/.howtoai/cache/workbook-search.md, one tagged line per statement. The
+            file <workspace>/AGENTS/howtoai/cache/workbook-search.md, one tagged line per statement. The
             workspace is the nearest folder at or above the current one with dev settings. Exits 0 also
             when it cannot load, and says so, because a failing load would hide the skill.
   resolve   --workspace W [--paths P ...] [--technologies T ...] [--tags T ...] [--topics S ...]
@@ -71,6 +71,7 @@ import subprocess
 import sys
 
 SKILL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+LEGACY_SECTION = "Skills and agents"  # no longer written or required; accepted last in older files
 SECTIONS = [("Overview", "overview"), ("Setup and configuration", "setup"), ("Idioms and patterns", "patterns"),
             ("Pitfalls", "pitfalls"), ("Commands", "commands"), ("Testing", "testing"), ("Security", "security"),
             ("Performance", "performance"), ("Deployment and operations", "deploy"), ("Our situation", "situation")]
@@ -82,7 +83,26 @@ SEP = " · "
 TAGS = ("access", "async", "build", "caching", "cli", "config", "data", "dependencies", "di", "errors", "formatting",
         "health", "http", "image", "lifecycle", "linting", "logging", "modules", "nullability", "performance", "secrets",
         "state", "strings", "style", "tests", "versions")
-SETTINGS = (".howtoai", "dev", "settings.json")
+STATE_FOLDER = "howtoai"  # the howtoai state folder, inside the workspace's AGENTS/ folder
+
+
+def agents_dir(ws):
+    """The workspace's AGENTS/ folder in the case it exists in (Agents/ counts), else <ws>/AGENTS."""
+    try:
+        for name in os.listdir(ws):
+            if name.lower() == "agents" and os.path.isdir(os.path.join(ws, name)):
+                return os.path.join(ws, name)
+    except OSError:
+        pass
+    return os.path.join(ws, "AGENTS")
+
+
+def state_dir(ws, *parts):
+    """<workspace>/AGENTS/howtoai/<parts>: settings, install record, reply log, workbooks, deploy, cache."""
+    return os.path.join(agents_dir(ws), STATE_FOLDER, *parts)
+
+
+SETTINGS = ("dev", "settings.json")  # inside state_dir
 PAGE = 20000  # characters of statements in one part
 PRINT_MAX = 28000  # characters; the Bash tool saves longer output to a file and shows only a preview
 STMT = re.compile(r"^- \*\*(?P<id>[a-z0-9-]+\.[a-z]+\.[up]?\d{3})\*\*"
@@ -272,19 +292,20 @@ def validate_wb(path, overlay=None):
     sup = wb["header"].get("Supported until", "")
     if sup and iso_date(sup) is None:
         errors.append("Header Supported until must be a real date, YYYY-MM-DD")
-    expected = ["Contents", "Header", "Load when"] + [h for h, _ in SECTIONS] + ["Skills and agents"]
+    expected = ["Contents", "Header", "Load when"] + [h for h, _ in SECTIONS]
+    order = wb["order"][:-1] if wb["order"][-1:] == [LEGACY_SECTION] else wb["order"]  # a file written before 2026-11-25
     if overlay:
-        present = [h for h in wb["order"]]
+        present = [h for h in order]
         filtered = [h for h in expected if h in present]
         if [h for h in present if h in expected] != filtered:
             errors.append("sections are out of order")
-        for h in ("Contents", "Header", "Skills and agents"):
+        for h in ("Contents", "Header"):
             if h not in present:
                 errors.append(f"missing section {h}")
     else:
-        if wb["order"] != expected:
-            missing = [h for h in expected if h not in wb["order"]]
-            extra = [h for h in wb["order"] if h not in expected]
+        if order != expected:
+            missing = [h for h in expected if h not in order]
+            extra = [h for h in order if h not in expected]
             errors.append(f"sections must be exactly {expected}; missing {missing}, unexpected {extra}")
         if not wb["globs"]:
             errors.append("Load when has no globs")
@@ -334,7 +355,7 @@ def validate_wb(path, overlay=None):
 def layer_dirs(ws, base_dir, user_dir):
     return {"base": base_dir or os.path.join(SKILL_DIR, "workbooks"),
             "user": user_dir or os.path.join(os.path.expanduser("~"), ".claude", "howtoai", "workbooks"),
-            "project": os.path.join(ws, ".howtoai", "workbooks") if ws else None}
+            "project": state_dir(ws, "workbooks") if ws else None}
 
 
 def available(dirs):
@@ -438,7 +459,7 @@ def matches(path, globs):
 def project_technologies(ws):
     if not ws:
         return []
-    p = os.path.join(ws, ".howtoai", "dev", "settings.json")
+    p = state_dir(ws, "dev", "settings.json")
     try:
         with open(p, encoding="utf-8-sig") as f:
             return list((json.load(f).get("workbooks") or {}).get("technologies") or [])
@@ -453,7 +474,7 @@ def project_technologies(ws):
 def find_workspace(start):
     folder = os.path.abspath(start)
     while True:
-        if os.path.isfile(os.path.join(folder, *SETTINGS)):
+        if os.path.isfile(state_dir(folder, *SETTINGS)):
             return folder
         parent = os.path.dirname(folder)
         if parent == folder:
@@ -494,7 +515,7 @@ def open_text(a):
     if not ws and not a.workspace and os.environ.get("CLAUDE_PROJECT_DIR"):
         ws = find_workspace(os.environ["CLAUDE_PROJECT_DIR"])
     if not ws:
-        return ("No dev workspace here (no .howtoai/dev/settings.json in this folder or above it), so no workbook "
+        return ("No dev workspace here (no AGENTS/howtoai/dev/settings.json in this folder or above it), so no workbook "
                 "rules are loaded. If the work is in a dev workspace elsewhere, say that its rules are not loaded. The routes below still work for a workspace you name; howtoai-dev's INSTALL.md "
                 "sets a workspace up.")
     if not project_technologies(ws):
@@ -520,7 +541,7 @@ def open_text(a):
                 sources.append(f"- {stem} {st['id']}: {st['source']}")
                 if is_must(st):
                     must.append(statement_line(st) + (f" [{stem}]" if "@" in stem else ""))
-    cache = os.path.join(ws, ".howtoai", "cache")
+    cache = state_dir(ws, "cache")
     write_if_changed(os.path.join(cache, ".gitignore"), "*\n")
     search = os.path.join(cache, "workbook-search.md")
     write_if_changed(search, "\n".join(rows) + "\n")
@@ -733,8 +754,7 @@ def cmd_resolve(a):
 
 def render_overlay(tech, title, layer, updated, sources, sections, codebase=None):
     present = [(h, s) for h, s in SECTIONS if sections.get(s)]
-    contents = ["- [Header](#header)"] + [f"- [{h}](#{h.lower().replace(' ', '-')})" for h, _ in present] + \
-               ["- [Skills and agents](#skills-and-agents)"]
+    contents = ["- [Header](#header)"] + [f"- [{h}](#{h.lower().replace(' ', '-')})" for h, _ in present]
     lines = [f"# {title} workbook ({layer})", "", "## Contents", ""] + contents + ["", "## Header", "",
              "| Key | Value |", "| --- | --- |", f"| Technology | `{tech}` |", f"| Title | {title} |",
              f"| Layer | {layer} |", f"| Updated | {updated} |", "", "Sources:", ""]
@@ -748,8 +768,6 @@ def render_overlay(tech, title, layer, updated, sources, sections, codebase=None
             lvl = f" · {st['level']}" if st.get("level") else ""
             tagged = f" · tags: {', '.join(st['tags'])}" if st.get("tags") else ""
             lines.append(f"- **{st['id']}**{lvl} · {st['text']}{tagged} · source: {st['source']} · confirmed: {st['confirmed']}")
-    lines += ["", "## Skills and agents", "",
-              f"- `dev-workbook` - keeps this {layer} layer; the dev skills read it through `workbook.py resolve`."]
     return "\n".join(lines) + "\n"
 
 
@@ -911,6 +929,10 @@ def cmd_skeleton(a):
             raise Fail(f"no base workbook {a.tech}.md to copy")
         with open(src, encoding="utf-8") as f:
             lines = f.read().splitlines()
+        if f"## {LEGACY_SECTION}" in lines:  # a base written before 2026-11-25
+            lines = [l for l in lines[:lines.index(f"## {LEGACY_SECTION}")] if l != "- [Skills and agents](#skills-and-agents)"]
+            while lines and not lines[-1].strip():
+                lines.pop()
         rows = {"Title": a.title, "Versions": "none yet", "Layer": a.layer, "Updated": date}
         copied = []
         for l in lines:
@@ -929,7 +951,7 @@ def cmd_skeleton(a):
         out({"ok": True, "file": a.out, "copied_from": src, "statements": len(parse(a.out)["statements"]),
              "next": "check every statement against the official docs for this version, then set Versions and Supported until"})
     contents =["- [Header](#header)", "- [Load when](#load-when)"] + \
-               [f"- [{h}](#{h.lower().replace(' ', '-')})" for h, _ in SECTIONS] + ["- [Skills and agents](#skills-and-agents)"]
+               [f"- [{h}](#{h.lower().replace(' ', '-')})" for h, _ in SECTIONS]
     lines = [f"# {a.title} workbook", "", "## Contents", ""] + contents + ["", "## Header", "", "| Key | Value |",
              "| --- | --- |", f"| Technology | `{a.tech}` |"] + ([f"| Version key | {key} |"] if key else []) + \
             [f"| Title | {a.title} |", "| Versions | none yet |",
@@ -938,7 +960,6 @@ def cmd_skeleton(a):
     lines += [f"| `{g}` |" for g in KNOWN.get(a.tech, [])]
     for h, _ in SECTIONS:
         lines += ["", f"## {h}", "", "- none yet"]
-    lines += ["", "## Skills and agents", "", "- `dev-workbook` - keeps this workbook; the dev skills read it through `workbook.py resolve`."]
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     with open(a.out, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines) + "\n")

@@ -12,7 +12,6 @@
 - [Allow the weekly audit](#allow-the-weekly-audit)
 - [Run the audit](#run-the-audit)
 - [Summarize](#summarize)
-- [Skills and agents](#skills-and-agents)
 
 ## Before you start
 
@@ -37,10 +36,14 @@ Run `check-deps` and show the user each item that is `missing`, with its `fix`:
 
 ## Ask the install questions
 
-1. **Dev mode.** Ask: "Do you want to keep the skills, agents, and tools in workspace files, so they are under version control and easier to change?" Explain in one line each: yes keeps the files in a workspace and links them into Claude's global folders; no is a normal plugin install that updates from the marketplace. Recommend no for someone who will not change the tools, yes for someone who builds or edits them. Say that yes also turns Git version control on, because dev mode needs it. If `file links` was missing, say that yes needs Windows Developer Mode for agent links.
+1. **Dev mode.** Ask: "Do you want to keep the skills, agents, and tools in workspace files, so they are under version control and easier to change?" Explain in one line each: yes keeps the files in the workspace's `AGENTS/` folder (a clone of the plugins, the user's own skills and agents, and the howtoai state folder, all under Git) and puts only links in Claude's folders; no is a normal plugin install that updates from the marketplace. Recommend no for someone who will not change the tools, yes for someone who builds or edits them. Say that yes also turns Git version control on, because dev mode needs it. If `file links` was missing, say that yes needs Windows Developer Mode for agent links.
 2. **Workspace.** The setting is kept in a workspace's `AGENTS.md`, in a `## Dev mode` section. For yes: which workspace holds the files (an absolute folder path; suggest the current one). For no: which workspace's `AGENTS.md` records the setting and gets the conventions block. A workspace is required either way, because both settings must be recorded.
 3. **Git version control.** With dev mode on it is on, so do not ask; if the user does not want it, dev mode is off. With dev mode off, ask: "Should Git version control be enabled for this workspace: on or off?" Recommend on: changes to the instructions and tools can then be reviewed and undone. On a rerun, recommend the current value.
-4. **Folders**, for dev mode on only. The source folder for the user's own skills, agents, and docs (default `AGENTS`, relative to the workspace), and the plugins folder for plugin sources (default `AGENTS/plugins`). When the workspace already holds a clone of the `howtoai-mods` marketplace (a folder with `.claude-plugin/marketplace.json` and a `howtoai/` folder), recommend it as the plugins folder, so nothing moves. Moving existing files into a new layout is a separate decision; do not offer to do it here.
+   - **Multi-repo workspace:** when the workspace root is not a repository but its direct subfolders are (for example a client folder holding several repositories), the user has set up Git: recommend Git version control on and dev mode on, and say that the files at the root (such as `AGENTS.md`) stay local, outside those repositories. `status` reports this layout as `git.layout` `multi-repo`.
+4. **Folders**, for dev mode on only. Recommend the defaults: the source folder `AGENTS` (the user's own skills in `AGENTS/skills/`, agents in `AGENTS/agents/`, docs in `AGENTS/docs/`) and the plugins folder `AGENTS/plugins` (a clone of the plugins). A harness folder (`.claude`, `.agents`, `.copilot`) is never the source folder: those folders, global and in the workspace, hold only links.
+   - **Main development workspace:** the workspace whose `AGENTS/plugins` holds the clone is the main one, and the global links point to it. Recommend making the workspace being installed the main one with its own clone. When the user wants to keep another workspace as the main one, pass that workspace's clone (the folder above the pointer's `howtoai_root`) as an absolute `--plugins-folder`: nothing is cloned or linked again, and the pointer stays there.
+   - **Clone source:** the public repository `https://github.com/GG323/claude-plugin`, or a local development clone the user names (for example, the folder where they build the plugins), cloned with `git clone "<local path>"` so its committed history comes along. Only committed changes are cloned: when that folder has uncommitted changes, say so and ask whether the user commits them first.
+   - Moving existing files into a new layout is a separate decision; do not offer to do it here.
 
 ## Record the choice
 
@@ -50,13 +53,15 @@ Run `set` with both answers (`--dev-mode` and `--git-version-control`, each on o
 
 When the files are not on disk yet (dev mode on with no `howtoai/` in the plugins folder), run `set --write` now and again after the clone, from the clone's own `devmode.py`, so the pointer's `howtoai_root` points at the clone.
 
-With Git version control on, show the user each of the `problems` in `git`, and fix one only after their yes:
+With Git version control on, show the user each of the `problems` in `git`, and fix one only after their yes. Show its `notes` too: in a multi-repo workspace they name the root files that stay local, and need no fix.
 
-- **Not in a repository:** offer `git init "<workspace>"`. Never add, commit, create a remote, or push: the first commit can hold private files, so it is the user's.
+- **`AGENTS/` not in a repository** (the `skills`, `agents`, or `docs` problem, or a multi-repo `notes` line for them): offer `git init "<workspace>/AGENTS"`, so `AGENTS/` is a repository of its own, and a `.gitignore` in it with the two lines `plugins/` (the clone is its own repository) and `howtoai/cache/` (generated). Write the `.gitignore` with the file tools after showing it.
+- **The workspace itself not in a repository:** offer `git init "<workspace>"` only when the user wants the whole workspace under one repository, never in a multi-repo workspace, where it would nest the user's repositories in a new one.
+- Never add, commit, create a remote, or push: the first commit can hold private files, so it is the user's.
 - **Ignored:** show which folder, and ask whether to change that `.gitignore` or leave it.
 - **Anything else:** show the message and list it under Missing in [Summarize](#summarize).
 
-Dev mode needs working Git version control. With dev mode on, go on to linking only when Git is installed and the workspace is in a repository; if the user declines that fix, offer dev mode off and run `set` again.
+Dev mode needs working Git version control. With dev mode on, go on to linking only when Git is installed and `git.problems` is empty (a multi-repo workspace counts); if the user declines a fix, offer dev mode off and run `set` again.
 
 ## Install or link
 
@@ -72,9 +77,12 @@ Skip the Dev mode on section.
 
 ### Dev mode on
 
-1. **Get the source.** Run `status` and read `paths.plugins`. If `<paths.plugins>/howtoai/` exists, use it. Otherwise, if the plugins folder is missing or empty, show the user `git clone https://github.com/GG323/claude-plugin "<paths.plugins>"` and run it after their yes, then run `set --write` again from the clone (see [Record the choice](#record-the-choice)) and run `check-deps` from it. If the folder exists with other files, stop and ask the user where the clone should go.
-2. **Plan the links.** The links to make are each folder in `<paths.plugins>/howtoai/skills/`, plus each skill folder in `paths.skills` and each agent file in `paths.agents` that `status` does not show as `link-ok`. Run `link --source "<path>"` for each, without `--write`, and show the user one list: what will be created, what is already linked (`none`), and what is refused.
-3. **Refusals.** A real folder or file in the way is never replaced: name it, and say the user can move it aside (for example, into the source folder or a backup folder) and rerun this step. A link to somewhere else is replaced only when the user says so, with `--replace-link`.
+1. **Get the source.** Run `status` and read `paths.plugins`. If `<paths.plugins>/howtoai/` exists, use it; with `paths.plugins_shared` true it is another workspace's clone, already linked from there, so step 2 normally finds every plugin link as `none`. Otherwise, if the plugins folder is missing or empty, show the user `git clone <clone source> "<paths.plugins>"` (the source from [Ask the install questions](#ask-the-install-questions), item 4) and run it after their yes, then run `set --write` again from the clone (see [Record the choice](#record-the-choice)) and run `check-deps` from it. If the folder exists with other files, stop and ask the user where the clone should go.
+2. **Plan the links.** Run each `link` below without `--write`, and show the user one list: what will be created, what already links there (`none`), what links elsewhere (`replace`), and what is refused.
+   - **Plugin skills, global:** each folder in `<paths.plugins>/howtoai/skills/`, with `link --source "<path>"`, plus `--harness agents` or `--harness copilot` for `~/.agents` or `~/.copilot` when those folders exist.
+   - **The workspace's own skills and agents:** each skill folder in `paths.skills` and each agent file in `paths.agents`, linked into this workspace only, with `link --source "<path>" --into workspace --workspace "<workspace>"` (and `--harness agents` or `copilot` when the workspace has those folders). Link one globally as well only when the user wants it in every workspace.
+   - A source inside a harness folder is refused: harness folders hold only links. Offer to move such a skill into `AGENTS/skills/` first, after the user's yes.
+3. **Refusals.** A real folder or file in the way is never replaced: name it, and say the user can move it aside (for example, into the source folder or a backup folder) and rerun this step. A link to somewhere else is replaced only when the user says so, with `--replace-link`; when this workspace becomes the main development workspace, its links replace the ones that point to the old main workspace's clone.
 4. **Create.** After the user's yes, run each planned `link` with `--write`. A Developer Mode error stops the agent links only: report it with its fix and go on.
 5. **Duplicates.** A marketplace copy beside the links is found and fixed in [Run the audit](#run-the-audit).
 
@@ -112,9 +120,3 @@ howtoai install
 ```
 
 When something stays open, end with the one step the user should take next.
-
-## Skills and agents
-
-- `skill-audit` - owns the Markdown conventions block (its `references/markdown-conventions.md`) and drafts a missing `AGENTS.md`.
-- `skill-builder` - after the install, places new personal skills and agents in the source folder when dev mode is on.
-- `howtoai-dev` - its own install needs this one first and calls the same `devmode.py`.

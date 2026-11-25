@@ -17,16 +17,16 @@ discover   Lists what the workspace already has for deploying: container files (
            Terraform, CI files, deploy scripts and Makefile or package.json deploy targets,
            hosting files; the deploy CLIs on PATH (with the WSL distros, where wsl is there); and the
            targets file. Reads only.
-target     The workspace's targets file, <ws>/.howtoai/deploy/targets.json. write validates one
+target     The workspace's targets file, <ws>/AGENTS/howtoai/deploy/targets.json. write validates one
            entry (from --file) and, only with --write, adds or replaces it; without --write it
            prints the preview.
 gate       Checks what code can: the target exists, the work is committed (git status clean
-           apart from .howtoai/, the plan folder, and the deploy files a first setup just wrote,
+           apart from AGENTS/ (tooling and howtoai state), the plan folder, and the deploy files a first setup just wrote,
            given as --new-file), and, with --change, the change is at
            stage deploy with an accepted human review, a green latest test run, and a green
            run that started at stage test since the last tests or build. Lists
            checks_run and checks_skipped.
-approve    Records one approved step in <ws>/.howtoai/deploy/approvals.json with its exact
+approve    Records one approved step in <ws>/AGENTS/howtoai/deploy/approvals.json with its exact
            command and an expiry (default: the target's approval_minutes, else 30). Run it only
            after the user's yes for that step.
 use        Checks one approval right before its step runs: the exact command (after trimming)
@@ -36,7 +36,7 @@ use        Checks one approval right before its step runs: the exact command (af
 check      An HTTP check with retries: status code and optional text. Commands checks are run
            by the agent, not here.
 log        Adds a run row to the deploy log: <change>/deploy-log.md with --change, else
-           <ws>/.howtoai/deploy/log.md; the file is created from assets/deploy-log.md.
+           <ws>/AGENTS/howtoai/deploy/log.md; the file is created from assets/deploy-log.md.
 self-edit  Adds a row to the deploy log's Self-edits table.
 
 Exit code 0 when the command ran (gate and check: "ok" says whether they passed); 1 with
@@ -58,8 +58,26 @@ import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.abspath(os.path.join(HERE, "..", "assets"))
-SKIP_DIRS = {".git", "node_modules", "bin", "obj", ".venv", "venv", "__pycache__", "dist", "build", ".howtoai",
-             "TestResults", ".terraform"}
+STATE_FOLDER = "howtoai"  # the howtoai state folder, inside the workspace's AGENTS/ folder
+
+
+def agents_dir(ws):
+    """The workspace's AGENTS/ folder in the case it exists in (Agents/ counts), else <ws>/AGENTS."""
+    try:
+        for name in os.listdir(ws):
+            if name.lower() == "agents" and os.path.isdir(os.path.join(ws, name)):
+                return os.path.join(ws, name)
+    except OSError:
+        pass
+    return os.path.join(ws, "AGENTS")
+
+
+def state_dir(ws, *parts):
+    """<workspace>/AGENTS/howtoai/<parts>: settings, install record, reply log, workbooks, deploy, cache."""
+    return os.path.join(agents_dir(ws), STATE_FOLDER, *parts)
+
+
+SKIP_DIRS = {".git", "node_modules", "bin", "obj", ".venv", "venv", "__pycache__", "dist", "build", "TestResults", ".terraform"}
 CLIS = ["docker", "podman", "nerdctl", "kubectl", "helm", "kustomize", "kind", "minikube", "rdctl", "k3d",
         "microk8s", "terraform", "az", "aws", "gcloud", "gh", "glab", "flyctl", "vercel", "netlify", "ssh", "scp",
         "rsync", "wsl"]
@@ -105,14 +123,14 @@ def now(a=None):
 
 
 def ws_path(ws, *parts):
-    return os.path.join(os.path.abspath(ws), ".howtoai", "deploy", *parts)
+    return state_dir(os.path.abspath(ws), "deploy", *parts)
 
 
 # ---------------------------------------------------------------- discover
 
 def walk(ws):
     for root, dirs, files in os.walk(ws):
-        dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+        dirs[:] = [d for d in dirs if d not in SKIP_DIRS and not (root == ws and d.lower() == "agents")]
         for name in files:
             yield os.path.join(root, name)
 
@@ -308,14 +326,14 @@ def repositories(ws):
             found.append(".")
     elif os.path.isfile(os.path.join(ws, ".git")) or (os.path.isdir(os.path.join(ws, ".git")) and os.listdir(os.path.join(ws, ".git"))):
         broken.append(".")
-    skip = {".git", ".howtoai", "node_modules", ".venv", "venv"}
+    skip = {".git", "node_modules", ".venv", "venv"}
     for folder, dirs, files in os.walk(ws):
         if folder != ws and (".git" in files or (".git" in dirs and os.listdir(os.path.join(folder, ".git")))):
             rel = os.path.relpath(folder, ws).replace(os.sep, "/")
             top = git(folder.replace(os.sep, "/"), "rev-parse", "--show-toplevel")
             same = top.returncode == 0 and os.path.realpath(top.stdout.strip()) == os.path.realpath(folder)
             (found if same else broken).append(rel)
-        dirs[:] = [d for d in dirs if d not in skip
+        dirs[:] = [d for d in dirs if d not in skip and not (folder == ws and d.lower() == "agents")
                    and not getattr(os.path, "isjunction", lambda p: False)(os.path.join(folder, d))]
     return found, broken
 
@@ -332,7 +350,7 @@ def unversioned(ws, repos, plan_folder):
         down = []
         for d in dirs:
             path = base + d
-            if path in repos or path in (".howtoai", plan_folder) or d == ".git":
+            if path in repos or path in (plan_folder,) or path.lower() == "agents" or d == ".git":
                 continue
             if any(r.startswith(path + "/") for r in repos):
                 down.append(d)
@@ -410,7 +428,7 @@ def cmd_gate(a):
                     path = f"(outside the workspace) {path}"
                 if line.startswith("??") and path.rstrip("/") in repos:
                     continue  # an untracked repository inside, checked on its own; a submodule's pointer still counts
-            if path.startswith((".howtoai/", plan_folder + "/")) or path in (".howtoai", plan_folder):
+            if path.lower().startswith("agents/") or path.lower() == "agents" or path.startswith(plan_folder + "/") or path == plan_folder:
                 continue
             if any(path == n or path.startswith(n.rstrip("/") + "/") for n in new_files):
                 continue

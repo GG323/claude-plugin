@@ -1,8 +1,8 @@
 """dev-reply-log: a UserPromptSubmit hook that records that the user replied, so an approval in the
 user's name can be checked against a real reply.
 
-In a workspace with project dev settings (.howtoai/dev/settings.json), it appends one line to
-<workspace>/.howtoai/dev/replies.jsonl for each user prompt: {"at": <local ISO time>, "sha256":
+In a workspace with project dev settings (AGENTS/howtoai/dev/settings.json), it appends one line to
+<workspace>/AGENTS/howtoai/dev/replies.jsonl for each user prompt: {"at": <local ISO time>, "sha256":
 <hash of the normalized prompt>}. It never stores the prompt's text. It keeps the last 50 lines.
 devcore.py's state patch hashes an approval's "reply" the same way and accepts an approval
 "by": "user" only when a logged reply made at or after the change's creation and after its last
@@ -31,7 +31,7 @@ def record(data):
     dc = common.devcore()
     if not common.configured(dc, ws):
         return
-    path = os.path.join(ws, dc.REPLY_LOG)
+    path = dc.reply_log(ws)
     at = datetime.datetime.now().astimezone().isoformat()
     line = json.dumps({"at": at, "sha256": dc.reply_hash(prompt)})
     try:

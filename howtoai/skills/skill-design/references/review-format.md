@@ -1,11 +1,5 @@
 # Review format
 
-## Contents
-
-- [Shape](#shape)
-- [Example](#example)
-- [Skills and agents](#skills-and-agents)
-
 ## Shape
 
 The review is Markdown in chat, in exactly these sections and this order, with no title or contents list of its own. An empty section keeps its heading and says "none".
@@ -49,8 +43,3 @@ The review is Markdown in chat, in exactly these sections and this order, with n
 
 **Verdict** - Block: 1 HIGH finding. Fix it now, or get a second opinion from `interfaces:better-interface`?
 ```
-
-## Skills and agents
-
-- [stages/review.md](../stages/review.md) - produces this report.
-- [rules.md](rules.md) - the rule IDs and severities it cites; [surfaces.md](surfaces.md) - how non-HTML surfaces are checked.

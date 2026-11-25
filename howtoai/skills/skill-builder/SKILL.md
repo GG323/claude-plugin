@@ -15,7 +15,6 @@ description: Creates, changes, or repairs skills, tools, and automated procedure
 - [Idea-generation option](#idea-generation-option)
 - [Feedback note for target skills](#feedback-note-for-target-skills)
 - [Supporting files](#supporting-files)
-- [Skills and agents](#skills-and-agents)
 
 ## Vocabulary
 
@@ -112,7 +111,7 @@ Do not use it for procedural, deterministic, or single-correct-answer outputs, o
 
 ## Feedback note for target skills
 
-Every target skill has a short **Feedback** section, placed last before `Skills and agents`, telling the main agent to send requested changes or reported problems to the `skill-builder` skill by name (for example, `/skill-builder` in Claude Code), not by file path. If `skill-builder` is unavailable, the main agent edits the skill directly: it agrees the change with the user first, keeps it as small as the problem needs, and checks the skill afterwards.
+Every target skill has a short **Feedback** section, placed as the last section, telling the main agent to send requested changes or reported problems to the `skill-builder` skill by name (for example, `/skill-builder` in Claude Code), not by file path. If `skill-builder` is unavailable, the main agent edits the skill directly: it agrees the change with the user first, keeps it as small as the problem needs, and checks the skill afterwards.
 
 ## Supporting files
 
@@ -127,14 +126,3 @@ Every target skill has a short **Feedback** section, placed last before `Skills 
 - The official Claude Code [skills](https://code.claude.com/docs/en/skills), [subagents](https://code.claude.com/docs/en/sub-agents), [hooks](https://code.claude.com/docs/en/hooks), and [plugins](https://code.claude.com/docs/en/plugins) docs — the authoritative source for harness-specific features.
 
 Resolve links to files inside this skill relative to this directory. If a bundled file is missing, stop and ask the user to restore it or give its new location; do not skip it or guess its contents.
-
-## Skills and agents
-
-- [Recall](stages/recall.md), [Plan](stages/plan.md), [Build](stages/build.md), [Test](stages/test.md), [Learn](stages/learn.md) — this skill's stages.
-- `skill-finder` — finds existing skills, tools, and procedures for a new target skill in [Recall](stages/recall.md#search-past-work); its candidates go to the user in Plan's Reuse decision, and it vets and installs or places the chosen one in [Build](stages/build.md#before-writing). It owns all vetting; this skill never vets a candidate itself.
-- `update-config` and `plugin-authoring` — write a hook or settings automation and a mod, routed in [Plan](stages/plan.md#choose-the-route) and handed off in [Build](stages/build.md#hand-off-or-skip-writing); Test then checks and tests what they made.
-- `skill-design` — builds a target skill's page or report template once (never called at runtime); reviews one HTML test output in [Test](stages/test.md#design-pass). `skill-builder`'s own plan page was built with it.
-- `artifact-design` — loaded before the plan page is published as an artifact, where the harness asks for it.
-- The local scheduled-tasks tools (for example, `mcp__scheduled-tasks__*` in Claude Code Desktop) and `schedule` (cloud routines) — create a scheduled procedure's unattended run in [Test](stages/test.md#save-and-deliver).
-- `command-pane` — writes the **User settings** block that sets the technical level.
-- The checker and the test subagents are the harness's built-in general-purpose subagents; no custom agent definition is required. Target skills that use the idea-generation option rely on the harness's built-in subagents unless the plan says otherwise.

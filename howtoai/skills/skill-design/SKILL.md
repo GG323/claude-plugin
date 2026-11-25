@@ -18,7 +18,6 @@ compatibility: Claude Code (Python 3 and the browser pane for checks); Claude.ai
 - [Common failures](#common-failures)
 - [What it can't do](#what-it-cant-do)
 - [Feedback](#feedback)
-- [Skills and agents](#skills-and-agents)
 
 ## Before you start
 
@@ -124,16 +123,3 @@ These deliverables keep their own shapes, without workspace title or contents-li
 ## Feedback
 
 If the user asks to change how this skill works or reports a problem with it, use the `skill-builder` skill (for example, `/skill-builder`) to plan and apply the change. If `skill-builder` is unavailable, agree the change with the user first, keep it as small as the problem needs, and check the skill afterwards.
-
-## Skills and agents
-
-- [stages/source.md](stages/source.md), [stages/build.md](stages/build.md), [stages/review.md](stages/review.md), [stages/redesign.md](stages/redesign.md) - the stages.
-- [references/design-reference.html](references/design-reference.html) - the house design reference and the design studio's page; [references/rules.md](references/rules.md) - hard rules, R1, severity, fixes, recommended values, principles, components; [references/surfaces.md](references/surfaces.md) - how each surface applies and checks the tokens, and template stamps; [references/review-format.md](references/review-format.md) - the review report.
-- [assets/design-tokens.json](assets/design-tokens.json) - the token values; [assets/house.css](assets/house.css), [assets/starter.html](assets/starter.html), [assets/client-profile.md](assets/client-profile.md) - copied into outputs; [examples/specimen.html](examples/specimen.html) - every component on one page.
-- [scripts/page.py](scripts/page.py) - `new` builds a page from the starter; `check` runs the scripted checks; `adherence` checks colors, fonts, and radii against the tokens; `contrast` measures any color pair. [scripts/tokens.py](scripts/tokens.py) - `show`, `check`, `apply`. [scripts/design_studio.py](scripts/design_studio.py) - the design studio: `serve`, `url`, `stop`, `list`, `show`, `export`, `set-default`, `import`, `delete`, `apply-house`.
-- [state/design-log.md](state/design-log.md) - every output's reference version, read by the redesign stage.
-- `artifact-design` - the page contract when a page is published as an artifact.
-- `dataviz` - charts in house colors; `pptx`, `docx` - decks and Word documents; `plugin-authoring` - mods.
-- `command-pane` - its Design studio button opens the studio.
-- `interfaces:better-interface` - optional second opinion in review mode, when installed.
-- `skill-builder` - builds and maintains this skill and the house design; stamps templates in its plans and runs the design pass in Test.

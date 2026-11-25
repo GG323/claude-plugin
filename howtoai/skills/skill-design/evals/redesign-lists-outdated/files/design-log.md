@@ -3,7 +3,6 @@
 ## Contents
 
 - [Log](#log)
-- [Skills and agents](#skills-and-agents)
 
 ## Log
 
@@ -14,7 +13,3 @@
 | 2026-10-20 | build: Today pane | `templates/today.tsx` | Claude Code mod | 0 | none | not reviewed |
 | 2026-10-28 | review: Northwind opening hours | `templates/northwind.html` | Web page | own style | none | Approve |
 | 2099-01-01 | build: future dashboard template | `templates/dashboard.html` | Dashboard | 999 | none | Approve |
-
-## Skills and agents
-
-- `skill-design` - writes this log.

@@ -5,17 +5,6 @@ description: Turns a raw meeting transcript or rough notes into concise, structu
 
 # Meeting notes
 
-## Contents
-
-- [Before you start](#before-you-start)
-- [Workflow](#workflow)
-- [Output](#output)
-- [Verify the output](#verify-the-output)
-- [Common failures](#common-failures)
-- [What it can't do](#what-it-cant-do)
-- [Feedback](#feedback)
-- [Skills and agents](#skills-and-agents)
-
 ## Before you start
 
 - Accept a transcript or notes as pasted text, an attached file, or a file path. A `.docx` input is read with the `docx` skill and a `.pdf` with the `pdf` skill, because they handle those formats reliably.
@@ -56,8 +45,3 @@ Before delivery, reread the source once more and confirm that each decision and 
 ## Feedback
 
 If the user asks to change how this skill works or reports a problem with it, use the `skill-builder` skill (for example, `/skill-builder`) to plan and apply the change. If `skill-builder` is unavailable, agree the change with the user first, keep it as small as the problem needs, and check the skill afterwards.
-
-## Skills and agents
-
-- `skill-builder` — builds and maintains this skill; send changes there, as described in [Feedback](#feedback).
-- `docx` and `pdf` — read Word and PDF inputs.

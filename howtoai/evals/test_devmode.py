@@ -19,7 +19,7 @@ AGENTS_MD = """# Test workspace
 
 - [Project](#project)
 - [Workspace layout](#workspace-layout)
-- [Skills and agents](#skills-and-agents)
+- [Installed skills](#installed-skills)
 
 ## Project
 
@@ -29,7 +29,7 @@ A test.
 
 - [AGENTS](AGENTS/) - source folder.
 
-## Skills and agents
+## Installed skills
 
 None apply.
 """
@@ -37,12 +37,14 @@ None apply.
 
 DEFAULT_ON = (
     "Dev mode is on: the installed and created skills, agents, and tools are kept in this workspace's files, under "
-    "version control, and the global folders `~/.claude/skills/` and `~/.claude/agents/` hold only links to them (a "
-    "directory junction or symbolic link per skill, a symbolic link per agent). Git version control should be enabled."
+    "version control, and the global folders `~/.claude/skills/` and `~/.claude/agents/`, like this workspace's "
+    "`.claude`, `.agents`, and `.copilot` folders, hold only links to them (a directory junction or symbolic link per "
+    "skill, a symbolic link per agent). Git version control should be enabled."
 )
 DEFAULT_OFF = (
     "Dev mode is off: the installed skills, agents, and tools come from normal plugin installs, and created ones are "
-    "saved in the usual `.claude` folders. Git version control should be enabled."
+    "saved in this workspace's `AGENTS/` folder, with links in its `.claude`, `.agents`, and `.copilot` folders. Git "
+    "version control should be enabled."
 )
 
 
@@ -87,8 +89,8 @@ class DevModeTest(unittest.TestCase):
             return f.read()
 
     def write_entry(self, *labelled):
-        text = AGENTS_MD.replace("## Skills and agents",
-                                 "## Dev mode\n\n%s\n\n## Skills and agents" % "\n".join(labelled))
+        text = AGENTS_MD.replace("## Installed skills",
+                                 "## Dev mode\n\n%s\n\n## Installed skills" % "\n".join(labelled))
         self.write_agents(text)
         return text
 
@@ -128,9 +130,9 @@ class DevModeTest(unittest.TestCase):
         text = self.read_agents()
         self.assertIn("## Dev mode\n\n%s\n\n- **Git version control:** on\n- **Dev mode:** on\n" % DEFAULT_ON, text)
         self.assertIn("- **Dev mode:** on\n- **Source folder:** [AGENTS/](AGENTS/)\n- **Plugins folder:** [AGENTS/plugins/](AGENTS/plugins/)", text)
-        order = [text.index(h) for h in ("## Workspace layout", "## Dev mode", "## Skills and agents")]
+        order = [text.index(h) for h in ("## Workspace layout", "## Dev mode", "## Installed skills")]
         self.assertEqual(order, sorted(order))
-        self.assertIn("- [Workspace layout](#workspace-layout)\n- [Dev mode](#dev-mode)\n- [Skills and agents]", text)
+        self.assertIn("- [Workspace layout](#workspace-layout)\n- [Dev mode](#dev-mode)\n- [Installed skills]", text)
         with open(os.path.join(self.claude, "howtoai", "install.json"), encoding="utf-8") as f:
             pointer = json.load(f)
         self.assertEqual(set(pointer), {"workspace", "howtoai_root", "updated"})
@@ -145,8 +147,8 @@ class DevModeTest(unittest.TestCase):
         self.assertFalse(again["written"])
 
     def test_status_reads_named_workspace_without_pointer(self):
-        self.write_agents(AGENTS_MD.replace("## Skills and agents",
-                                            "## Dev mode\n\nText.\n\n- **Git version control:** on\n- **Dev mode:** on\n- **Source folder:** `My tools/`\n\n## Skills and agents"))
+        self.write_agents(AGENTS_MD.replace("## Installed skills",
+                                            "## Dev mode\n\nText.\n\n- **Git version control:** on\n- **Dev mode:** on\n- **Source folder:** `My tools/`\n\n## Installed skills"))
         s = self.run_cmd("status", "--workspace", self.ws)
         self.assertIsNone(s["pointer"])
         self.assertEqual(s["setting"]["source_folder"], "My tools")
@@ -159,7 +161,7 @@ class DevModeTest(unittest.TestCase):
         self.assertEqual((s["source_folder"], s["plugins_folder"]), ("My tools", "PLUGIN/claude-plugin"))
 
     def test_malformed_entry_refused(self):
-        self.write_agents(AGENTS_MD.replace("## Skills and agents", "## Dev mode\n\nOn, I think.\n\n## Skills and agents"))
+        self.write_agents(AGENTS_MD.replace("## Installed skills", "## Dev mode\n\nOn, I think.\n\n## Installed skills"))
         r = self.run_cmd("status", "--workspace", self.ws, code=1)
         self.assertIn("on or off", r["error"])
         self.assertEqual([x["setting"] for x in r["needs_setting"]], ["Git version control", "Dev mode"])
@@ -280,8 +282,8 @@ class DevModeTest(unittest.TestCase):
         self.assertEqual([x["name"] for x in r["links"]], ["demo"], "unlink must stay possible")
 
     def test_git_setting_bad_value_refused_by_status_and_set(self):
-        text = AGENTS_MD.replace("## Skills and agents", "## Dev mode\n\n- **Git version control:** maybe\n- **Dev mode:** on\n"
-                                 "- **Source folder:** `My tools/`\n\n## Skills and agents")
+        text = AGENTS_MD.replace("## Installed skills", "## Dev mode\n\n- **Git version control:** maybe\n- **Dev mode:** on\n"
+                                 "- **Source folder:** `My tools/`\n\n## Installed skills")
         self.write_agents(text)
         self.assertIn("Git version control", self.run_cmd("status", "--workspace", self.ws, code=1)["error"])
         self.run_cmd("set", "--dev-mode", "on", "--workspace", self.ws, "--write", code=1)
@@ -304,10 +306,12 @@ class DevModeTest(unittest.TestCase):
         with open(os.path.join(self.ws, ".gitignore"), "w", encoding="utf-8") as f:
             f.write("AGENTS/plugins/\n")
         g = self.run_cmd("status")["git"]
-        self.assertFalse(g["ok"])
-        self.assertIn("ignored", " ".join(g["problems"]))
+        self.assertTrue(g["ok"], "an ignored plugins folder that is not cloned yet is only a note")
         plugins = os.path.join(self.ws, "AGENTS", "plugins")
         os.makedirs(plugins)
+        g = self.run_cmd("status")["git"]
+        self.assertFalse(g["ok"])
+        self.assertIn("ignored", " ".join(g["problems"]))
         subprocess.run(["git", "init", "-q", plugins], check=True)
         self.assertTrue(self.run_cmd("status")["git"]["ok"], "a folder with its own repository is versioned there")
 
@@ -418,7 +422,7 @@ class DevModeTest(unittest.TestCase):
         r = self.run_cmd("agents-md", "--workspace", self.ws, "--write")
         self.assertEqual((r["blocks"][0]["action"], r["blocks"][0]["state"]), ("insert", "missing"))
         text = self.read_agents()
-        order = [text.index(h) for h in ("## Workspace layout", "## Markdown conventions", "### Instruction flow", "## Skills and agents")]
+        order = [text.index(h) for h in ("## Workspace layout", "## Markdown conventions", "### Instruction flow", "## Installed skills")]
         self.assertEqual(order, sorted(order))
         self.assertIn("- [Markdown conventions](#markdown-conventions)\n  - [Markdown structure](#markdown-structure)", text)
         r = self.run_cmd("agents-md", "--workspace", self.ws, "--write")
@@ -429,7 +433,7 @@ class DevModeTest(unittest.TestCase):
         self.set_on()
         self.run_cmd("agents-md", "--workspace", self.ws, "--write")
         text = self.read_agents()
-        order = [text.index(h) for h in ("## Workspace layout", "## Dev mode", "## Markdown conventions", "## Skills and agents")]
+        order = [text.index(h) for h in ("## Workspace layout", "## Dev mode", "## Markdown conventions", "## Installed skills")]
         self.assertEqual(order, sorted(order))
         self.assertTrue(self.run_cmd("status")["dev_mode"])
 
@@ -481,7 +485,7 @@ class DevModeTest(unittest.TestCase):
 
     def test_dev_mode_off_takes_over_a_pointer_without_a_valid_setting(self):
         for number, text in enumerate((AGENTS_MD, AGENTS_MD.replace(
-                "## Skills and agents", "## Dev mode\n\n- **Dev mode:** on\n\n## Skills and agents"))):
+                "## Installed skills", "## Dev mode\n\n- **Dev mode:** on\n\n## Installed skills"))):
             with self.subTest(number=number):
                 self.set_on()
                 self.write_agents(text)
@@ -503,6 +507,118 @@ class DevModeTest(unittest.TestCase):
     def test_dev_mode_off_writes_the_first_pointer(self):
         other = self.other_workspace()
         self.assertEqual(self.set_other(other, "off")["pointer"]["workspace"], os.path.abspath(other))
+
+    # ---- multi-repo workspaces, shared clones, workspace links -------------------
+
+    def fake_clone(self, base):
+        os.makedirs(os.path.join(base, ".claude-plugin"))
+        os.makedirs(os.path.join(base, "howtoai"))
+        os.makedirs(os.path.join(base, ".git"))
+        with open(os.path.join(base, ".claude-plugin", "marketplace.json"), "w", encoding="utf-8") as f:
+            f.write("{}")
+        return base
+
+    def test_multi_repo_root_is_a_note_not_a_problem(self):
+        for name in ("app", "infra"):
+            os.makedirs(os.path.join(self.ws, name, ".git"))
+        self.write_agents()
+        self.run_cmd("set", "--dev-mode", "off", "--git-version-control", "on", "--workspace", self.ws, "--write")
+        g = self.run_cmd("status", "--workspace", self.ws)["git"]
+        self.assertTrue(g["ok"], g)
+        self.assertEqual(g["layout"], "multi-repo")
+        self.assertEqual([os.path.basename(p) for p in g["nested_repos"]], ["app", "infra"])
+        self.assertIn("stays local", " ".join(g["notes"]))
+        self.assertFalse(os.path.exists(os.path.join(self.ws, ".git")), "the script never runs git init")
+
+    def test_plain_folder_without_repositories_is_still_a_problem(self):
+        os.makedirs(os.path.join(self.ws, "notes"))
+        self.set_on()
+        g = self.run_cmd("status")["git"]
+        self.assertFalse(g["ok"])
+        self.assertEqual(g["layout"], "single-repo")
+        self.assertIn("not in a Git repository", " ".join(g["problems"]))
+
+    def test_shared_clone_keeps_the_owners_pointer(self):
+        clone = self.fake_clone(os.path.join(self.ws, "AGENTS", "plugins"))
+        self.set_on()
+        other = self.other_workspace()
+        os.makedirs(os.path.join(other, "repo", ".git"))
+        r = self.run_cmd("set", "--dev-mode", "on", "--git-version-control", "on", "--workspace", other,
+                         "--plugins-folder", clone, "--as-of", "2026-11-25", "--write")
+        self.assertEqual(r["pointer"]["workspace"], os.path.abspath(self.ws), "the clone's owner keeps the pointer")
+        self.assertFalse(r["pointer_changed"])
+        self.assertTrue(r["paths"]["plugins_shared"])
+        self.assertEqual(r["setting"]["source_folder"], "AGENTS")
+        self.assertIn("- **Plugins folder:** [%s/]" % clone.replace("\\", "/"), r["diff"], "the root of an absolute path stays")
+        st = self.run_cmd("status", "--workspace", other)
+        self.assertTrue(st["dev_mode"])
+        self.assertEqual(os.path.normcase(os.path.normpath(st["paths"]["plugins"])),
+                         os.path.normcase(os.path.normpath(clone)))
+        self.assertEqual(st["git"]["problems"], [], st["git"])
+
+    def test_absolute_plugins_folder_must_be_a_clone(self):
+        self.write_agents()
+        plain = os.path.join(self.tmp, "not-a-clone")
+        os.makedirs(plain)
+        r = self.run_cmd("set", "--dev-mode", "on", "--git-version-control", "on", "--workspace", self.ws,
+                         "--plugins-folder", plain, code=2)
+        self.assertIn("howtoai-mods", r["error"])
+
+    def test_a_harness_folder_is_never_a_link_source(self):
+        self.set_on()
+        src = self.skill("local-tool", os.path.join(self.ws, ".claude", "skills"))
+        r = self.run_cmd("link", "--source", src, "--write", code=1)
+        self.assertTrue(r["in_harness_folder"])
+        self.assertIn("AGENTS/", r["error"])
+        self.assertFalse(os.path.lexists(os.path.join(self.claude, "skills", "local-tool")))
+
+    def test_workspace_link_for_a_workspace_only_skill(self):
+        self.set_on()
+        src = self.skill("uvp-only")
+        r = self.run_cmd("link", "--source", src, "--into", "workspace", "--workspace", self.ws, "--write")
+        dest = os.path.join(self.ws, ".claude", "skills", "uvp-only")
+        self.assertEqual((r["action"], r["into"], os.path.normcase(r["dest"])), ("create", "workspace", os.path.normcase(dest)))
+        self.assertTrue(r["in_source"])
+        self.assertTrue(os.path.isfile(os.path.join(dest, "SKILL.md")), "the workspace link resolves")
+        self.assertFalse(os.path.lexists(os.path.join(self.claude, "skills", "uvp-only")), "nothing global")
+        self.assertEqual(self.run_cmd("link", "--source", src, "--into", "workspace", "--workspace", self.ws)["action"], "none")
+        r = self.run_cmd("unlink", "--dest", dest, "--write")
+        self.assertTrue(r["written"])
+        self.assertFalse(os.path.lexists(dest))
+        self.assertTrue(os.path.isfile(os.path.join(src, "SKILL.md")), "unlink never touches the target")
+
+    def test_workspace_link_needs_a_workspace_and_other_harnesses(self):
+        self.set_on()
+        src = self.skill("tool-x")
+        self.run_cmd("link", "--source", src, "--into", "workspace", code=2)
+        r = self.run_cmd("link", "--source", src, "--into", "workspace", "--workspace", self.ws, "--harness", "copilot")
+        self.assertEqual(os.path.normcase(r["dest"]), os.path.normcase(os.path.join(self.ws, ".copilot", "skills", "tool-x")))
+        r = self.run_cmd("link", "--source", src, "--harness", "agents")
+        self.assertEqual(os.path.normcase(r["dest"]),
+                         os.path.normcase(os.path.join(os.path.dirname(self.claude), ".agents", "skills", "tool-x")))
+
+    def test_workspace_link_needs_no_entry_in_that_workspace(self):
+        self.set_on()
+        other = self.other_workspace()
+        src = self.skill("local-only", os.path.join(other, "AGENTS", "skills"))
+        r = self.run_cmd("link", "--source", src, "--into", "workspace", "--workspace", other)
+        self.assertEqual(r["action"], "create")
+        self.assertTrue(r["in_source"])
+
+    def test_ignored_plugins_folder_not_cloned_yet_is_a_note(self):
+        self.write_agents()
+        os.makedirs(os.path.join(self.ws, "AGENTS", ".git"))
+        with open(os.path.join(self.ws, "AGENTS", ".gitignore"), "w", encoding="utf-8") as f:
+            f.write("plugins/\nhowtoai/cache/\n")
+        os.makedirs(os.path.join(self.ws, "app", ".git"))
+        self.run_cmd("set", "--dev-mode", "on", "--git-version-control", "on", "--workspace", self.ws, "--write")
+        g = self.run_cmd("status", "--workspace", self.ws)["git"]
+        self.assertNotIn("plugins", " ".join(g["problems"]))
+        self.assertIn("not cloned yet", " ".join(g["notes"]))
+
+    def test_unlink_refuses_a_link_outside_harness_folders(self):
+        r = self.run_cmd("unlink", "--dest", os.path.join(self.ws, "AGENTS", "skills", "x"), code=1)
+        self.assertIn("harness folder", r["error"])
 
 
 if __name__ == "__main__":

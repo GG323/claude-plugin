@@ -1,5 +1,5 @@
 {
   "name": "howtoai-dev",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "HowToAI software-development process: plan, tests first, build, test, review, human review, deploy, and learn, with per-technology workbooks. INSTALL.md sets it up per user and workspace (dev mode or plugin mode, tracker: Markdown, Jira, GitHub Issues, or Azure DevOps, plan format, test targets, workbooks, deploy). Skills: dev-plan (the entry point: sizes, asks, plans, goldfish review loop, approval), dev-test (tests first, safe test runs), dev-build (smallest traced change behind a lint, format, type-check, and test gate), dev-review (goldfish code review and human review), dev-learn (root cause and lowest-level fixes), dev-deploy (any named target, one approval per production step), dev-workbook (C#, .NET, Docker, Terraform, Python), and dev-core; twelve goldfish reviewer agents; the dev-test-first and dev-safe-target hooks."
 }

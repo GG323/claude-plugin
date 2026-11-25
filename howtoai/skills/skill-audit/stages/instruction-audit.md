@@ -1,13 +1,5 @@
 # Instruction audit
 
-## Contents
-
-- [Entry and scope](#entry-and-scope)
-- [Collect the instruction files](#collect-the-instruction-files)
-- [Run the checks](#run-the-checks)
-- [Record the findings](#record-the-findings)
-- [Skills and agents](#skills-and-agents)
-
 ## Entry and scope
 
 Entered from [Tool audit](tool-audit.md) with the run folder and the targets. Run every section below for each target in order.
@@ -46,11 +38,3 @@ Leave out fixed-format files (`evals/`, `state/`, `assets/`), because they hold 
 3. Add them to the run file with domain `instruction` and status `open`.
 
 Pass the run folder to the Workspace audit stage: read [stages/workspace-audit.md](workspace-audit.md). In a candidate run, go to the Report stage instead: read [stages/report.md](report.md).
-
-## Skills and agents
-
-- [skill-audit](../SKILL.md) — the overview and rules for every stage.
-- [references/checks.md](../references/checks.md) — checks I1 to I9.
-- [scripts/check_config.py](../scripts/check_config.py) — the scripted checks I5 to I9.
-- `/doctor` — the Claude Code command whose instruction checks this stage covers.
-- Previous stage: [Tool audit](tool-audit.md); next stage: [Workspace audit](workspace-audit.md), or [Report](report.md) in a candidate run.

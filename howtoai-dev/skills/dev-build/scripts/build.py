@@ -14,7 +14,7 @@ hunks  Diffs the snapshot against the working tree now and lists every changed h
        "path:start-end" (lines in the new file) or "path:<line>d" (lines deleted after that line),
        "path:binary" for a binary file. Each hunk has a class: code, test (testing.test_globs),
        protected (build.protected_globs), or manifest (a package manifest). The plan folder,
-       .howtoai/, and TESTING.md files (dev-test owns them) are left out.
+       AGENTS/ (tooling and howtoai state), and TESTING.md files (dev-test owns them) are left out.
 gate   Runs one gate command and records it in <change>/raw/build-<n>/gate.json under the label.
        The command must equal the command of the gate item NAME in build.gate (no ad-hoc commands).
        Records the exit code, duration, the working tree's tree ID, and the last output lines.
@@ -125,7 +125,7 @@ def git(ws, *args, env=None):
     return p.stdout
 
 
-SKIP_DIRS = {".git", ".howtoai", "node_modules", ".venv", "venv"}  # never a name a repository could have
+SKIP_DIRS = {".git", "node_modules", ".venv", "venv"}  # never a name a repository could have
 
 
 def git_top(folder):
@@ -161,7 +161,7 @@ def repositories(ws, settings):
                 if os.path.realpath(git_top(folder) or "") != os.path.realpath(folder):
                     raise Fail(f"{os.path.relpath(folder, ws)} has a .git that git does not accept; repair or remove it")
                 roots.append(folder)
-        dirs[:] = sorted(d for d in dirs if d not in SKIP_DIRS and not (folder == ws and d == plans)
+        dirs[:] = sorted(d for d in dirs if d not in SKIP_DIRS and not (folder == ws and (d == plans or d.lower() == "agents"))
                          and not getattr(os.path, "isjunction", lambda p: False)(os.path.join(folder, d)))
     if not roots:
         raise Fail(f"no git repository at, above, or inside {ws}")
@@ -175,7 +175,7 @@ def pathspecs(ws, settings, root, repos):
     specs = []
     if inside != ".." and not inside.startswith("../"):  # the workspace lies in this repository
         base = "" if inside == "." else inside + "/"
-        specs += [f":(exclude){base}{plans}", f":(exclude){base}.howtoai", f":(exclude,glob){base}**/TESTING.md"]
+        specs += [f":(exclude){base}{plans}", f":(exclude){base}AGENTS", f":(exclude,glob){base}**/TESTING.md"]
     else:
         specs.append(":(exclude,glob)**/TESTING.md")
     links = gitlinks(root) if len(repos) > 1 else set()
@@ -246,7 +246,7 @@ def tree_now(ws, settings):
     """Tree ID of the working tree as `git add -A` would stage it, through a throwaway index, in every
     repository of the workspace.
 
-    The plan folder, .howtoai/, and TESTING.md files (dev-test rewrites their Latest run section after
+    The plan folder, AGENTS/ (tooling and howtoai state), and TESTING.md files (dev-test rewrites their Latest run section after
     every run) are left out, so records written during the build do not change it."""
     repos = repositories(ws, settings)
     return join_trees([(key, repo_tree(ws, settings, root, repos)) for key, root in repos])
@@ -329,7 +329,7 @@ def diff_hunks(ws, settings, base, head):
 def repo_hunks(ws, settings, root, base, head):
     text = git(root, "diff-tree", "-r", "-p", "-U0", "--no-renames", "--no-color", "--no-ext-diff", base, head)
     plan_folder = settings.get("plan_folder", "dev-plans")
-    skip = (plan_folder + "/", ".howtoai/")
+    skip = (plan_folder + "/", "AGENTS/")
     hunks, path, old = [], None, None
     for line in text.splitlines():
         if line.startswith("diff --git "):
@@ -358,7 +358,7 @@ def repo_hunks(ws, settings, root, base, head):
         rel = os.path.relpath(abs_path, ws).replace(os.sep, "/")
         if rel.startswith("../"):
             continue
-        if rel.startswith(skip) or rel == "TESTING.md" or rel.endswith("/TESTING.md"):
+        if rel.startswith(skip) or rel.lower().startswith("agents/") or rel == "TESTING.md" or rel.endswith("/TESTING.md"):
             continue
         hid = rel + hid[len(path):]
         result.append({"id": hid, "path": rel, "class": classify(rel, settings)})

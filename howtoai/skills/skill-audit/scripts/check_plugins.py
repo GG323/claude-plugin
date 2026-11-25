@@ -234,8 +234,8 @@ class Runner:
 
     def value(self, m):
         spec, keys = m.group(1), m.group(2)
-        if not re.fullmatch(r"\.howtoai/[a-z0-9-]+/settings\.json", spec):
-            raise Invalid("a value is filled in only from .howtoai/<tool>/settings.json")
+        if not re.fullmatch(r"AGENTS/howtoai/[a-z0-9-]+/settings.json", spec):
+            raise Invalid("a value is filled in only from AGENTS/howtoai/<tool>/settings.json")
         try:
             node = self.open_json("{workspace}/" + spec)
             for key in keys.split("/"):
@@ -339,8 +339,7 @@ class Runner:
             if kind == "line":
                 for x in [w.strip() for w in wanted.split("\n") if w.strip()]:
                     named = re.match(r"- `[^`]+`", x)
-                    area = (section(have, "Skills and agents") or "") if named else have
-                    lines = [y.strip() for y in area.split("\n")]
+                    lines = [y.strip() for y in have.split("\n")]
                     entries = [y for y in lines if y.startswith(named.group(0))] if named else [x] if x in lines else []
                     if entries != [x]:
                         if len(entries) > 1:

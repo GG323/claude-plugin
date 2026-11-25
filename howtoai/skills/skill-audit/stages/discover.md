@@ -1,12 +1,5 @@
 # Discover
 
-## Contents
-
-- [Entry and inputs](#entry-and-inputs)
-- [Find the targets](#find-the-targets)
-- [Start the run file](#start-the-run-file)
-- [Skills and agents](#skills-and-agents)
-
 ## Entry and inputs
 
 Entered from [Before you start](../SKILL.md#before-you-start) with today's date, the mode, and any targets the user named, or, in a candidate run, the candidate folder.
@@ -39,9 +32,3 @@ In a candidate run, the one target is the candidate folder `skill-finder` named.
    It writes `report.json` with one entry per target and the skipped targets, ready for findings.
 
 Pass the run folder to the Tool audit stage: read [stages/tool-audit.md](tool-audit.md).
-
-## Skills and agents
-
-- [skill-audit](../SKILL.md) — the overview and rules for every stage.
-- [scripts/find_workspaces.py](../scripts/find_workspaces.py) and [scripts/render_report.py](../scripts/render_report.py) — find the targets and start the run file.
-- Next stage: [Tool audit](tool-audit.md).

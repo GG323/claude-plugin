@@ -22,7 +22,6 @@ compatibility: Needs Python 3 and the chromadb package (run through uv, or insta
 - [Common failures](#common-failures)
 - [What it can't do](#what-it-cant-do)
 - [Feedback](#feedback)
-- [Skills and agents](#skills-and-agents)
 
 ## Before you start
 
@@ -103,7 +102,7 @@ The scripts below run as `py -3 -I "${CLAUDE_SKILL_DIR}/scripts/vet.py"` (or `py
 3. **Compliance audit.** Run the `skill-audit` skill in candidate mode, with the copy as its only target (for example, "Run skill-audit in candidate mode on `<copy>`"). It audits the copy's instruction files and its settings, hooks, manifests, and MCP configs, report-only: it fixes nothing, writes no run log, and skips the workspace audit and the index rebuild. These findings fail the candidate: L1 to L4 (links), D1 (frontmatter), I2 (named files, scripts, or tools that do not exist), I3 (contradictions), I5 to I9 defects (invalid settings it ships, permission rules, hooks, manifests, or MCP and LSP configs, including a hook that names a missing script, a literal credential, and a package or image not pinned to one version), G4 (credentials or personal data), and any safety problem from step 2. House-style findings (S1 to S6, D2, D3, D4, F1 to F4, G1 to G3, G5, I1, I4) and I5 to I9 suggestions are reported and accepted, not fixed, because a third-party tool is never edited in place.
 4. **Report and ask.** Give the [vetting report](#vetting-report) and ask for approval to install. Install only on a clear yes. When `skill-builder` called this skill, return the report and wait for its go-ahead instead, because `skill-builder` asks the user.
 5. **Install from the reviewed copy**, so that what runs is what was reviewed:
-   - **Skill folder, agent, command, output style, or procedure file:** copy it from the reviewed copy into the folder the user chooses (for example, `~/.claude/skills/<name>/` or a workspace's `.claude/agents/`). Never install it with the candidate table's remote command (`npx skills add` or a fresh download), which fetches a copy nobody reviewed.
+   - **Skill folder, agent, command, output style, or procedure file:** copy it from the reviewed copy into the `AGENTS/` folder the user chooses (for example, the workspace's `AGENTS/skills/<name>/` or `AGENTS/agents/<name>.md`), then link it with the `howtoai` plugin's `devmode.py link` (`--into workspace` for one workspace) instead of copying into a `.claude` folder. Never install it with the candidate table's remote command (`npx skills add` or a fresh download), which fetches a copy nobody reviewed.
    - **Plugin** (including mods and the hooks and MCP servers it bundles): its marketplace commands (`claude plugin marketplace add <source>`, then `claude plugin install <plugin>@<marketplace>`).
    - **Standalone hook or MCP server:** it changes the user's configuration, so show the exact entry and the file it goes in (`settings.json`, `.mcp.json`, or `claude mcp add`), with its package or image pinned to the reviewed version, and add it only on its own clear yes.
    - **Scheduled task or automation:** create it only on its own clear yes, from the reviewed prompt or file.
@@ -160,7 +159,7 @@ When called by `skill-builder`, return the candidate table or the vetting report
 | An agenticskills entry has no install command, or one naming another skill | The page lists several skills' commands and none matched its own name | Open its page and take the command shown for that skill |
 | `UnicodeEncodeError` from Python on Windows | Output encoding; `-I` ignores `PYTHONIOENCODING` | The script forces UTF-8 itself; do not pipe its output through tools that re-encode |
 | The search runs slowly the first time | The embedding model downloads once | Wait; later searches take seconds |
-| The audit of a candidate shows a defect in almost every file | HowToAI house-style checks (Contents list, Skills and agents, Feedback) run on a third-party tool | Accept them as house style, as [Vet and install a candidate](#vet-and-install-a-candidate) step 3 says; only the failing checks listed there fail the candidate |
+| The audit of a candidate shows a defect in almost every file | HowToAI house-style checks (Contents list, Feedback) run on a third-party tool | Accept them as house style, as [Vet and install a candidate](#vet-and-install-a-candidate) step 3 says; only the failing checks listed there fail the candidate |
 | The installed plugin differs from the reviewed copy | The marketplace moved to a newer commit between review and install, or someone edited the installed copy | Uninstall, then vet the new commit or install the reviewed one |
 | The audit of a single-skill candidate audits no files | `skill-audit` ran in its normal mode, which looks for a `.claude` folder's `skills/` | Run it in candidate mode, which audits the candidate folder itself |
 | A skill chosen from a vendored or installed pack also brings hooks or MCP servers | The skill's `part of plugin:` line was missed, and the whole plugin was installed | Vet the whole plugin, or copy only the reviewed skill folder |
@@ -175,13 +174,3 @@ When called by `skill-builder`, return the candidate table or the vetting report
 ## Feedback
 
 If the user asks to change how this skill works or reports a problem with it, use the `skill-builder` skill (for example, `/skill-builder`) to plan and apply the change. If `skill-builder` is unavailable, agree the change with the user first, keep it as small as the problem needs, and check the skill afterwards.
-
-## Skills and agents
-
-- [scripts/finder.py](scripts/finder.py) - index, search, expand, dump, and stats.
-- [scripts/vet.py](scripts/vet.py) - isolate, manifest, scan, and compare, in [Vet and install a candidate](#vet-and-install-a-candidate).
-- [evals/](evals/) - saved test cases for both vetting routes, a direct request and a call from `skill-builder`, and [evals/test_vetting_scripts.py](evals/test_vetting_scripts.py), the regression test of the vetting scripts (`py -3 -I` it; it builds synthetic candidates in a temporary folder and runs none of them).
-- [sources.json](sources.json) - the approved sources.
-- `skill-builder` - calls this skill in Recall, asks the user the Reuse decision in Plan, and calls [Vet and install a candidate](#vet-and-install-a-candidate) in Build; it owns no vetting of its own. It also builds and maintains this skill, as described in [Feedback](#feedback).
-- `skill-audit` - rebuilds the index in its runs, and audits each candidate in candidate mode in [Vet and install a candidate](#vet-and-install-a-candidate).
-- Thorough mode uses the harness's built-in read-only subagents; no custom agent is required.

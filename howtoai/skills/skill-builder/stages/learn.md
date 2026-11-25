@@ -1,16 +1,5 @@
 # Learn from this run
 
-## Contents
-
-- [When to use this stage](#when-to-use-this-stage)
-- [Gather what happened](#gather-what-happened)
-- [Update the registry](#update-the-registry)
-- [Record lessons](#record-lessons)
-- [Promote proven lessons](#promote-proven-lessons)
-- [Clean up](#clean-up)
-- [Report](#report)
-- [Skills and agents](#skills-and-agents)
-
 ## When to use this stage
 
 Learn is the last stage of every run. It is entered from [Test](test.md#run-and-deliver) after delivery, and from [Plan](plan.md) when the user drops a request or retires a target skill. It records what this run showed in the knowledge store that [Recall](recall.md) searches, and keeps that store free of repeats and failed attempts.
@@ -75,10 +64,3 @@ Test outputs are temporary; the delivery report and the saved test cases in `eva
 ## Report
 
 Tell the user in one or two lines what was recorded, which promotions were proposed or applied, and what was cleaned up. Report every folder or file that could not be deleted, with its path, so the user can remove it. This ends the run.
-
-## Skills and agents
-
-- [skill-builder](../SKILL.md) — rules and vocabulary this stage applies.
-- [Recall](recall.md) — searches what this stage records.
-- [Plan](plan.md) — receives approved changes to `skill-builder` itself.
-- No dedicated learning agent is required.
