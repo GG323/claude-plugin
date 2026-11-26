@@ -1,0 +1,27 @@
+{
+ "howtoai-dev": {
+  "tracker": {
+   "kind": "markdown"
+  },
+  "environments": {
+   "allow": [
+    {
+     "name": "local db",
+     "kind": "local",
+     "match": {
+      "host": "localhost"
+     }
+    }
+   ],
+   "deny": [
+    "shop-prod.postgres.database.azure.com"
+   ]
+  },
+  "workbooks": {
+   "technologies": [
+    "csharp",
+    "dotnet"
+   ]
+  }
+ }
+}

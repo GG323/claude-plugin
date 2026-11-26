@@ -59,7 +59,7 @@ class Workspace(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory(prefix="dev-regressions-", ignore_cleanup_errors=True)
         self.ws = os.path.join(self.tmp.name, "ws")
         write(os.path.join(self.ws, "AGENTS.md"), "# Workspace\n")
-        write(os.path.join(self.ws, "AGENTS", "settings", "dev", "settings.json"), json.dumps(self.settings))
+        write(os.path.join(self.ws, "AGENTS", "settings.json"), json.dumps({"howtoai-dev": self.settings}))
         self.user = os.path.join(self.tmp.name, "user.json")
         write(self.user, "{}")
 
@@ -283,7 +283,7 @@ class RepositoryEdges(Workspace):
     def test_workspace_below_the_root_with_a_repository_inside(self):
         repository(os.path.join(self.ws, "my repo"), {"r.txt": "r\n"})
         repository(self.tmp.name, {".gitignore": "user.json\n"}, commit=False)
-        git(self.tmp.name, "add", ".gitignore", "ws/AGENTS.md", "ws/AGENTS/settings")
+        git(self.tmp.name, "add", ".gitignore", "ws/AGENTS.md", "ws/AGENTS/settings.json")
         git(self.tmp.name, "-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "-q", "-m", "base")
         self.assertEqual(self.uncommitted(self.gate_out()), [])
 
@@ -808,7 +808,7 @@ class EveryEntryPoint(Workspace):
     def checked(self, rows, result="green", stage="review", started="test", later=None, points=None, then=(), route="run"):
         """rows: the Results of a run that started at stage `started`. later: those of a run review started."""
         if points is not None:
-            write(os.path.join(self.ws, "AGENTS", "settings", "dev", "settings.json"), json.dumps({"testing": {"entry_points": points}}))
+            write(os.path.join(self.ws, "AGENTS", "settings.json"), json.dumps({"howtoai-dev": {"testing": {"entry_points": points}}}))
         change = self.new_change()
         self.patch(change, {"stage": stage})
         reports = [rows] if later is None else [rows, later]
@@ -960,7 +960,7 @@ class Batch2Text(unittest.TestCase):
     def test_reviewers_are_told_what_the_diff_omits(self):
         text = read(os.path.join(SKILLS, "dev-review", "references", "viewpoints.md"))
         brief = next(line for line in text.splitlines() if line.startswith("Every brief starts with"))
-        for part in ("`TESTING.md`", "the plan folder", "`AGENTS/settings/`", "by design"):
+        for part in ("`TESTING.md`", "the plan folder", "`AGENTS/`", "by design"):
             self.assertIn(part, brief)
 
     def test_the_install_route_proposes_the_deny_rules_too(self):

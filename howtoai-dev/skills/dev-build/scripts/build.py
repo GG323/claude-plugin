@@ -14,7 +14,7 @@ hunks  Diffs the snapshot against the working tree now and lists every changed h
        "path:start-end" (lines in the new file) or "path:<line>d" (lines deleted after that line),
        "path:binary" for a binary file. Each hunk has a class: code, test (testing.test_globs),
        protected (build.protected_globs), or manifest (a package manifest). The plan folder,
-       AGENTS/ (tooling and the settings folder), and TESTING.md files (dev-test owns them) are left out.
+       AGENTS/ (tooling, settings, and run state), and TESTING.md files (dev-test owns them) are left out.
 gate   Runs one gate command and records it in <change>/raw/build-<n>/gate.json under the label.
        The command must equal the command of the gate item NAME in build.gate (no ad-hoc commands).
        Records the exit code, duration, the working tree's tree ID, and the last output lines.
@@ -246,7 +246,7 @@ def tree_now(ws, settings):
     """Tree ID of the working tree as `git add -A` would stage it, through a throwaway index, in every
     repository of the workspace.
 
-    The plan folder, AGENTS/ (tooling and the settings folder), and TESTING.md files (dev-test rewrites their Latest run section after
+    The plan folder, AGENTS/ (tooling, settings, and run state), and TESTING.md files (dev-test rewrites their Latest run section after
     every run) are left out, so records written during the build do not change it."""
     repos = repositories(ws, settings)
     return join_trees([(key, repo_tree(ws, settings, root, repos)) for key, root in repos])

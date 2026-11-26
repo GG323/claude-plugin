@@ -51,7 +51,11 @@ def settings(dc, ws):
 
 
 def configured(dc, ws):
-    return os.path.isfile(dc.project_file(ws))
+    """True when the workspace's AGENTS/settings.json has a "howtoai-dev" key."""
+    try:
+        return dc.is_configured(ws)
+    except Exception:
+        return False
 
 
 def changes(dc, ws):

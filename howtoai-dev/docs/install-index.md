@@ -5,7 +5,7 @@
 - [How to use this index](#how-to-use-this-index)
 - [Requirements at a glance](#requirements-at-a-glance)
 - [Dev mode](#dev-mode)
-- [Settings folder](#settings-folder)
+- [Where things are kept](#where-things-are-kept)
 - [Dependencies and harness](#dependencies-and-harness)
 - [Tracker](#tracker)
 - [Plan format](#plan-format)
@@ -47,7 +47,7 @@ Every install requirement of `howtoai-dev` has one section here. Each section sa
 | Throwaway targets | `testing.ephemeral` | confirmed | `docker` |
 | Test-first hook | `testing.test_first` | stated as a default | `block` |
 | Build gate | `build.gate` | confirmed from CI | none, found on the first build |
-| Deploy | `deploy.entry_points`, `AGENTS/settings/deploy/targets.json` | yes: now, later, or never | none |
+| Deploy | `deploy.entry_points`, `AGENTS/deploy-targets.json` | yes: now, later, or never | none |
 | Workbooks | `workbooks.technologies`, workbook files, codebase versions | yes, per technology and version | found in manifests |
 | Hooks | `hook_rules`; registration of the three hooks | dev mode only | plugin hooks |
 | Review | `review.confidence_threshold`, `review.max_rounds`, `review.clean_rounds_to_stop` | stated as defaults | 80, 5, 2 |
@@ -61,14 +61,14 @@ Every install requirement of `howtoai-dev` has one section here. Each section sa
 - **New option:** a different link layout is a change to the `howtoai` plugin's `devmode.py` and its `docs/dev-mode.md`, not to this plugin.
 - **Search:** `rg -n "devmode|Dev mode|Git version control|git-version-control" INSTALL.md docs assets`.
 
-## Settings folder
+## Where things are kept
 
-- **Setting:** none; the location is fixed: `<workspace>/AGENTS/settings/`, found in any letter case (`Agents/` counts). It holds `dev/` (`settings.json`, `install.md`, `replies.jsonl`, `lessons.md`), `workbooks/`, `deploy/` (`targets.json`, `approvals.json`, `log.md`), and the generated `cache/`. The user's defaults are in `~/.claude/howtoai/`.
-- **Set by:** [INSTALL: The settings folder](../INSTALL.md#goal), and the move of an older install's folder in [Look up the project](../INSTALL.md#look-up-the-project).
-- **Read by:** one helper per script, `state_dir()` and `agents_dir()` with `STATE_FOLDER`: [devcore.py](../skills/dev-core/scripts/devcore.py) (also used by both hooks), [workbook.py](../skills/dev-workbook/scripts/workbook.py), and [deploy.py](../skills/dev-deploy/scripts/deploy.py). The whole `AGENTS/` folder is tooling: the root-only skips in [build.py](../skills/dev-build/scripts/build.py), [targets.py](../skills/dev-test/scripts/targets.py), [testing_md.py](../skills/dev-test/scripts/testing_md.py), and `deploy.py`, and the `agents/` prefix checks in `devcore.py` and [dev_test_first.py](../hooks/dev_test_first.py).
-- **Signs:** an existing `AGENTS/settings/`; a leftover `.howtoai/` or `AGENTS/howtoai/` from an older install, which nothing reads.
-- **New option:** a different folder name is one change to `STATE_FOLDER` in the three scripts, the eval fixtures under `skills/*/evals/*/files/AGENTS/`, and every text this section's search finds.
-- **Search:** `rg -n "AGENTS/settings|STATE_FOLDER|state_dir|agents_dir|settings/cache" skills hooks scripts INSTALL.md AUDIT.md docs assets README.md`.
+- **Setting:** none; the places are fixed. At the `<workspace>/AGENTS/` root (found in any letter case; `Agents/` counts): `settings.json` (shared by the workspace's tools; this plugin reads and writes only its `"howtoai-dev"` key), `install.md`, `lessons.md`, `workbooks/`, and `deploy-targets.json`. In `AGENTS/state/`, left out of Git: `approvals.json`, `deploy-log.md`, and `cache/`. In the plugin: dev-core's `state/replies.jsonl`. The user's defaults are in `~/.claude/howtoai/`.
+- **Set by:** [INSTALL: Where things are kept](../INSTALL.md#goal), and the move of an older layout's files in [Look up the project](../INSTALL.md#look-up-the-project).
+- **Read by:** one set of helpers per script, `agents_dir()`, `agents_file()`, and `state_dir()`, with `SETTINGS_FILE`, `SETTINGS_KEY`, and `STATE_FOLDER`: [devcore.py](../skills/dev-core/scripts/devcore.py) (also `read_project()`, `is_configured()`, and `reply_log()`, used by both hooks), [workbook.py](../skills/dev-workbook/scripts/workbook.py), and [deploy.py](../skills/dev-deploy/scripts/deploy.py) (`TARGETS`, `APPROVALS`, `DEPLOY_LOG`). The whole `AGENTS/` folder is tooling: the root-only skips in [build.py](../skills/dev-build/scripts/build.py), [targets.py](../skills/dev-test/scripts/targets.py), [testing_md.py](../skills/dev-test/scripts/testing_md.py), and `deploy.py`, and the `agents/` prefix checks in `devcore.py` and [dev_test_first.py](../hooks/dev_test_first.py).
+- **Signs:** an existing `AGENTS/settings.json` with a `"howtoai-dev"` key; leftovers from an older layout (`.howtoai/`, `AGENTS/howtoai/`, `AGENTS/settings/`), which nothing reads.
+- **New option:** a different place is one change to the constants in the three scripts, the eval fixtures under `skills/*/evals/*/files/AGENTS/`, and every text this section's search finds.
+- **Search:** `rg -n "AGENTS/settings|AGENTS/state|deploy-targets|SETTINGS_KEY|STATE_FOLDER|state_dir|agents_file|reply_log" skills hooks scripts INSTALL.md AUDIT.md docs assets README.md`.
 
 ## Dependencies and harness
 
@@ -82,7 +82,7 @@ Every install requirement of `howtoai-dev` has one section here. Each section sa
 
 ## Tracker
 
-- **Setting:** `tracker.kind` (`markdown`, `jira`, `github`, `azure-devops`), with `tracker.jira_project`, `tracker.jira_issue_type`, `tracker.github_repo`, `tracker.ado_org`, `tracker.ado_project`, `tracker.ado_work_item_type`, and `tracker.plan_item_type`. The user's default goes in `~/.claude/howtoai/dev-settings.json`, the project's choice in `AGENTS/settings/dev/settings.json`.
+- **Setting:** `tracker.kind` (`markdown`, `jira`, `github`, `azure-devops`), with `tracker.jira_project`, `tracker.jira_issue_type`, `tracker.github_repo`, `tracker.ado_org`, `tracker.ado_project`, `tracker.ado_work_item_type`, and `tracker.plan_item_type`. The user's default goes in `~/.claude/howtoai/dev-settings.json`, the project's choice in `AGENTS/settings.json`.
 - **Set by:** [INSTALL: Per-user choices](../INSTALL.md#per-user-choices) and [Ask the project decisions](../INSTALL.md#ask-the-project-decisions).
 - **Read by:**
   - [dev-plan split: Send to the tracker](../skills/dev-plan/stages/split.md#send-to-the-tracker), which holds every tracker's route;
@@ -160,7 +160,7 @@ Every install requirement of `howtoai-dev` has one section here. Each section sa
 
 ## Deploy
 
-- **Setting:** `deploy.entry_points` in the settings, and one entry per target in `AGENTS/settings/deploy/targets.json` (steps, rollback, health checks).
+- **Setting:** `deploy.entry_points` in the settings, and one entry per target in `AGENTS/deploy-targets.json` (steps, rollback, health checks).
 - **Set by:** [INSTALL: Deploy target](../INSTALL.md#deploy-target), which runs [dev-deploy: Set up a target](../skills/dev-deploy/routes/setup-target.md#find-what-exists) when the user wants it now.
 - **Read by:** [dev-deploy: Check the gate](../skills/dev-deploy/routes/deploy.md#check-the-gate) through [Record and close](../skills/dev-deploy/routes/deploy.md#record-and-close), `skills/dev-deploy/scripts/deploy.py`, and the [dev_safe_target.py](../hooks/dev_safe_target.py) hook for production approvals.
 - **Signs:** CI deploy jobs, `Makefile` targets, container files, Kubernetes manifests, Helm charts, Terraform folders, and the CLIs' current contexts ([dev-deploy: Find what exists](../skills/dev-deploy/routes/setup-target.md#find-what-exists)).
@@ -169,9 +169,9 @@ Every install requirement of `howtoai-dev` has one section here. Each section sa
 
 ## Workbooks and versions
 
-- **Setting:** `workbooks.technologies`; the Workbooks section of the workspace's `AGENTS.md`, whose text and check are in [AUDIT.md](../AUDIT.md#workbooks-text); the workbook files (base in `skills/dev-workbook/workbooks/`, user in `~/.claude/howtoai/workbooks/`, project in `<workspace>/AGENTS/settings/workbooks/`); the "Codebase versions" lines in each project `<tech>.md`; and version workbooks `<tech>@<key>.md`.
+- **Setting:** `workbooks.technologies`; the Workbooks section of the workspace's `AGENTS.md`, whose text and check are in [AUDIT.md](../AUDIT.md#workbooks-text); the workbook files (base in `skills/dev-workbook/workbooks/`, user in `~/.claude/howtoai/workbooks/`, project in `<workspace>/AGENTS/workbooks/`); the "Codebase versions" lines in each project `<tech>.md`; and version workbooks `<tech>@<key>.md`.
 - **Set by:** [INSTALL: Workbooks](../INSTALL.md#workbooks), which runs [dev-workbook: Create](../skills/dev-workbook/routes/create.md#steps), [Record a version](../skills/dev-workbook/routes/record-version.md#steps), and [Audit](../skills/dev-workbook/routes/audit.md#steps).
-- **Read by:** every agent through [dev-workbook: Read the workbooks](../skills/dev-workbook/SKILL.md#read-the-workbooks) (the goldfish preload it with `skills: dev-workbook`; loading writes `AGENTS/settings/cache/workbook-search.md` and `workbook-sources.md`, kept out of Git); [dev-workbook: Resolve](../skills/dev-workbook/routes/resolve.md#steps), called by [dev-build: Consult the workbook](../skills/dev-build/routes/build.md#consult-the-workbook), [dev-review: Consult the workbook](../skills/dev-review/routes/review.md#consult-the-workbook), dev-plan, dev-test, and dev-deploy; the `goldfish-compliance` agent checks the recorded versions against the code.
+- **Read by:** every agent through [dev-workbook: Read the workbooks](../skills/dev-workbook/SKILL.md#read-the-workbooks) (the goldfish preload it with `skills: dev-workbook`; loading writes `AGENTS/state/cache/workbook-search.md` and `workbook-sources.md`, kept out of Git); [dev-workbook: Resolve](../skills/dev-workbook/routes/resolve.md#steps), called by [dev-build: Consult the workbook](../skills/dev-build/routes/build.md#consult-the-workbook), [dev-review: Consult the workbook](../skills/dev-review/routes/review.md#consult-the-workbook), dev-plan, dev-test, and dev-deploy; the `goldfish-compliance` agent checks the recorded versions against the code.
 - **Signs:** manifests such as `*.csproj`, `global.json`, `package.json`, `pyproject.toml`, `Dockerfile`, and `*.tf`, with the version each declares.
 - **New option:** a new technology needs no skill change: Create makes its workbook. A new subject tag, or a new section in every workbook, is a change to `skills/dev-workbook/references/format.md` and `scripts/workbook.py`.
 - **Search:** `rg -n "workbook.py resolve|Codebase versions|record-version" skills agents`.
@@ -180,7 +180,7 @@ Every install requirement of `howtoai-dev` has one section here. Each section sa
 
 - **Setting:** `hook_rules`; in dev mode, the three hooks registered in `~/.claude/settings.json` by absolute path (two `PreToolUse`, and `dev_reply_log.py` under `UserPromptSubmit`); in plugin mode, the plugin's [hooks.json](../hooks/hooks.json).
 - **Set by:** [INSTALL: Install or link](../INSTALL.md#install-or-link); `hook_rules` are added later by dev-learn, after approval.
-- **Read by:** [dev_test_first.py](../hooks/dev_test_first.py), [dev_safe_target.py](../hooks/dev_safe_target.py), and their shared [common.py](../hooks/common.py). [dev_reply_log.py](../hooks/dev_reply_log.py) writes `AGENTS/settings/dev/replies.jsonl` (a hash and time per user prompt, never the text), which `devcore.py`'s state patch reads to check an approval `"by": "user"`; without it, such approvals are recorded `"unverified": true`.
+- **Read by:** [dev_test_first.py](../hooks/dev_test_first.py), [dev_safe_target.py](../hooks/dev_safe_target.py), and their shared [common.py](../hooks/common.py). [dev_reply_log.py](../hooks/dev_reply_log.py) writes `skills/dev-core/state/replies.jsonl` (a hash and time per user prompt, never the text), which `devcore.py`'s state patch reads to check an approval `"by": "user"`; without it, such approvals are recorded `"unverified": true`.
 - **New option:** a new hook goes into `hooks/` and `hooks.json`, and into the dev-mode registration step of [Install or link](../INSTALL.md#install-or-link).
 - **Search:** `rg -n "hook_rules|dev_test_first|dev_safe_target|dev_reply_log|replies.jsonl" skills hooks INSTALL.md`.
 

@@ -11,7 +11,7 @@ compatibility: Needs Python 3 (standard library only) and the dev-core, dev-work
 Stage 8 of `howtoai-dev`, after each human review: find why the round's Critical, Major, declined, and repeated findings got through, and fix each cause once, where it lives, so the next change does not repeat it.
 
 - `<change folder>/learn-<round>.md`, from `dev-core`'s [learn template](../dev-core/assets/templates/learn.md) in its own fixed shape: one row per collected finding, then a Drift section with at least one bullet ("none found" when clean).
-- Lesson lines in `<workspace>/AGENTS/settings/dev/lessons.md` (the [lesson](../dev-core/assets/templates/lesson.md) format), which `dev-plan` reads at setup.
+- Lesson lines in `<workspace>/AGENTS/lessons.md` (the [lesson](../dev-core/assets/templates/lesson.md) format), which `dev-plan` reads at setup.
 - Each fix the user approves, handed to its owner: `dev-workbook`, `dev-core`'s Setup (hook rules), or `skill-builder`.
 
 ## Before you start
@@ -24,7 +24,7 @@ Stage 8 of `howtoai-dev`, after each human review: find why the round's Critical
 
    `"ok": false` carries the error, which you report before stopping that step. Without Python 3, stop and say the learn step needs it.
 2. **The change and round:** the change folder `dev-review` hands on, or the one the user names; the round is the highest `review-<n>.md` in it unless the user names one. Read it with `DEVCORE state "<change folder>"`; never edit `state.json` by hand.
-3. **The workspace and log:** `DEVCORE root --cwd "<change folder>"` gives the workspace; the lessons log is `<workspace>/AGENTS/settings/dev/lessons.md`, created by the first lesson.
+3. **The workspace and log:** `DEVCORE root --cwd "<change folder>"` gives the workspace; the lessons log is `<workspace>/AGENTS/lessons.md`, created by the first lesson.
 4. **The method:** read `dev-core`'s [self-edit and root-cause method](../dev-core/references/self-edit.md). Its stage table, fix levels, and change plan are the rules this skill applies.
 
 ## Routes

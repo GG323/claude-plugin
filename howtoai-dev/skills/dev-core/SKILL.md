@@ -32,7 +32,7 @@ Keep the one settings file, plan folder, and template set every `howtoai-dev` sk
 - **Workspace:** `DEVCORE root --cwd "<the session's working directory>"` returns the nearest folder holding `AGENTS.md` or `CLAUDE.md`. If none is found, ask the user which folder is the workspace and pass it as `--workspace` from then on.
 - Every command except `root` takes `--user-file "<path>"` to read that file instead of the user's own defaults (tests use it). Every command prints one JSON object; `"ok": false` carries the error: report it and stop the step that needed it. The JSON goes to the calling skill, never raw to the user; the caller says in one line what changed ("Started change `2026-11-18-login-rate-limit`").
 - Never edit `state.json`, `INDEX.md`, or the settings file by hand.
-- Never create, read, or write `AGENTS/settings/dev/replies.jsonl`: only the `dev-reply-log` hook writes it, on a real user prompt, and only `DEVCORE state` reads it.
+- Never create, read, or write `skills/dev-core/state/replies.jsonl`: only the `dev-reply-log` hook writes it, on a real user prompt, and only `DEVCORE state` reads it.
 - **Documents are written with the file tools only**, never a shell command ([Plan folder contract](#plan-folder-contract)).
 
 ## Routes
@@ -41,7 +41,7 @@ Take the route the calling skill names.
 
 ### Read settings
 
-`DEVCORE settings --workspace "<workspace>"` returns the merged settings (schema defaults, then the user's `~/.claude/howtoai/dev-settings.json`, then the project's `<workspace>/AGENTS/settings/dev/settings.json`), the source of each top-level key, and `configured`. When `configured` is false and the caller is `dev-plan`, run [Setup](#setup) first. The keys are in [assets/settings.schema.json](assets/settings.schema.json); "unknown key" means a value outside it.
+`DEVCORE settings --workspace "<workspace>"` returns the merged settings (schema defaults, then the user's `~/.claude/howtoai/dev-settings.json`, then the project's `<workspace>/AGENTS/settings.json`), the source of each top-level key, and `configured`. When `configured` is false and the caller is `dev-plan`, run [Setup](#setup) first. The keys are in [assets/settings.schema.json](assets/settings.schema.json); "unknown key" means a value outside it.
 
 Then apply each `hook_rules` entry yourself before each command or edit: when its `match` finds the command or file path, stop and give its `reason` on `block`, and say it on `warn`. The `dev-safe-target` hook applies the same rules as a second layer, where it runs.
 
@@ -95,11 +95,11 @@ For a nontechnical user, the nontechnical form wins over any step's wording that
 Approvals:
 
 - `"by": "plan"` (a path the approved work item names): the script requires the user's plan approval and adds `"covers"` citing it.
-- `"by": "user"`: `"reply"` is required, the user's reply word for word, recorded only after the user answered. The script checks it against `AGENTS/settings/dev/replies.jsonl` (the `dev-reply-log` hook's hash of each user prompt, never its text) and refuses a reply that matches no prompt since the change's last user approval, so one reply that approves several items is one record whose `"what"` names them all.
+- `"by": "user"`: `"reply"` is required, the user's reply word for word, recorded only after the user answered. The script checks it against `skills/dev-core/state/replies.jsonl` (the `dev-reply-log` hook's hash of each user prompt, never its text) and refuses a reply that matches no prompt since the change's last user approval, so one reply that approves several items is one record whose `"what"` names them all.
 - Without that log it records the approval with `"unverified": true` and prints a warning: show every unverified approval to the user in your next message.
-- `dev-deploy` records each production step's approval, with its exact command and expiry, in `<workspace>/AGENTS/settings/deploy/approvals.json`, which the `dev-safe-target` hook reads.
+- `dev-deploy` records each production step's approval, with its exact command and expiry, in `<workspace>/AGENTS/state/approvals.json`, which the `dev-safe-target` hook reads.
 
-Stage changes go into `history` with a timestamp, and every write rebuilds the index. A move from `tests-first` to `build` is refused when git shows files changed since the `tests-first` stage outside `testing.test_globs`, the plan folder, and `AGENTS/settings/`; without git it is recorded with `"unchecked"` and a warning. Entries that look like secrets are refused.
+Stage changes go into `history` with a timestamp, and every write rebuilds the index. A move from `tests-first` to `build` is refused when git shows files changed since the `tests-first` stage outside `testing.test_globs`, the plan folder, and `AGENTS/` (tooling, settings, and run state); without git it is recorded with `"unchecked"` and a warning. Entries that look like secrets are refused.
 
 ### Rebuild the index
 
@@ -118,11 +118,11 @@ Stage changes go into `history` with a timestamp, and every write rebuilds the i
 
 ## Plan folder contract
 
-- **File tools only.** Write and edit every document in a change folder, in `AGENTS/settings/`, and each `TESTING.md` with the file tools (Write, Edit), never through a shell redirect, heredoc, or here-string: `dev-safe-target` denies a command whose text names a production marker, and these documents often name one. A script that writes its own file is not affected.
+- **File tools only.** Write and edit every document in a change folder, in `AGENTS/` (`settings.json`, `install.md`, `lessons.md`, `workbooks/`, `state/`), and each `TESTING.md` with the file tools (Write, Edit), never through a shell redirect, heredoc, or here-string: `dev-safe-target` denies a command whose text names a production marker, and these documents often name one. A script that writes its own file is not affected.
 - One folder at the workspace root, `dev-plans/` by default (`plan_folder`), with one subfolder per change named `<YYYY-MM-DD>-<slug>`.
 - A change folder holds `state.json` (written only by the script) and the documents the stages write: `questions.md`, `plan.md`, `plan-review-<round>.md`, `plan.html`, `wi/<n>.md`, `test-map.md` (or `test-map-<n>.md` per work item), `test-run-<n>.md`, `build-<n>.md`, `review-<round>.md`, `learn-<round>.md`, `deploy-log.md`. Reviewers' raw replies go in `raw/<loop>-<round>/`, and `dev-build`'s snapshot and gate records in `raw/build-<n>/`.
 - The dev skills never archive, move, or delete a change folder: cleanup is the user's job; after it, rebuild the index.
-- Lessons go to `<workspace>/AGENTS/settings/dev/lessons.md`, one line each in the [lesson](assets/templates/lesson.md) format; `dev-learn` owns that file and removes each lesson once its fix is applied or declined.
+- Lessons go to `<workspace>/AGENTS/lessons.md`, one line each in the [lesson](assets/templates/lesson.md) format; `dev-learn` owns that file and removes each lesson once its fix is applied or declined.
 
 ## Templates
 
@@ -136,7 +136,7 @@ Copy a template with the file tools, fill every `{placeholder}`, and keep every 
 | [plan-review.md](assets/templates/plan-review.md) | `findings.py tally` for `dev-plan` | `<change>/plan-review-<round>.md` |
 | [review.md](assets/templates/review.md) | `findings.py tally` for `dev-review` | `<change>/review-<round>.md` |
 | [learn.md](assets/templates/learn.md) | `dev-learn` | `<change>/learn-<round>.md` |
-| [lesson.md](assets/templates/lesson.md) | `dev-learn` | a line in `<workspace>/AGENTS/settings/dev/lessons.md` |
+| [lesson.md](assets/templates/lesson.md) | `dev-learn` | a line in `<workspace>/AGENTS/lessons.md` |
 | [test-map.md](assets/templates/test-map.md) | `dev-test` Write route | `<change>/test-map.md`, or `test-map-<n>.md` per work item |
 | [test-run.md](assets/templates/test-run.md) | `dev-test` | `<change>/test-run-<n>.md` |
 | [build.md](assets/templates/build.md) | `dev-build` | `<change>/build-<n>.md` |
@@ -147,7 +147,7 @@ Copy a template with the file tools, fill every `{placeholder}`, and keep every 
 ## Verify the output
 
 - **Deliverables:** the settings file, change folders with `state.json`, and `INDEX.md`, written by `devcore.py`; review rounds, by `findings.py`; the other documents, from the templates by the calling skill.
-- **Writes:** only `<workspace>/<plan_folder>/` and `<workspace>/AGENTS/settings/dev/`, plus the deny rules that [Setup](#setup) has `update-config` merge into `<workspace>/.claude/settings.json` after their own yes. Settings are written only after the user approves the preview.
+- **Writes:** only `<workspace>/<plan_folder>/` and this plugin's `"howtoai-dev"` key in `<workspace>/AGENTS/settings.json` (other tools' keys are kept), plus the deny rules that [Setup](#setup) has `update-config` merge into `<workspace>/.claude/settings.json` after their own yes. Settings are written only after the user approves the preview.
 - Each command returned `"ok": true`. After setup, `DEVCORE settings` shows `"configured": true` and the approved values, and the workspace's `.claude/settings.json` holds each approved deny rule. After a state change, the change's `INDEX.md` row shows the new stage.
 - After any change to a script, run `py -3 -I -B "${CLAUDE_SKILL_DIR}/evals/test_devcore.py"` and `py -3 -I -B "${CLAUDE_SKILL_DIR}/evals/test_findings.py"`; they work in temporary folders and touch no real settings.
 - This skill does not plan, test, build, review, deploy, hold technology rules, or clean up change folders. Send requested changes or problems with it to the `skill-builder` skill (`/skill-builder` in Claude Code), not by file path; if `skill-builder` is unavailable, agree the change with the user first, keep it as small as the problem needs, and check the skill afterwards.

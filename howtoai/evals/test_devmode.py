@@ -609,7 +609,7 @@ class DevModeTest(unittest.TestCase):
         self.write_agents()
         os.makedirs(os.path.join(self.ws, "AGENTS", ".git"))
         with open(os.path.join(self.ws, "AGENTS", ".gitignore"), "w", encoding="utf-8") as f:
-            f.write("plugins/\nsettings/cache/\n")
+            f.write("plugins/\nstate/\n")
         os.makedirs(os.path.join(self.ws, "app", ".git"))
         self.run_cmd("set", "--dev-mode", "on", "--git-version-control", "on", "--workspace", self.ws, "--write")
         g = self.run_cmd("status", "--workspace", self.ws)["git"]

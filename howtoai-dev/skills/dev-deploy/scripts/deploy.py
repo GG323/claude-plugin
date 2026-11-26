@@ -17,16 +17,16 @@ discover   Lists what the workspace already has for deploying: container files (
            Terraform, CI files, deploy scripts and Makefile or package.json deploy targets,
            hosting files; the deploy CLIs on PATH (with the WSL distros, where wsl is there); and the
            targets file. Reads only.
-target     The workspace's targets file, <ws>/AGENTS/settings/deploy/targets.json. write validates one
+target     The workspace's targets file, <ws>/AGENTS/deploy-targets.json. write validates one
            entry (from --file) and, only with --write, adds or replaces it; without --write it
            prints the preview.
 gate       Checks what code can: the target exists, the work is committed (git status clean
-           apart from AGENTS/ (tooling and the settings folder), the plan folder, and the deploy files a first setup just wrote,
+           apart from AGENTS/ (tooling, settings, and run state), the plan folder, and the deploy files a first setup just wrote,
            given as --new-file), and, with --change, the change is at
            stage deploy with an accepted human review, a green latest test run, and a green
            run that started at stage test since the last tests or build. Lists
            checks_run and checks_skipped.
-approve    Records one approved step in <ws>/AGENTS/settings/deploy/approvals.json with its exact
+approve    Records one approved step in <ws>/AGENTS/state/approvals.json with its exact
            command and an expiry (default: the target's approval_minutes, else 30). Run it only
            after the user's yes for that step.
 use        Checks one approval right before its step runs: the exact command (after trimming)
@@ -36,7 +36,7 @@ use        Checks one approval right before its step runs: the exact command (af
 check      An HTTP check with retries: status code and optional text. Commands checks are run
            by the agent, not here.
 log        Adds a run row to the deploy log: <change>/deploy-log.md with --change, else
-           <ws>/AGENTS/settings/deploy/log.md; the file is created from assets/deploy-log.md.
+           <ws>/AGENTS/state/deploy-log.md; the file is created from assets/deploy-log.md.
 self-edit  Adds a row to the deploy log's Self-edits table.
 
 Exit code 0 when the command ran (gate and check: "ok" says whether they passed); 1 with
@@ -58,7 +58,7 @@ import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.abspath(os.path.join(HERE, "..", "assets"))
-STATE_FOLDER = "settings"  # the settings folder, inside the workspace's AGENTS/ folder
+STATE_FOLDER = "state"           # AGENTS/state/: run records, left out of Git
 
 
 def agents_dir(ws):
@@ -72,9 +72,15 @@ def agents_dir(ws):
     return os.path.join(ws, "AGENTS")
 
 
+def agents_file(ws, *parts):
+    """A file the user reviews, at the AGENTS/ root (settings.json, workbooks/, deploy-targets.json, ...)."""
+    return os.path.join(agents_dir(ws), *parts)
+
+
 def state_dir(ws, *parts):
-    """<workspace>/AGENTS/settings/<parts>: settings, install record, reply log, workbooks, deploy, cache."""
+    """<workspace>/AGENTS/state/<parts>: run records (deploy approvals, deploy log, cache), left out of Git."""
     return os.path.join(agents_dir(ws), STATE_FOLDER, *parts)
+
 
 
 SKIP_DIRS = {".git", "node_modules", "bin", "obj", ".venv", "venv", "__pycache__", "dist", "build", "TestResults", ".terraform"}
@@ -122,8 +128,15 @@ def now(a=None):
     return datetime.datetime.now().astimezone()
 
 
-def ws_path(ws, *parts):
-    return state_dir(os.path.abspath(ws), "deploy", *parts)
+TARGETS = "deploy-targets.json"   # at the AGENTS/ root: the user reviews it
+APPROVALS = "approvals.json"      # in AGENTS/state/: run records
+DEPLOY_LOG = "deploy-log.md"      # in AGENTS/state/
+
+
+def ws_path(ws, name):
+    """The targets file at the AGENTS/ root; approvals and the deploy log in AGENTS/state/."""
+    ws = os.path.abspath(ws)
+    return agents_file(ws, TARGETS) if name == TARGETS else state_dir(ws, name)
 
 
 # ---------------------------------------------------------------- discover
@@ -216,7 +229,7 @@ def cmd_discover(a):
 # ---------------------------------------------------------------- targets
 
 def load_targets(ws):
-    path = ws_path(ws, "targets.json")
+    path = ws_path(ws, TARGETS)
     if not os.path.isfile(path):
         return {"targets": []}
     data = json.loads(read(path))
@@ -300,8 +313,8 @@ def cmd_target(a):
     if not a.write:
         return {"ok": True, "preview": entry, "replaces": replaced, "written": False}
     data["targets"] = others + [entry]
-    write_json(ws_path(ws, "targets.json"), data)
-    return {"ok": True, "written": True, "replaces": replaced, "path": ws_path(ws, "targets.json")}
+    write_json(ws_path(ws, TARGETS), data)
+    return {"ok": True, "written": True, "replaces": replaced, "path": ws_path(ws, TARGETS)}
 
 
 def get_target(ws, name):
@@ -480,7 +493,7 @@ def cmd_approve(a):
     if not 1 <= minutes <= 240:
         raise Fail("--minutes must be from 1 to 240")
     t = now(a)
-    path = ws_path(ws, "approvals.json")
+    path = ws_path(ws, APPROVALS)
     data = json.loads(read(path)) if os.path.isfile(path) else {"approvals": []}
     keep_after = t - datetime.timedelta(days=30)
     data["approvals"] = [x for x in data.get("approvals", [])
@@ -495,7 +508,7 @@ def cmd_approve(a):
 
 
 def cmd_use(a):
-    path = ws_path(a.workspace, "approvals.json")
+    path = ws_path(a.workspace, APPROVALS)
     data = json.loads(read(path)) if os.path.isfile(path) else {"approvals": []}
     item = next((x for x in data.get("approvals", []) if x.get("id") == a.id), None)
     if item is None:
@@ -537,7 +550,7 @@ def cmd_check(a):
 # ---------------------------------------------------------------- log
 
 def log_path(ws, change):
-    return os.path.join(os.path.abspath(change), "deploy-log.md") if change else ws_path(ws, "log.md")
+    return os.path.join(os.path.abspath(change), "deploy-log.md") if change else ws_path(ws, DEPLOY_LOG)
 
 
 def ensure_log(path, ws, change):

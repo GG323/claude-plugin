@@ -2,13 +2,13 @@
 
 Python 3, standard library only. Every command prints one JSON object (resolve can print Markdown).
 Format: references/format.md in this skill. Layers: base (this skill's workbooks/), user
-(~/.claude/howtoai/workbooks/), project (<workspace>/AGENTS/settings/workbooks/); project wins over user, user
+(~/.claude/howtoai/workbooks/), project (<workspace>/AGENTS/workbooks/); project wins over user, user
 over base. Every command takes --base-dir and --user-dir to replace the default folders (tests use them).
 
   open      [--workspace W]
             What the skill prints when it loads, with no arguments from the caller: every MUST and MUST
             NOT of the workspace's workbooks, the tags, and how to search the rest. Writes the search
-            file <workspace>/AGENTS/settings/cache/workbook-search.md, one tagged line per statement. The
+            file <workspace>/AGENTS/state/cache/workbook-search.md, one tagged line per statement. The
             workspace is the nearest folder at or above the current one with dev settings. Exits 0 also
             when it cannot load, and says so, because a failing load would hide the skill.
   resolve   --workspace W [--paths P ...] [--technologies T ...] [--tags T ...] [--topics S ...]
@@ -83,7 +83,9 @@ SEP = " · "
 TAGS = ("access", "async", "build", "caching", "cli", "config", "data", "dependencies", "di", "errors", "formatting",
         "health", "http", "image", "lifecycle", "linting", "logging", "modules", "nullability", "performance", "secrets",
         "state", "strings", "style", "tests", "versions")
-STATE_FOLDER = "settings"  # the settings folder, inside the workspace's AGENTS/ folder
+SETTINGS_FILE = "settings.json"  # the workspace's shared AGENTS/settings.json, one top-level key per tool
+SETTINGS_KEY = "howtoai-dev"     # this plugin's key in it
+STATE_FOLDER = "state"           # AGENTS/state/: run records, left out of Git
 
 
 def agents_dir(ws):
@@ -97,12 +99,26 @@ def agents_dir(ws):
     return os.path.join(ws, "AGENTS")
 
 
+def agents_file(ws, *parts):
+    """A file the user reviews, at the AGENTS/ root (settings.json, workbooks/, deploy-targets.json, ...)."""
+    return os.path.join(agents_dir(ws), *parts)
+
+
 def state_dir(ws, *parts):
-    """<workspace>/AGENTS/settings/<parts>: settings, install record, reply log, workbooks, deploy, cache."""
+    """<workspace>/AGENTS/state/<parts>: run records (deploy approvals, deploy log, cache), left out of Git."""
     return os.path.join(agents_dir(ws), STATE_FOLDER, *parts)
 
 
-SETTINGS = ("dev", "settings.json")  # inside state_dir
+def project_settings(ws):
+    """The "howtoai-dev" part of the workspace's shared AGENTS/settings.json, or None when missing."""
+    p = agents_file(ws, SETTINGS_FILE)
+    with open(p, encoding="utf-8-sig") as f:
+        data = json.load(f)
+    if not isinstance(data, dict):
+        raise ValueError("not an object")
+    return data.get(SETTINGS_KEY)
+
+
 PAGE = 20000  # characters of statements in one part
 PRINT_MAX = 28000  # characters; the Bash tool saves longer output to a file and shows only a preview
 STMT = re.compile(r"^- \*\*(?P<id>[a-z0-9-]+\.[a-z]+\.[up]?\d{3})\*\*"
@@ -355,7 +371,7 @@ def validate_wb(path, overlay=None):
 def layer_dirs(ws, base_dir, user_dir):
     return {"base": base_dir or os.path.join(SKILL_DIR, "workbooks"),
             "user": user_dir or os.path.join(os.path.expanduser("~"), ".claude", "howtoai", "workbooks"),
-            "project": state_dir(ws, "workbooks") if ws else None}
+            "project": agents_file(ws, "workbooks") if ws else None}
 
 
 def available(dirs):
@@ -459,10 +475,9 @@ def matches(path, globs):
 def project_technologies(ws):
     if not ws:
         return []
-    p = state_dir(ws, "dev", "settings.json")
+    p = agents_file(ws, SETTINGS_FILE)
     try:
-        with open(p, encoding="utf-8-sig") as f:
-            return list((json.load(f).get("workbooks") or {}).get("technologies") or [])
+        return list(((project_settings(ws) or {}).get("workbooks") or {}).get("technologies") or [])
     except FileNotFoundError:
         return []
     except (ValueError, AttributeError, TypeError) as e:
@@ -474,7 +489,7 @@ def project_technologies(ws):
 def find_workspace(start):
     folder = os.path.abspath(start)
     while True:
-        if os.path.isfile(state_dir(folder, *SETTINGS)):
+        if os.path.isfile(agents_file(folder, SETTINGS_FILE)):
             return folder
         parent = os.path.dirname(folder)
         if parent == folder:
@@ -515,7 +530,7 @@ def open_text(a):
     if not ws and not a.workspace and os.environ.get("CLAUDE_PROJECT_DIR"):
         ws = find_workspace(os.environ["CLAUDE_PROJECT_DIR"])
     if not ws:
-        return ("No dev workspace here (no AGENTS/settings/dev/settings.json in this folder or above it), so no workbook "
+        return ("No dev workspace here (no AGENTS/settings.json in this folder or above it), so no workbook "
                 "rules are loaded. If the work is in a dev workspace elsewhere, say that its rules are not loaded. The routes below still work for a workspace you name; howtoai-dev's INSTALL.md "
                 "sets a workspace up.")
     if not project_technologies(ws):

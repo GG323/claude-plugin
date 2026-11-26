@@ -12,12 +12,14 @@ Usage (Python 3, standard library only; every command prints one JSON object):
 root        Finds the workspace root: the nearest folder at or above --cwd (default: the current
             folder) that holds AGENTS.md or CLAUDE.md.
 settings    Merges the schema defaults, the user file (default ~/.claude/howtoai/dev-settings.json),
-            and the project file (<workspace>/AGENTS/settings/dev/settings.json). Prints the merged values,
+            and this plugin's "howtoai-dev" key in the project file (<workspace>/AGENTS/settings.json,
+            shared by the workspace's tools, one top-level key each). Prints the merged values,
             the source of each top-level key, and whether the project is configured.
 setup       Validates --values (a JSON object of project settings), or the same JSON read from the
             --values-file F (UTF-8), against the schema. Give exactly one of the two. Without
             --write it prints the file it would write (a preview); with --write it writes
-            <workspace>/AGENTS/settings/dev/settings.json, or with --scope user the user defaults file.
+            the "howtoai-dev" key of <workspace>/AGENTS/settings.json (other keys are kept), or with
+            --scope user the user defaults file.
             Values that look like secrets are refused.
 new-change  Creates <workspace>/<plan_folder>/<date>-<slug>/state.json and rebuilds INDEX.md.
             An existing folder gets a -2, -3, ... suffix. The date comes from the system clock
@@ -29,17 +31,17 @@ state       Prints a change's state.json. With --patch it applies the patch firs
                "increment": {"review": 1}}
             Stage changes are recorded in history. The index is rebuilt after every write.
             An approval with "by": "user" needs "reply", the user's reply word for word. When
-            <workspace>/AGENTS/settings/dev/replies.jsonl exists (written by the dev-reply-log hook on each
+            dev-core's state/replies.jsonl exists (written by the dev-reply-log hook on each
             user prompt, as a sha256 of the normalized text, never the text), the reply must match an
             entry newer than the change's last user approval, or the patch is refused. Without that
             log the approval is recorded with "unverified": true and a warning is printed.
             A move from tests-first to build is refused when git shows files changed since the
-            tests-first stage outside testing.test_globs, the plan folder, and AGENTS/ (tooling and the settings folder); without
+            tests-first stage outside testing.test_globs, the plan folder, and AGENTS/ (tooling, settings, and run state); without
             git the move is recorded with "unchecked" and a warning.
 index       Rebuilds <workspace>/<plan_folder>/INDEX.md in full from every state.json.
 
 Exit code 0 on success; 1 with {"ok": false, "error": "..."} on any error. Nothing is written
-outside <workspace>/<plan_folder>/ and <workspace>/AGENTS/settings/dev/.
+outside <workspace>/<plan_folder>/ and <workspace>/AGENTS/settings.json.
 """
 
 import argparse
@@ -167,7 +169,10 @@ def merge(base, over):
     return result
 
 
-STATE_FOLDER = "settings"  # the settings folder, inside the workspace's AGENTS/ folder
+SETTINGS_FILE = "settings.json"  # the workspace's shared AGENTS/settings.json, one top-level key per tool
+SETTINGS_KEY = "howtoai-dev"     # this plugin's key in it
+STATE_FOLDER = "state"           # AGENTS/state/: run records the tools write for themselves, left out of Git
+SKILL_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
 
 def agents_dir(ws):
@@ -181,13 +186,33 @@ def agents_dir(ws):
     return os.path.join(ws, "AGENTS")
 
 
+def agents_file(ws, *parts):
+    """A file the user reviews, at the AGENTS/ root: settings.json, install.md, lessons.md, workbooks/,
+    deploy-targets.json."""
+    return os.path.join(agents_dir(ws), *parts)
+
+
 def state_dir(ws, *parts):
-    """<workspace>/AGENTS/settings/<parts>: settings, install record, reply log, workbooks, deploy, cache."""
+    """<workspace>/AGENTS/state/<parts>: run records (deploy approvals, deploy log, cache), left out of Git."""
     return os.path.join(agents_dir(ws), STATE_FOLDER, *parts)
 
 
 def project_file(ws):
-    return state_dir(ws, "dev", "settings.json")
+    return agents_file(ws, SETTINGS_FILE)
+
+
+def read_project(ws):
+    """This plugin's part of the shared AGENTS/settings.json, or None when the file or the key is missing."""
+    data = read_json(project_file(ws))
+    if data is None:
+        return None
+    if not isinstance(data, dict):
+        raise Fail(f"{project_file(ws)} must hold a JSON object with one key per tool")
+    return data.get(SETTINGS_KEY)
+
+
+def is_configured(ws):
+    return bool(ws) and read_project(ws) is not None
 
 
 def user_file(arg):
@@ -201,7 +226,7 @@ def load_settings(ws, user_arg=None):
     for label, path in (("user", user_file(user_arg)), ("project", project_file(ws) if ws else None)):
         if not path:
             continue
-        data = read_json(path)
+        data = read_json(path) if label == "user" else read_project(ws)
         if data is None:
             continue
         errs = validate(data, sch)
@@ -285,11 +310,13 @@ def new_change(ws, title, slug, date, now, user_arg=None):
             "index": index, "changes": count}
 
 
-REPLY_LOG = os.path.join("AGENTS", STATE_FOLDER, "dev", "replies.jsonl")  # as shown to users
+REPLY_LOG = os.path.join("skills", "dev-core", "state", "replies.jsonl")  # inside the plugin, as shown to users
 
 
-def reply_log(ws):
-    return state_dir(ws, "dev", "replies.jsonl")
+def reply_log(ws=None):
+    """The dev-reply-log hook's log, in this skill's own state/ folder (shared by every workspace that uses
+    this copy of the plugin); ws is kept for callers and not used."""
+    return os.environ.get("HOWTOAI_DEV_REPLY_LOG") or os.path.join(SKILL_DIR, "state", "replies.jsonl")
 
 
 def reply_hash(text):
@@ -485,7 +512,7 @@ def main(argv=None):
         if a.cmd == "settings":
             ws = os.path.abspath(a.workspace) if a.workspace else None
             merged, sources = load_settings(ws, a.user_file)
-            out({"ok": True, "workspace": ws, "configured": bool(ws and os.path.isfile(project_file(ws))),
+            out({"ok": True, "workspace": ws, "configured": is_configured(ws),
                  "settings": merged, "sources": sources})
         if a.cmd == "setup":
             ws = os.path.abspath(a.workspace)
@@ -511,15 +538,20 @@ def main(argv=None):
                 raise Fail("values look like they hold a secret (a token, key, or password in a URL); "
                            "settings never store secrets")
             path = user_file(a.user_file) if a.scope == "user" else project_file(ws)
-            existing = read_json(path) or {}
+            whole = read_json(path) or {}
+            if not isinstance(whole, dict):
+                raise Fail(f"{path} must hold a JSON object")
+            existing = whole if a.scope == "user" else (whole.get(SETTINGS_KEY) or {})
             result = merge(existing, values)
             effective = merge(load_settings(ws, a.user_file)[0], values)
             if effective["plan"]["publish"] == "tracker" and effective["tracker"]["kind"] == "markdown":
                 raise Fail("plan.publish tracker needs tracker.kind jira, github, or azure-devops; "
                            "with Markdown work items, use auto, artifact, html-file, or markdown")
             if a.write:
-                write_json(path, result)
-            out({"ok": True, "written": a.write, "scope": a.scope, "path": path, "settings": result})
+                # project scope: only this plugin's key changes; other tools' keys in the shared file stay
+                write_json(path, result if a.scope == "user" else dict(whole, **{SETTINGS_KEY: result}))
+            out({"ok": True, "written": a.write, "scope": a.scope, "path": path,
+                 "key": None if a.scope == "user" else SETTINGS_KEY, "settings": result})
         if a.cmd == "new-change":
             ws = os.path.abspath(a.workspace)
             out(new_change(ws, a.title, a.slug, a.date, a.now, a.user_file))

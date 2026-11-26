@@ -75,11 +75,12 @@ The default layout, inside the workspace:
 | `AGENTS/agents/<agent>.md` | The user's own subagents. |
 | `AGENTS/docs/` | Notes and references for those tools. |
 | `AGENTS/plugins/` | A clone of the `howtoai-mods` marketplace (`.claude-plugin/marketplace.json`, `howtoai/`, `howtoai-dev/`), unless the entry's **Plugins folder** points elsewhere; each plugin keeps its own `skills/` and `agents/`. |
-| `AGENTS/settings/` | The settings folder: `dev/` (settings, install record, reply log, lessons), `workbooks/`, `deploy/`, and the generated `cache/`. |
+| `AGENTS/settings.json`, `AGENTS/install.md`, `AGENTS/lessons.md`, `AGENTS/workbooks/`, `AGENTS/deploy-targets.json` | Files the user reviews: the shared settings (one top-level key per tool; `howtoai-dev` for that plugin), its install record, lessons log, project workbooks, and deploy targets |
+| `AGENTS/state/` | Run records the tools write for themselves (deploy approvals, deploy log, generated `cache/`), left out of Git. |
 
 - **One home.** The workspace that the pointer names is the main development workspace: its `AGENTS/` holds the plugins' clone and the skills and agents the user wants in every workspace, and the global `~/.claude` (and `~/.agents` or `~/.copilot`, when those exist) links to them. Another workspace shares that clone through an absolute **Plugins folder**.
 - **Workspace-only tools.** A skill or agent that belongs to one workspace lives in that workspace's `AGENTS/skills/` or `AGENTS/agents/` and is linked only into its own `.claude` (and `.agents` or `.copilot` when it uses them) with `link --into workspace`.
-- **Git.** `AGENTS/` is under Git: covered by the workspace's repository, or, when no repository covers it, its own (`git init AGENTS`, run only after the user's yes, with no commit). Its `.gitignore` leaves out `plugins/` (a repository of its own) and `settings/cache/` (generated).
+- **Git.** `AGENTS/` is under Git: covered by the workspace's repository, or, when no repository covers it, its own (`git init AGENTS`, run only after the user's yes, with no commit). Its `.gitignore` leaves out `state/` (run records and caches), and `plugins/` only when the plugins folder is a git clone of its own.
 
 Folders are created when the first file goes into them, never empty in advance. Callers never build these paths themselves: [status](#status) prints them resolved.
 

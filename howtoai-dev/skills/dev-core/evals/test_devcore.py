@@ -208,7 +208,7 @@ class DevcoreTests(unittest.TestCase):
         code, out = run("setup", "--workspace", self.ws, "--user-file", self.user, "--scope", "user",
                         "--values", '{"plan": {"publish": "markdown"}}', "--write")
         self.assertEqual((code, out["scope"], out["path"]), (0, "user", self.user))
-        self.assertFalse(os.path.exists(os.path.join(self.ws, "AGENTS", "settings", "dev", "settings.json")))
+        self.assertFalse(os.path.exists(os.path.join(self.ws, "AGENTS", "settings.json")))
         _, merged = run("settings", "--workspace", self.ws, "--user-file", self.user)
         self.assertEqual((merged["settings"]["plan"]["publish"], merged["sources"]["plan"], merged["configured"]),
                          ("markdown", "user", False))
@@ -231,15 +231,17 @@ class UserApprovalNeedsTheReply(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix="devcore-reply-")
         self.ws = os.path.join(self.tmp.name, "ws")
-        os.makedirs(os.path.join(self.ws, "AGENTS", "settings", "dev"))
+        os.makedirs(os.path.join(self.ws, "AGENTS"))
         with open(os.path.join(self.ws, "AGENTS.md"), "w", encoding="utf-8") as f:
             f.write("# ws\n")
-        with open(os.path.join(self.ws, "AGENTS", "settings", "dev", "settings.json"), "w", encoding="utf-8") as f:
-            f.write('{"tracker": {"kind": "markdown"}}')
+        with open(os.path.join(self.ws, "AGENTS", "settings.json"), "w", encoding="utf-8") as f:
+            f.write('{"howtoai-dev": {"tracker": {"kind": "markdown"}}}')
         self.user = os.path.join(self.tmp.name, "user.json")
         _, out = run("new-change", "--workspace", self.ws, "--user-file", self.user, "--title", "x")
         self.change = out["change_dir"]
-        self.log = os.path.join(self.ws, "AGENTS", "settings", "dev", "replies.jsonl")
+        self.log = os.path.join(self.tmp.name, "plugin-state", "replies.jsonl")
+        os.environ["HOWTOAI_DEV_REPLY_LOG"] = self.log
+        self.addCleanup(os.environ.pop, "HOWTOAI_DEV_REPLY_LOG", None)
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -399,7 +401,7 @@ class TestsFirstMoveChecksGit(unittest.TestCase):
         os.utime(os.path.join(self.ws, "src", "old.py"), (946684800, 946684800))  # changed before tests-first
         self.to_tests_first()
         self.put("tests/test_app.py", "def test(): pass\n")
-        self.put("AGENTS/settings/dev/note.txt", "x\n")
+        self.put("AGENTS/note.txt", "x\n")
         code, out = self.to_build()
         self.assertEqual(code, 0, out)
         self.assertEqual(out["state"]["stage"], "build")

@@ -234,8 +234,8 @@ class Runner:
 
     def value(self, m):
         spec, keys = m.group(1), m.group(2)
-        if not re.fullmatch(r"AGENTS/settings/[a-z0-9-]+/settings.json", spec):
-            raise Invalid("a value is filled in only from AGENTS/settings/<tool>/settings.json")
+        if spec != "AGENTS/settings.json":
+            raise Invalid("a value is filled in only from AGENTS/settings.json, under the tool's own key")
         try:
             node = self.open_json("{workspace}/" + spec)
             for key in keys.split("/"):

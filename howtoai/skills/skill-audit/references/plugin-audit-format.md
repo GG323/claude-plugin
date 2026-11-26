@@ -38,7 +38,7 @@ A `## Checks` section holds one table with the columns ID, Scope, Applies, Kind,
 
 ## Text to install
 
-`#<block>` names a heading in the same file, with the text in a fenced block under it. Inside the block, `{json:AGENTS/settings/<tool>/settings.json#<key/key>}` becomes that setting's list of short lowercase names; no other file or value can be filled in.
+`#<block>` names a heading in the same file, with the text in a fenced block under it. Inside the block, `{json:AGENTS/settings.json#<tool>/<key/key>}` (the workspace's shared settings file, one top-level key per tool) becomes that setting's list of short lowercase names; no other file or value can be filled in.
 
 Text to install holds no word that starts with `@` (also not in backticks), and no hidden characters. `section` and `line` install only into the workspace's `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`, or `.claude/CLAUDE.md`.
 

@@ -8,7 +8,7 @@ diff      Writes <change>/raw/review-<N>/diff.patch and changed.json for the rou
           Round 1 (no --since-build) compares HEAD with the working tree as `git add -A` would
           stage it, so uncommitted tests and code are both included; with --since-build B it
           compares build B's snapshot (raw/build-B/snapshot.json, a fix build) with the working
-          tree, so a re-review sees only the fix. The plan folder, AGENTS/ (tooling and the settings folder), and TESTING.md are
+          tree, so a re-review sees only the fix. The plan folder, AGENTS/ (tooling, settings, and run state), and TESTING.md are
           left out, as in dev-build. changed.json holds {"base", "tree", "files": {path:
           [[start, end], ...]}, "hunks"}; findings.py tally --changed reads it. Nothing is
           staged or committed.

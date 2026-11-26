@@ -1,19 +1,19 @@
 """dev-safe-target: a PreToolUse hook on Bash, PowerShell, MCP tools, Edit, Write, and MultiEdit.
 
 An approved deploy step comes first: a command that matches, character for character after
-trimming, an unexpired and unused step in <workspace>/AGENTS/settings/deploy/approvals.json (written by
+trimming, an unexpired and unused step in <workspace>/AGENTS/state/approvals.json (written by
 dev-deploy after the user's yes) is marked used and passes with no decision, so the user's normal
 permission prompt still shows. Nothing here ever returns allow.
 
 Checked before everything, the approved step included: a write, edit, command, or MCP call that
-touches <workspace>/AGENTS/settings/dev/replies.jsonl (the dev-reply-log hook's record of real user
+touches dev-core's state/replies.jsonl (the dev-reply-log hook's record of real user
 replies) is denied, in every workspace.
 
 Then, in this order (deny wins over ask, ask over warn):
   1. Deny markers (environments.deny in the dev settings, user or project): a command or MCP call
      whose text holds one is denied. Applies in every workspace whose settings name markers.
   2. hook_rules from the settings: a regex on the command or file path, with action block or warn.
-  3. Only in workspaces with project dev settings (AGENTS/settings/dev/settings.json):
+  3. Only in workspaces with project dev settings (a "howtoai-dev" key in AGENTS/settings.json):
      - Destructive commands (drops, truncates, bulk deletes, down-migrations, database resets,
        destroy, prune) ask first, unless they name a container whose latest ephemeral entry in a
        change's state is "created" (entries are appended, so a later "removed" ends it).
@@ -55,10 +55,14 @@ DESTRUCTIVE_CMD = [
 def marker_files(dc, ws, marker):
     """The settings files whose environments.deny lists the marker (project first, then user)."""
     found = []
-    for path in (dc.project_file(ws), dc.user_file(os.environ.get("HOWTOAI_DEV_USER_FILE") or None)):
+    for path, keyed in ((dc.project_file(ws), True),
+                        (dc.user_file(os.environ.get("HOWTOAI_DEV_USER_FILE") or None), False)):
         try:
             with open(path, encoding="utf-8") as f:
-                deny = (json.load(f).get("environments") or {}).get("deny") or []
+                data = json.load(f)
+            if keyed:
+                data = data.get(dc.SETTINGS_KEY) or {}
+            deny = (data.get("environments") or {}).get("deny") or []
         except (OSError, ValueError, AttributeError):
             continue
         if any(isinstance(m, str) and m.lower() == marker.lower() for m in deny):
@@ -131,7 +135,7 @@ def edited_text(tool, ti, path):
 
 def approved_step(ws, command):
     """True, and the approval marked used, when command is an approved, unexpired, unused step."""
-    path = common.devcore().state_dir(ws, "deploy", "approvals.json")
+    path = common.devcore().state_dir(ws, "approvals.json")
     cmd = command.strip()
     if not cmd or not os.path.isfile(path):
         return False
@@ -169,11 +173,6 @@ def check(data):
     path = ti.get("file_path") if is_edit else None
     if path and not os.path.isabs(path):
         path = os.path.join(data.get("cwd") or os.getcwd(), path)
-    ws = common.workspace(os.path.dirname(path) if path else (data.get("cwd") or os.getcwd()))
-    if not ws:
-        return None
-    dc = common.devcore()
-    s = common.settings(dc, ws)
     if is_cmd:
         text = ti.get("command") or ""
     elif is_mcp:
@@ -181,10 +180,17 @@ def check(data):
     else:
         text = ""
     low = text.lower()
-    log_rel = os.path.relpath(dc.reply_log(ws), ws).replace("\\", "/")
-    if (is_edit and (common.rel(ws, path) or "").lower() == log_rel.lower()) or ((is_cmd or is_mcp) and "replies.jsonl" in low):
+    dc = common.devcore()
+    # the reply log lives in the plugin, outside every workspace, so it is guarded before the workspace is found
+    log = dc.reply_log()
+    log_rel = "dev-core's " + dc.REPLY_LOG.replace("\\", "/")
+    if (is_edit and os.path.normcase(os.path.abspath(path)) == os.path.normcase(os.path.abspath(log))) or ((is_cmd or is_mcp) and "replies.jsonl" in low):
         return ("deny", f"dev-safe-target: {log_rel} is written only by the dev-reply-log hook on a real user prompt. "
                         "Ask the user and wait for the reply; never write or edit the log.")
+    ws = common.workspace(os.path.dirname(path) if path else (data.get("cwd") or os.getcwd()))
+    if not ws:
+        return None
+    s = common.settings(dc, ws)
     if is_cmd and approved_step(ws, text):
         return None
 

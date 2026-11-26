@@ -27,5 +27,5 @@ Goal: one change folder, new or resumed.
 
 ## Recall
 
-- Read `<workspace>/AGENTS/settings/dev/lessons.md` when it exists; keep the lessons that match the request, its areas, or its technologies, and cite them by ID where they shape a decision.
+- Read `<workspace>/AGENTS/lessons.md` when it exists; keep the lessons that match the request, its areas, or its technologies, and cite them by ID where they shape a decision.
 - From `INDEX.md`, check the open changes (not `done` or `dropped`) that may touch the same area. An overlap is a scope fact, for example "change `2026-11-12-session-cache` also edits `src/auth/`".
