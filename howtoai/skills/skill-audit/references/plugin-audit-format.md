@@ -15,8 +15,8 @@ An `INSTALL.md` runs the same file, so setup requirements are written only in `A
 A `## Checks` section holds one table with the columns ID, Scope, Applies, Kind, Target, Expect, and Fix. A pipe inside a cell is written `\|`.
 
 - **Scope:** `global` (once per audit) or `workspace` (once per workspace).
-- **Applies:** `always`, `exists <path>`, or `contains <path> :: <text>`; `not` in front negates one, and ` && ` joins several.
-- **Paths** start with `{plugin}` (the folder holding the audit file), `{workspace}`, or `{global}` and cannot leave it, also through links, and never use `**`. Outside the tool's own folder only the text of the workspace's AGENTS.md and CLAUDE.md files and the global CLAUDE.md is read, and of a JSON file only whether a key or hook is there. Secret-like files are never opened.
+- **Applies:** `always`, `exists <path>`, `contains <path> :: <text>`, or `json <path> :: <key/key>` (true when the key path exists in that JSON file and is not `false`, `null`, or empty); `not` in front negates one, and ` && ` joins several.
+- **Paths** start with `{plugin}` (the folder holding the audit file), `{workspace}`, or `{global}` and cannot leave it, also through links, and never use `**`. Outside the tool's own folder only the text of the workspace's AGENTS.md and CLAUDE.md files and the global CLAUDE.md is read, and of a JSON file only whether a key or hook is there and, for a `json` Applies, whether its value is not `false`, `null`, or empty. Secret-like files are never opened.
 - **Fix:** what to propose to the user. It is shown as the tool's proposal and applied only after a yes.
 
 ## Kinds

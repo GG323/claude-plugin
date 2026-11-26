@@ -37,8 +37,7 @@ Every install requirement of `howtoai-dev` has one section here. Each section sa
 
 | Requirement | Setting | Asked at install | Default |
 | --- | --- | --- | --- |
-| Git version control | `## Dev mode` entry in the workspace `AGENTS.md` | yes, once per workspace; on without a separate question when dev mode is chosen | none: must be set on or off |
-| Dev mode | `## Dev mode` entry in the workspace `AGENTS.md` | yes, once per workspace | none: must be set on or off |
+| Dev mode | `howtoai` key in the workspace `AGENTS/settings.json` | yes, once per workspace | none: must be set on or off |
 | Tracker | `tracker.kind` and its keys | yes, when a sign is found or the user wants one | `markdown` |
 | Plan format | `plan.publish` | yes | `auto` |
 | Plan folder | `plan_folder` | stated as a default | `dev-plans` |
@@ -54,12 +53,12 @@ Every install requirement of `howtoai-dev` has one section here. Each section sa
 
 ## Dev mode
 
-- **Setting:** the `## Dev mode` entry in the workspace's `AGENTS.md`: **Git version control** and **Dev mode**, both required and each on or off (dev mode on needs Git version control on; a missing or invalid value is an error, never off), plus the source and plugins folders. It is read and written only by the `howtoai` plugin's `devmode.py`; the user-level pointer `~/.claude/howtoai/install.json` says which workspace holds it. The contract is the `howtoai` plugin's `docs/dev-mode.md`.
+- **Setting:** the `howtoai` key in the workspace's `AGENTS/settings.json`: `dev_mode`, required and true or false (a missing or invalid value is an error, never off), plus the source and plugins folders when they are not the defaults. Git is not a setting; with dev mode on, the files must be under Git before linking. It is read and written only by the `howtoai` plugin's `devmode.py`; the user-level pointer `~/.claude/howtoai/install.json` says which workspace holds it. The contract is the `howtoai` plugin's `docs/dev-mode.md`.
 - **Set by:** [INSTALL: Dev mode](../INSTALL.md#dev-mode) and [Install or link](../INSTALL.md#install-or-link).
 - **Read by:** INSTALL only; the dev skills run the same from a link or from a plugin install. `scripts/install_check.py deps` reports each skill and agent link as `dev_links`.
-- **Signs:** the existing entry; `devmode.py status`'s `needs_setting` (ask) and `git.problems` (show before linking); junctions in `~/.claude/skills` and symbolic links in `~/.claude/agents` that point into a workspace.
+- **Signs:** the existing `howtoai` key in `AGENTS/settings.json`; `devmode.py status`'s `needs_setting` (ask) and `git.problems` (show before linking); junctions in `~/.claude/skills` and symbolic links in `~/.claude/agents` that point into a workspace.
 - **New option:** a different link layout is a change to the `howtoai` plugin's `devmode.py` and its `docs/dev-mode.md`, not to this plugin.
-- **Search:** `rg -n "devmode|Dev mode|Git version control|git-version-control" INSTALL.md docs assets`.
+- **Search:** `rg -n "devmode|Dev mode|dev_mode" INSTALL.md docs assets`.
 
 ## Where things are kept
 

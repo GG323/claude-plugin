@@ -299,7 +299,21 @@ class Runner:
             if not words:
                 raise Invalid("contains needs text")
             return os.path.isfile(path) and words in self.open_text(spec)
-        raise Invalid("Applies is always, exists <path>, or contains <path> :: <text>")
+        if kind == "json":
+            # true when the key path exists and is not false, null, or empty (a JSON file inside its root)
+            spec, _, keys = rest.partition(" :: ")
+            if not keys:
+                raise Invalid("json needs a key path")
+            if not os.path.isfile(self.one(spec)):
+                return False
+            try:
+                node = self.open_json(spec)
+                for key in keys.split("/"):
+                    node = node[key]
+            except (ValueError, KeyError, TypeError):
+                return False
+            return node not in (False, None, "", [], {})
+        raise Invalid("Applies is always, exists <path>, contains <path> :: <text>, or json <path> :: <key/key>")
 
     def run(self, check):
         kind, target, expect = check["kind"], check["target"], check["expect"]

@@ -20,8 +20,7 @@
 
 | Decision | Value | Stored in | Source |
 | --- | --- | --- | --- |
-| Git version control | {on / off} | `AGENTS.md` `## Dev mode` | {asked / required by dev mode / already set} |
-| Dev mode | {on / off} | `AGENTS.md` `## Dev mode` | {asked / already set} |
+| Dev mode | {on / off} | `AGENTS/settings.json` `howtoai` | {asked / already set} |
 | Tracker | {markdown / jira PROJ / github owner/name / azure-devops org project} | {user / project} settings `tracker` | {asked / sign found in ...} |
 | Plan format | {auto / artifact / html-file / markdown / tracker} | {user / project} settings `plan.publish` | {asked / default} |
 | Plan folder | {dev-plans} | {schema default / project settings `plan_folder`} | {default / asked} |

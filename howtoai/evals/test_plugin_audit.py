@@ -102,6 +102,24 @@ class Safety(Fake):
                         "\n## T\n\n```markdown\n## Rules\n\n{json:s.json#k}\n```\n"], "--workspace", self.ws)
         self.assertEqual(got["A1"]["status"], "invalid")
 
+    def test_a_json_condition_reads_a_key_path(self):
+        rows = ["| A1 | workspace | `json {workspace}/AGENTS/settings.json :: howtoai/dev_mode` | exists | `{workspace}` | x | none |\n",
+                "| A2 | workspace | `json {workspace}/AGENTS/settings.json :: howtoai` | exists | `{workspace}` | x | none |\n",
+                "| A3 | workspace | `not json {workspace}/AGENTS/settings.json :: howtoai/dev_mode` | exists | `{workspace}` | x | none |\n",
+                "| A4 | workspace | `json {workspace}/AGENTS/settings.json` | exists | `{workspace}` | x | none |\n"]
+        got = self.one(rows, "--workspace", self.ws)
+        self.assertEqual([got[i]["status"] for i in ("A1", "A2", "A3")], ["not-applicable"] * 2 + ["pass"], "no file")
+        self.assertEqual(got["A4"]["status"], "invalid", "a key path is required")
+        put(os.path.join(self.ws, "AGENTS", "settings.json"), '{"howtoai": {"dev_mode": false}}')
+        got = self.one(rows, "--workspace", self.ws)
+        self.assertEqual([got[i]["status"] for i in ("A1", "A2", "A3")], ["not-applicable", "pass", "pass"], "false is off")
+        put(os.path.join(self.ws, "AGENTS", "settings.json"), '{"howtoai": {"dev_mode": true}}')
+        got = self.one(rows, "--workspace", self.ws)
+        self.assertEqual([got[i]["status"] for i in ("A1", "A2", "A3")], ["pass", "pass", "not-applicable"])
+        put(os.path.join(self.ws, "AGENTS", "settings.json"), "{ broken")
+        got = self.one(rows, "--workspace", self.ws)
+        self.assertEqual(got["A1"]["status"], "not-applicable", "a broken file is read as not set")
+
     def test_bad_files_are_reported_and_nothing_is_written(self):
         audit = os.path.join(self.tmp, "tool", "AUDIT.md")
         put(audit, "# no table\n")
@@ -153,7 +171,8 @@ class DevPlugin(Fake):
         self.assertEqual(got["D1"]["status"], "not-applicable")
 
     def test_dev_mode_needs_the_reply_log_hook(self):
-        put(os.path.join(self.ws, "AGENTS.md"), "# W\n\n- **Dev mode:** on\n")
+        put(os.path.join(self.ws, "AGENTS.md"), "# W\n")
+        put(os.path.join(self.ws, "AGENTS", "settings.json"), '{"howtoai": {"dev_mode": true}, "howtoai-dev": {"workbooks": {"technologies": ["python"]}}}')
         cmd = 'F="/p/howtoai-dev/hooks/%s"; exec py -3 -I -B "$F"'
         hooks = {"PreToolUse": [
             {"matcher": "Edit|Write|MultiEdit|NotebookEdit", "hooks": [{"type": "command", "command": cmd % "dev_test_first.py"}]},

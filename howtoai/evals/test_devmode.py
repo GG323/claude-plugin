@@ -35,19 +35,6 @@ None apply.
 """
 
 
-DEFAULT_ON = (
-    "Dev mode is on: the installed and created skills, agents, and tools are kept in this workspace's files, under "
-    "version control, and the global folders `~/.claude/skills/` and `~/.claude/agents/`, like this workspace's "
-    "`.claude`, `.agents`, and `.copilot` folders, hold only links to them (a directory junction or symbolic link per "
-    "skill, a symbolic link per agent). Git version control should be enabled."
-)
-DEFAULT_OFF = (
-    "Dev mode is off: the installed skills, agents, and tools come from normal plugin installs, and created ones are "
-    "saved in this workspace's `AGENTS/` folder, with links in its `.claude`, `.agents`, and `.copilot` folders. Git "
-    "version control should be enabled."
-)
-
-
 class DevModeTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="devmode-test-")
@@ -80,25 +67,30 @@ class DevModeTest(unittest.TestCase):
             f.write("---\nname: %s\n---\n" % name)
         return d
 
-    def write_agents(self, text=AGENTS_MD, newline="\n"):
-        with open(os.path.join(self.ws, "AGENTS.md"), "w", encoding="utf-8", newline=newline) as f:
+    def write_agents(self, text=AGENTS_MD, newline="\n", ws=None):
+        with open(os.path.join(ws or self.ws, "AGENTS.md"), "w", encoding="utf-8", newline=newline) as f:
             f.write(text)
 
     def read_agents(self):
         with open(os.path.join(self.ws, "AGENTS.md"), encoding="utf-8") as f:
             return f.read()
 
-    def write_entry(self, *labelled):
-        text = AGENTS_MD.replace("## Installed skills",
-                                 "## Dev mode\n\n%s\n\n## Installed skills" % "\n".join(labelled))
-        self.write_agents(text)
-        return text
+    def settings_file(self, ws=None):
+        return os.path.join(ws or self.ws, "AGENTS", "settings.json")
+
+    def write_settings(self, data, ws=None):
+        path = self.settings_file(ws)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(data if isinstance(data, str) else json.dumps(data))
+        return path
+
+    def read_settings(self, ws=None):
+        with open(self.settings_file(ws), encoding="utf-8") as f:
+            return json.load(f)
 
     def set_on(self, *extra):
-        if not os.path.exists(os.path.join(self.ws, "AGENTS.md")):
-            self.write_agents()
-        return self.run_cmd("set", "--dev-mode", "on", "--workspace", self.ws, "--as-of", "2026-11-21",
-                            "--git-version-control", "on", "--write", *extra)
+        return self.run_cmd("set", "--dev-mode", "on", "--workspace", self.ws, "--as-of", "2026-11-21", "--write", *extra)
 
     # ---- status and set --------------------------------------------------------------
 
@@ -107,37 +99,36 @@ class DevModeTest(unittest.TestCase):
         self.assertFalse(r["ok"])
         self.assertIsNone(r["setting"])
         self.assertIsNone(r["dev_mode"], "unknown is never reported as off")
-        self.assertEqual([x["setting"] for x in r["needs_setting"]], ["Git version control", "Dev mode"])
+        self.assertEqual([x["setting"] for x in r["needs_setting"]], ["Dev mode"])
         self.assertIsNone(r["paths"])
         self.assertEqual(r["links"], [])
 
-    def test_set_needs_agents_md(self):
-        r = self.run_cmd("set", "--dev-mode", "on", "--workspace", self.ws, "--write", code=1)
-        self.assertIn("AGENTS.md", r["error"])
-
-    def test_set_preview_writes_nothing(self):
-        self.write_agents()
-        r = self.run_cmd("set", "--dev-mode", "on", "--git-version-control", "on", "--workspace", self.ws)
-        self.assertEqual(r["entry_action"], "insert")
-        self.assertIn("+- **Dev mode:** on", r["diff"])
-        self.assertFalse(r["written"])
-        self.assertEqual(self.read_agents(), AGENTS_MD)
-        self.assertFalse(os.path.exists(os.path.join(self.claude, "howtoai", "install.json")))
-
-    def test_set_writes_entry_and_pointer(self):
+    def test_set_needs_no_agents_md(self):
         r = self.set_on()
         self.assertTrue(r["written"])
-        text = self.read_agents()
-        self.assertIn("## Dev mode\n\n%s\n\n- **Git version control:** on\n- **Dev mode:** on\n" % DEFAULT_ON, text)
-        self.assertIn("- **Dev mode:** on\n- **Source folder:** [AGENTS/](AGENTS/)\n- **Plugins folder:** [AGENTS/plugins/](AGENTS/plugins/)", text)
-        order = [text.index(h) for h in ("## Workspace layout", "## Dev mode", "## Installed skills")]
-        self.assertEqual(order, sorted(order))
-        self.assertIn("- [Workspace layout](#workspace-layout)\n- [Dev mode](#dev-mode)\n- [Installed skills]", text)
+        self.assertFalse(os.path.exists(os.path.join(self.ws, "AGENTS.md")), "set never writes AGENTS.md")
+        self.assertEqual(self.read_settings(), {"howtoai": {"dev_mode": True}})
+
+    def test_set_preview_writes_nothing(self):
+        r = self.run_cmd("set", "--dev-mode", "on", "--workspace", self.ws)
+        self.assertIn('"dev_mode": true', r["diff"])
+        self.assertIn("AGENTS/settings.json", r["diff"])
+        self.assertFalse(r["written"])
+        self.assertFalse(os.path.exists(self.settings_file()))
+        self.assertFalse(os.path.exists(os.path.join(self.claude, "howtoai", "install.json")))
+
+    def test_set_writes_the_key_and_pointer(self):
+        r = self.set_on()
+        self.assertTrue(r["written"])
+        self.assertEqual((r["key"], r["setting"]), ("howtoai", {"dev_mode": True, "source_folder": "AGENTS",
+                                                                 "plugins_folder": "AGENTS/plugins"}))
+        self.assertEqual(self.read_settings(), {"howtoai": {"dev_mode": True}}, "defaults are not written")
         with open(os.path.join(self.claude, "howtoai", "install.json"), encoding="utf-8") as f:
             pointer = json.load(f)
         self.assertEqual(set(pointer), {"workspace", "howtoai_root", "updated"})
         s = self.run_cmd("status")
         self.assertTrue(s["dev_mode"])
+        self.assertTrue(s["settings_file_exists"])
         self.assertEqual(s["setting"]["source_folder"], "AGENTS")
         self.assertEqual(s["setting"]["plugins_folder"], "AGENTS/plugins")
         self.assertEqual(s["paths"]["skills"], os.path.join(os.path.abspath(self.ws), "AGENTS", "skills"))
@@ -146,29 +137,38 @@ class DevModeTest(unittest.TestCase):
         self.assertFalse(again["pointer_changed"])
         self.assertFalse(again["written"])
 
+    def test_set_keeps_other_tools_keys(self):
+        other = {"howtoai-dev": {"tracker": {"kind": "markdown"}, "workbooks": {"technologies": ["python"]}}}
+        self.write_settings(other)
+        self.set_on()
+        data = self.read_settings()
+        self.assertEqual(data["howtoai-dev"], other["howtoai-dev"])
+        self.assertEqual(data["howtoai"], {"dev_mode": True})
+        self.run_cmd("set", "--dev-mode", "off", "--workspace", self.ws, "--write")
+        self.assertEqual(self.read_settings(), {"howtoai-dev": other["howtoai-dev"], "howtoai": {"dev_mode": False}})
+
+    def test_set_refuses_a_broken_settings_file(self):
+        for text in ("{ broken", "[1, 2]"):
+            with self.subTest(text=text):
+                self.write_settings(text)
+                self.run_cmd("set", "--dev-mode", "on", "--workspace", self.ws, "--write", code=1)
+                self.run_cmd("status", "--workspace", self.ws, code=1)
+                with open(self.settings_file(), encoding="utf-8") as f:
+                    self.assertEqual(f.read(), text, "other tools' settings are never overwritten")
+
     def test_status_reads_named_workspace_without_pointer(self):
-        self.write_agents(AGENTS_MD.replace("## Installed skills",
-                                            "## Dev mode\n\nText.\n\n- **Git version control:** on\n- **Dev mode:** on\n- **Source folder:** `My tools/`\n\n## Installed skills"))
+        self.write_settings({"howtoai": {"dev_mode": True, "source_folder": "My tools/"}})
         s = self.run_cmd("status", "--workspace", self.ws)
         self.assertIsNone(s["pointer"])
         self.assertEqual(s["setting"]["source_folder"], "My tools")
         self.assertEqual(s["setting"]["plugins_folder"], "My tools/plugins")
 
-    def test_status_parses_link_with_spaces(self):
+    def test_folders_are_written_only_when_not_default(self):
         self.set_on("--source-folder", "My tools", "--plugins-folder", "PLUGIN/claude-plugin")
-        self.assertIn("- **Source folder:** [My tools/](<My tools/>)", self.read_agents())
+        self.assertEqual(self.read_settings()["howtoai"],
+                         {"dev_mode": True, "source_folder": "My tools", "plugins_folder": "PLUGIN/claude-plugin"})
         s = self.run_cmd("status")["setting"]
         self.assertEqual((s["source_folder"], s["plugins_folder"]), ("My tools", "PLUGIN/claude-plugin"))
-
-    def test_malformed_entry_refused(self):
-        self.write_agents(AGENTS_MD.replace("## Installed skills", "## Dev mode\n\nOn, I think.\n\n## Installed skills"))
-        r = self.run_cmd("status", "--workspace", self.ws, code=1)
-        self.assertIn("on or off", r["error"])
-        self.assertEqual([x["setting"] for x in r["needs_setting"]], ["Git version control", "Dev mode"])
-        r = self.run_cmd("set", "--dev-mode", "on", "--git-version-control", "on", "--workspace", self.ws, "--write")
-        self.assertEqual(r["entry_action"], "replace")
-        self.assertNotIn("On, I think.", self.read_agents())
-        self.assertTrue(self.run_cmd("status", "--workspace", self.ws)["dev_mode"])
 
     def test_set_keeps_folders_and_switches_off(self):
         self.set_on("--source-folder", "Agents", "--plugins-folder", "PLUGIN/claude-plugin")
@@ -176,97 +176,42 @@ class DevModeTest(unittest.TestCase):
         self.assertEqual(r["setting"]["plugins_folder"], "PLUGIN/claude-plugin")
         self.assertFalse(r["changed"])
         r = self.run_cmd("set", "--dev-mode", "off", "--workspace", self.ws, "--write")
-        self.assertEqual(r["entry_action"], "replace")
-        text = self.read_agents()
-        self.assertIn("## Dev mode\n\n%s\n\n- **Git version control:** on\n- **Dev mode:** off\n" % DEFAULT_OFF, text)
-        self.assertNotIn("- **Dev mode:** on", text)
-        self.assertEqual(text.count("## Dev mode"), 1)
-        self.assertEqual(text.count("- [Dev mode](#dev-mode)"), 1)
+        self.assertTrue(r["changed"])
+        self.assertEqual(r["previous"]["dev_mode"], True)
+        self.assertIs(self.read_settings()["howtoai"]["dev_mode"], False)
         self.assertFalse(self.run_cmd("status")["dev_mode"])
 
     def test_set_rejects_bad_folders(self):
-        self.write_agents()
         self.run_cmd("set", "--dev-mode", "on", "--workspace", self.ws, "--source-folder", "../out", code=2)
         self.run_cmd("set", "--dev-mode", "on", "--workspace", self.ws, "--source-folder", self.tmp, code=2)
         self.run_cmd("set", "--dev-mode", "on", code=2)
         self.run_cmd("set", "--dev-mode", "on", "--workspace", os.path.join(self.tmp, "missing"), code=2)
+        self.run_cmd("set", "--dev-mode", "on", "--workspace", self.ws, "--git-version-control", "on", code=2)
 
-    def test_set_keeps_crlf(self):
-        self.write_agents(newline="\r\n")
-        self.set_on()
-        with open(os.path.join(self.ws, "AGENTS.md"), "rb") as f:
-            raw = f.read()
-        self.assertNotIn(b"\r\r", raw)
-        self.assertEqual(raw.count(b"\n"), raw.count(b"\r\n"))
+    # ---- an invalid setting ----------------------------------------------------------
 
-    # ---- Git version control ---------------------------------------------------------
-
-    def test_git_setting_off_is_kept_with_dev_mode_off(self):
-        self.write_agents()
-        args = ("set", "--dev-mode", "off", "--workspace", self.ws, "--write")
-        self.run_cmd(*args, "--git-version-control", "off")
-        text = self.read_agents()
-        self.assertIn("- **Git version control:** off\n- **Dev mode:** off\n", text)
-        self.assertNotIn("should be enabled", text)
-        s = self.run_cmd("status")
-        self.assertIs(s["setting"]["git_version_control"], False)
-        self.assertIs(s["dev_mode"], False)
-        self.assertIsNone(s["git"])
-        self.assertFalse(self.run_cmd(*args)["changed"], "a rerun without the option keeps off")
-
-    def test_dev_mode_refuses_git_off(self):
-        self.write_agents()
-        r = self.run_cmd("set", "--dev-mode", "on", "--git-version-control", "off", "--workspace", self.ws, "--write", code=1)
-        self.assertIn("Dev mode needs Git version control on", r["error"])
-        self.assertEqual(self.read_agents(), AGENTS_MD)
-
-    def test_dev_mode_never_switches_git_on_silently(self):
-        self.write_agents()
-        self.run_cmd("set", "--dev-mode", "off", "--git-version-control", "off", "--workspace", self.ws, "--write")
-        before = self.read_agents()
-        r = self.run_cmd("set", "--dev-mode", "on", "--workspace", self.ws, "--write", code=1)
-        self.assertIn("Dev mode needs Git version control on", r["error"])
-        self.assertEqual(self.read_agents(), before)
-        self.set_on()
-        self.assertIn(DEFAULT_ON, self.read_agents())
-
-    def test_hand_edited_dev_on_git_off_is_an_error(self):
-        self.write_entry("- **Git version control:** off", "- **Dev mode:** on")
-        r = self.run_cmd("status", "--workspace", self.ws, code=1)
-        self.assertIn("Dev mode needs Git version control on", r["error"])
-        self.assertIsNone(r["setting"])
-        self.assertIsNone(r["paths"])
-
-    def test_missing_git_line_is_an_error(self):
-        for dev in ("on", "off"):
-            text = self.write_entry("- **Dev mode:** %s" % dev)
-            r = self.run_cmd("status", "--workspace", self.ws, code=1)
-            self.assertEqual([x["setting"] for x in r["needs_setting"]], ["Git version control"])
-            self.assertIn("on or off", r["error"])
-            r = self.run_cmd("set", "--dev-mode", dev, "--workspace", self.ws, "--write", code=1)
-            self.assertIn("--git-version-control", r["error"])
-            self.assertEqual(self.read_agents(), text, "set must not guess")
-
-    def test_missing_dev_mode_line_is_an_error_and_repairable(self):
-        self.write_entry("- **Git version control:** on", "- **Source folder:** `My tools/`")
+    def test_missing_key_is_an_error(self):
+        self.write_settings({"howtoai-dev": {}})
         r = self.run_cmd("status", "--workspace", self.ws, code=1)
         self.assertEqual([x["setting"] for x in r["needs_setting"]], ["Dev mode"])
         self.assertIsNone(r["dev_mode"])
+        self.assertIn("on or off", r["error"])
+
+    def test_bad_dev_mode_value_is_an_error_and_repairable(self):
+        self.write_settings({"howtoai": {"dev_mode": "yes", "source_folder": "My tools"}})
+        r = self.run_cmd("status", "--workspace", self.ws, code=1)
+        self.assertIn("'yes'", r["error"])
+        self.assertIsNone(r["setting"])
+        self.assertIsNone(r["paths"])
         r = self.run_cmd("set", "--dev-mode", "on", "--workspace", self.ws, "--write")
         self.assertEqual(r["setting"]["source_folder"], "My tools", "a repair keeps the folders")
 
-    def test_bad_dev_mode_value_is_an_error(self):
-        self.write_entry("- **Git version control:** on", "- **Dev mode:** yes")
+    def test_a_key_that_is_not_an_object_is_an_error(self):
+        self.write_settings({"howtoai": True})
         r = self.run_cmd("status", "--workspace", self.ws, code=1)
-        self.assertIn("'yes'", r["error"])
-
-    def test_no_section_is_an_error(self):
-        self.write_agents()
-        r = self.run_cmd("status", "--workspace", self.ws, code=1)
-        self.assertEqual([x["setting"] for x in r["needs_setting"]], ["Git version control", "Dev mode"])
-        self.assertIsNone(r["dev_mode"])
-        self.run_cmd("set", "--dev-mode", "off", "--workspace", self.ws, "--write", code=1)
-        self.assertEqual(self.read_agents(), AGENTS_MD)
+        self.assertIn("must be an object", r["error"])
+        self.run_cmd("set", "--dev-mode", "off", "--workspace", self.ws, "--write")
+        self.assertEqual(self.read_settings(), {"howtoai": {"dev_mode": False}})
 
     def test_link_needs_a_valid_setting(self):
         src = self.skill("demo")
@@ -277,26 +222,25 @@ class DevModeTest(unittest.TestCase):
     def test_status_still_lists_links_on_error(self):
         self.set_on()
         self.run_cmd("link", "--source", self.skill("demo"), "--write")
-        self.write_agents()
+        self.write_settings({})
         r = self.run_cmd("status", code=1)
         self.assertEqual([x["name"] for x in r["links"]], ["demo"], "unlink must stay possible")
 
-    def test_git_setting_bad_value_refused_by_status_and_set(self):
-        text = AGENTS_MD.replace("## Installed skills", "## Dev mode\n\n- **Git version control:** maybe\n- **Dev mode:** on\n"
-                                 "- **Source folder:** `My tools/`\n\n## Installed skills")
-        self.write_agents(text)
-        self.assertIn("Git version control", self.run_cmd("status", "--workspace", self.ws, code=1)["error"])
-        self.run_cmd("set", "--dev-mode", "on", "--workspace", self.ws, "--write", code=1)
-        self.assertEqual(self.read_agents(), text, "a bad value must not reset the folders")
-        r = self.run_cmd("set", "--dev-mode", "on", "--git-version-control", "on", "--workspace", self.ws, "--write")
-        self.assertEqual(r["setting"]["source_folder"], "My tools", "an explicit repair keeps the folders")
+    # ---- Git -------------------------------------------------------------------------
 
     def test_git_health_without_repository(self):
         self.set_on()
         g = self.run_cmd("status")["git"]
         self.assertFalse(g["ok"])
+        self.assertTrue(g["required"])
         self.assertIn("not in a Git repository", " ".join(g["problems"]))
         self.assertFalse(os.path.exists(os.path.join(self.ws, ".git")), "the script never runs git init")
+
+    def test_git_is_advice_only_with_dev_mode_off(self):
+        self.run_cmd("set", "--dev-mode", "off", "--workspace", self.ws, "--write")
+        g = self.run_cmd("status", "--workspace", self.ws)["git"]
+        self.assertFalse(g["required"])
+        self.assertEqual(list(g["repos"]), ["settings"], "with dev mode off only the settings file is checked")
 
     @unittest.skipUnless(shutil.which("git"), "needs git")
     def test_git_health_repository_ignored_and_nested(self):
@@ -429,12 +373,12 @@ class DevModeTest(unittest.TestCase):
         self.assertFalse(r["changed"])
         self.assertEqual(r["blocks"][0]["action"], "none")
 
-    def test_agents_md_after_set_keeps_order(self):
+    def test_agents_md_after_set_keeps_the_setting(self):
+        self.write_agents()
         self.set_on()
+        self.assertEqual(self.read_agents(), AGENTS_MD, "set never touches AGENTS.md")
         self.run_cmd("agents-md", "--workspace", self.ws, "--write")
-        text = self.read_agents()
-        order = [text.index(h) for h in ("## Workspace layout", "## Dev mode", "## Markdown conventions", "## Installed skills")]
-        self.assertEqual(order, sorted(order))
+        self.assertNotIn("Dev mode", self.read_agents())
         self.assertTrue(self.run_cmd("status")["dev_mode"])
 
     def test_agents_md_differing_baseline_kept(self):
@@ -454,12 +398,10 @@ class DevModeTest(unittest.TestCase):
         other = os.path.join(os.path.dirname(self.ws), "other-" + os.path.basename(self.ws))
         os.makedirs(other)
         self.addCleanup(__import__("shutil").rmtree, other, True)
-        with open(os.path.join(other, "AGENTS.md"), "w", encoding="utf-8") as f:
-            f.write(AGENTS_MD)
         return other
 
     def set_other(self, other, dev_mode):
-        return self.run_cmd("set", "--dev-mode", dev_mode, "--git-version-control", "on", "--workspace", other,
+        return self.run_cmd("set", "--dev-mode", dev_mode, "--workspace", other,
                             "--as-of", "2026-11-22", "--write")
 
     def test_dev_mode_off_keeps_the_pointers_workspace(self):
@@ -479,16 +421,15 @@ class DevModeTest(unittest.TestCase):
 
     def test_dev_mode_off_takes_over_a_dead_pointer(self):
         self.set_on()
-        os.remove(os.path.join(self.ws, "AGENTS.md"))
+        os.remove(self.settings_file())
         other = self.other_workspace()
         self.assertEqual(self.set_other(other, "off")["pointer"]["workspace"], os.path.abspath(other))
 
     def test_dev_mode_off_takes_over_a_pointer_without_a_valid_setting(self):
-        for number, text in enumerate((AGENTS_MD, AGENTS_MD.replace(
-                "## Installed skills", "## Dev mode\n\n- **Dev mode:** on\n\n## Installed skills"))):
+        for number, data in enumerate(({}, {"howtoai": {"source_folder": "AGENTS"}})):
             with self.subTest(number=number):
                 self.set_on()
-                self.write_agents(text)
+                self.write_settings(data)
                 other = self.other_workspace()
                 r = self.set_other(other, "off")
                 self.assertEqual(r["pointer"]["workspace"], os.path.abspath(other))
@@ -521,8 +462,7 @@ class DevModeTest(unittest.TestCase):
     def test_multi_repo_root_is_a_note_not_a_problem(self):
         for name in ("app", "infra"):
             os.makedirs(os.path.join(self.ws, name, ".git"))
-        self.write_agents()
-        self.run_cmd("set", "--dev-mode", "off", "--git-version-control", "on", "--workspace", self.ws, "--write")
+        self.run_cmd("set", "--dev-mode", "off", "--workspace", self.ws, "--write")
         g = self.run_cmd("status", "--workspace", self.ws)["git"]
         self.assertTrue(g["ok"], g)
         self.assertEqual(g["layout"], "multi-repo")
@@ -543,13 +483,14 @@ class DevModeTest(unittest.TestCase):
         self.set_on()
         other = self.other_workspace()
         os.makedirs(os.path.join(other, "repo", ".git"))
-        r = self.run_cmd("set", "--dev-mode", "on", "--git-version-control", "on", "--workspace", other,
+        r = self.run_cmd("set", "--dev-mode", "on", "--workspace", other,
                          "--plugins-folder", clone, "--as-of", "2026-11-25", "--write")
         self.assertEqual(r["pointer"]["workspace"], os.path.abspath(self.ws), "the clone's owner keeps the pointer")
         self.assertFalse(r["pointer_changed"])
         self.assertTrue(r["paths"]["plugins_shared"])
         self.assertEqual(r["setting"]["source_folder"], "AGENTS")
-        self.assertIn("- **Plugins folder:** [%s/]" % clone.replace("\\", "/"), r["diff"], "the root of an absolute path stays")
+        self.assertEqual(self.read_settings(other)["howtoai"]["plugins_folder"], clone.replace("\\", "/"),
+                         "an absolute shared clone is written as it is")
         st = self.run_cmd("status", "--workspace", other)
         self.assertTrue(st["dev_mode"])
         self.assertEqual(os.path.normcase(os.path.normpath(st["paths"]["plugins"])),
@@ -557,10 +498,9 @@ class DevModeTest(unittest.TestCase):
         self.assertEqual(st["git"]["problems"], [], st["git"])
 
     def test_absolute_plugins_folder_must_be_a_clone(self):
-        self.write_agents()
         plain = os.path.join(self.tmp, "not-a-clone")
         os.makedirs(plain)
-        r = self.run_cmd("set", "--dev-mode", "on", "--git-version-control", "on", "--workspace", self.ws,
+        r = self.run_cmd("set", "--dev-mode", "on", "--workspace", self.ws,
                          "--plugins-folder", plain, code=2)
         self.assertIn("howtoai-mods", r["error"])
 
@@ -606,12 +546,11 @@ class DevModeTest(unittest.TestCase):
         self.assertTrue(r["in_source"])
 
     def test_ignored_plugins_folder_not_cloned_yet_is_a_note(self):
-        self.write_agents()
         os.makedirs(os.path.join(self.ws, "AGENTS", ".git"))
         with open(os.path.join(self.ws, "AGENTS", ".gitignore"), "w", encoding="utf-8") as f:
             f.write("plugins/\nstate/\n")
         os.makedirs(os.path.join(self.ws, "app", ".git"))
-        self.run_cmd("set", "--dev-mode", "on", "--git-version-control", "on", "--workspace", self.ws, "--write")
+        self.run_cmd("set", "--dev-mode", "on", "--workspace", self.ws, "--write")
         g = self.run_cmd("status", "--workspace", self.ws)["git"]
         self.assertNotIn("plugins", " ".join(g["problems"]))
         self.assertIn("not cloned yet", " ".join(g["notes"]))

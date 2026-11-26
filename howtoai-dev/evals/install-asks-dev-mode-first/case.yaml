@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: install-asks-dev-mode-first
 expected_outcome: |
-  The agent runs the dependency check (install_check.py deps) before anything else, reads the workspace's dev-mode setting through devmode.py status, finds no Dev mode entry in AGENTS.md, and asks the dev-mode question in its own words ("keep the skills, agents, and tools in workspace files, under version control") with a recommendation, before any per-user or project question. Nothing is written: no settings file, no AGENTS.md change, no link.
+  The agent runs the dependency check (install_check.py deps) before anything else, reads the workspace's dev-mode setting through devmode.py status, finds no `howtoai` key in AGENTS/settings.json (status exits 1 with needs_setting), and asks the dev-mode question in its own words ("keep the skills, agents, and tools in workspace files, under version control") with a recommendation, before any per-user or project question. Nothing is written: no settings file, no AGENTS.md change, no link.
 context:
   scaffold_script: place-files.sh

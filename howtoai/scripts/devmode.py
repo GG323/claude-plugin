@@ -4,28 +4,30 @@ Run it as:  py -3 -I -B devmode.py [--claude-dir <dir>] <command> [options]
 (python3 -I -B outside Windows). Standard library only. Every command prints one JSON object.
 Exit codes: 0 done or previewed, 1 refused or failed (JSON has "error"), 2 bad arguments.
 
-The setting lives in the workspace's AGENTS.md, in its "## Dev mode" section (the entry).
-Git version control and Dev mode must each be on or off: a missing one is an error, never a
-default. Dev mode on needs Git version control on.
-~/.claude/howtoai/install.json is only a pointer: which workspace holds the entry, and where
+The setting lives in the workspace's shared AGENTS/settings.json, under the "howtoai" key:
+  {"howtoai": {"dev_mode": true, "source_folder": "AGENTS", "plugins_folder": "AGENTS/plugins"}}
+dev_mode (true or false) is required: a missing or invalid value is an error, never a default.
+The folders are optional and default to AGENTS and <source>/plugins. Other tools' keys in the file
+are kept as they are. Git is not a setting: status reports whether Git covers the files, and dev
+mode on needs that check to pass before linking.
+~/.claude/howtoai/install.json is only a pointer: which workspace holds the setting, and where
 this plugin is (howtoai_root).
 
 Commands
   status [--workspace <path>]
-      The entry (read from <workspace>/AGENTS.md; the workspace defaults to the pointer's), the
-      pointer, the resolved folders, and the health of every entry in <claude-dir>/skills and
-      <claude-dir>/agents. With Git version control on, also whether Git really covers the files.
-      Exit 1 with needs_setting when a setting is missing or invalid.
-  set --dev-mode on|off --workspace <path> [--source-folder <f>] [--plugins-folder <f>]
-      [--git-version-control on|off] [--write]
-      Previews the Dev mode entry in <workspace>/AGENTS.md and the pointer; writes both only
-      with --write. Folders are relative to the workspace: source default AGENTS, plugins
-      default <source>/plugins. The plugins folder may instead be the absolute path of an
-      existing howtoai-mods clone (shared with the workspace that owns it; the pointer then
-      stays on that workspace). An option left out keeps the entry's
-      current value; without one, --git-version-control is required. Never runs git init,
-      add, or commit. A workspace root with no repository whose direct subfolders hold
-      repositories is a multi-repo layout: its root files are notes, not Git problems.
+      The setting (read from <workspace>/AGENTS/settings.json; the workspace defaults to the
+      pointer's), the pointer, the resolved folders, whether Git covers the files, and the health
+      of every entry in <claude-dir>/skills and <claude-dir>/agents. Exit 1 with needs_setting
+      when the setting is missing or invalid.
+  set --dev-mode on|off --workspace <path> [--source-folder <f>] [--plugins-folder <f>] [--write]
+      Previews the "howtoai" key in <workspace>/AGENTS/settings.json and the pointer; writes both
+      only with --write, keeping every other key in the file. Folders are relative to the
+      workspace: source default AGENTS, plugins default <source>/plugins; a default is not
+      written into the key. The plugins folder may instead be the absolute path of an existing
+      howtoai-mods clone (shared with the workspace that owns it; the pointer then stays on that
+      workspace). An option left out keeps the current value. Never runs git init, add, or
+      commit. A workspace root with no repository whose direct subfolders hold repositories is a
+      multi-repo layout: its root files are notes, not Git problems.
   link --source <skill folder or agent .md file> [--into global|workspace] [--workspace <path>]
       [--harness claude|agents|copilot] [--replace-link] [--write]
       Previews the link for one skill (<root>/skills/<name>) or agent (<root>/agents/<name>.md);
@@ -73,10 +75,9 @@ HARNESS_SKILLS = [
 IS_WINDOWS = os.name == "nt"
 REPARSE_MOUNT_POINT = 0xA0000003
 BASELINE_HEADING = "Markdown conventions"
-DEVMODE_HEADING = "Dev mode"
-SETTINGS = (("git_version_control", "Git version control"), ("dev_mode", "Dev mode"))
+SETTINGS_FILE = "settings.json"  # the workspace's shared AGENTS/settings.json, one top-level key per tool
+SETTINGS_KEY = "howtoai"        # this plugin's key in it
 HARNESS_FOLDERS = (".claude", ".agents", ".copilot")
-LABEL = re.compile(r"^- \*\*(Git version control|Dev mode|Source folder|Plugins folder):\*\*\s*(.+?)\s*$")
 
 
 class Refused(Exception):
@@ -177,7 +178,7 @@ def entry_health(path, kind, workspace):
     return item
 
 
-# ---- pointer and entry --------------------------------------------------------------------
+# ---- pointer and setting ------------------------------------------------------------------
 
 def pointer_path(claude_dir):
     return os.path.join(claude_dir, "howtoai", "install.json")
@@ -251,62 +252,76 @@ def read_agents(ws):
         return path, f.read()
 
 
-def label_value(raw):
-    """`AGENTS/` or [AGENTS](AGENTS/) or [AGENTS](<My folder/>) -> AGENTS."""
-    m = re.match(r"^\[[^\]]*\]\((.+)\)$", raw)
-    if m:
-        raw = m.group(1).strip()
-        if raw.startswith("<") and raw.endswith(">"):
-            raw = raw[1:-1]
-    raw = raw.strip("`").strip().replace("\\", "/")
+def agents_dir(ws):
+    """The workspace's AGENTS/ folder in the case it exists in (Agents/ counts), else <ws>/AGENTS."""
+    try:
+        for name in os.listdir(ws):
+            if name.lower() == "agents" and os.path.isdir(os.path.join(ws, name)):
+                return os.path.join(ws, name)
+    except OSError:
+        pass
+    return os.path.join(ws, "AGENTS")
+
+
+def settings_path(ws):
+    return os.path.join(agents_dir(ws), SETTINGS_FILE)
+
+
+def read_settings_file(ws):
+    """(path, the whole shared settings object or None when there is no file). A file that is not a
+    JSON object is refused, because writing to it would lose other tools' settings."""
+    path = settings_path(ws)
+    if not os.path.isfile(path):
+        return path, None
+    try:
+        with open(path, encoding="utf-8-sig") as f:
+            data = json.load(f)
+    except (OSError, ValueError) as e:
+        raise Refused("%s cannot be read: %s. Fix it first; it holds every tool's settings." % (path, e))
+    if not isinstance(data, dict):
+        raise Refused("%s must hold a JSON object with one key per tool." % path)
+    return path, data
+
+
+def folder_value(raw):
+    raw = str(raw).strip().replace("\\", "/")
     # a leading "/" is dropped (relative folders), unless the value is an absolute shared clone
     return raw.rstrip("/") if is_marketplace_clone(raw.rstrip("/") or "/") else raw.strip("/")
 
 
-def parse_entry(lines):
-    """Return what the Dev mode section says, valid or not; None when there is no section."""
-    s = find(sections(lines), DEVMODE_HEADING)
-    if not s:
+def parse_setting(raw):
+    """What the "howtoai" key says, valid or not; None when there is no key."""
+    if raw is None:
         return None
-    found = {}
-    for i in range(s[1], s[2]):
-        m = LABEL.match(lines[i])
-        if m:
-            found[m.group(1)] = (label_value(m.group(2)), i + 1)
-    entry = {"line": s[1] + 1, "bad": {}}
-    for key, label in SETTINGS:
-        raw, line = found.get(label, (None, None))
-        entry[key] = {"on": True, "off": False}.get(raw.lower()) if raw is not None else None
-        if raw is not None and entry[key] is None:
-            entry["bad"][key] = (raw, line)
-    src = found.get("Source folder", ("AGENTS", None))[0] or "AGENTS"
+    if not isinstance(raw, dict):
+        return {"dev_mode": None, "source_folder": "AGENTS", "plugins_folder": "AGENTS/plugins", "bad": {"howtoai": raw}}
+    entry = {"bad": {}}
+    entry["dev_mode"] = raw.get("dev_mode") if isinstance(raw.get("dev_mode"), bool) else None
+    if "dev_mode" in raw and entry["dev_mode"] is None:
+        entry["bad"]["dev_mode"] = raw.get("dev_mode")
+    src = folder_value(raw.get("source_folder") or "AGENTS") or "AGENTS"
     entry["source_folder"] = src
-    entry["plugins_folder"] = found.get("Plugins folder", (src + "/plugins", None))[0] or src + "/plugins"
+    entry["plugins_folder"] = folder_value(raw.get("plugins_folder") or src + "/plugins") or src + "/plugins"
     return entry
 
 
 def setting_needs(entry):
-    """What stops the entry from being a valid setting; an empty list when it is valid."""
+    """What stops the key from being a valid setting; an empty list when it is valid."""
     entry = entry or {}
-    needs = []
-    for key, label in SETTINGS:
-        if entry.get(key) is not None:
-            continue
-        if key in entry.get("bad", {}):
-            raw, line = entry["bad"][key]
-            problem = "%s is '%s' on line %d of AGENTS.md; it must be on or off." % (label, raw, line)
-        else:
-            problem = "%s is not set; it must be made on or off." % label
-        needs.append({"setting": label, "problem": problem})
-    if entry.get("dev_mode") and entry.get("git_version_control") is False:
-        needs.append({"setting": "Git version control",
-                      "problem": "Dev mode needs Git version control on: turn Git version control on, or dev mode off."})
-    return needs
+    if isinstance(entry.get("dev_mode"), bool):
+        return []
+    if "howtoai" in entry.get("bad", {}):
+        problem = 'The "howtoai" key in AGENTS/settings.json must be an object.'
+    elif "dev_mode" in entry.get("bad", {}):
+        problem = 'Dev mode is %r in AGENTS/settings.json; it must be true or false.' % (entry["bad"]["dev_mode"],)
+    else:
+        problem = "Dev mode is not set; it must be made on or off."
+    return [{"setting": "Dev mode", "problem": problem}]
 
 
 def needs_error(needs):
     return (" ".join(n["problem"] for n in needs) + " Ask the user, then record the answer: devmode.py set "
-            "--workspace <path> --dev-mode on|off --git-version-control on|off.")
+            "--workspace <path> --dev-mode on|off.")
 
 
 def public(entry):
@@ -336,12 +351,13 @@ def repo_root(path):
 
 
 def git_health(ws, setting):
-    """What keeps Git from covering the files; None when the setting is off. Read-only."""
-    if not ws or not setting or not setting["git_version_control"]:
+    """Whether Git covers the files (AGENTS/settings.json, and with dev mode on the source and plugins folders);
+    None without a valid setting. Git is not a setting: dev mode on needs ok here before linking. Read-only."""
+    if not ws or not setting:
         return None
     git = shutil.which("git")
     problems = [] if git else ["Git is not installed (Windows: winget install Git.Git)."]
-    targets = [("AGENTS.md", os.path.join(ws, "AGENTS.md"), False)]
+    targets = [("settings", settings_path(ws), False)]
     if setting["dev_mode"]:
         paths = resolved_paths(ws, setting)
         targets += [(key, paths[key], True) for key in ("skills", "agents", "docs", "plugins")]
@@ -364,19 +380,19 @@ def git_health(ws, setting):
                 problems.append("%s is ignored by the repository %s: %s" % (key, root, path))
             elif r.returncode != 1:
                 problems.append("%s could not be checked in %s: %s" % (key, root, r.stderr.strip()))
-    return {"ok": not problems, "problems": problems, "notes": notes, "repos": repos,
+    return {"ok": not problems, "required": bool(setting["dev_mode"]), "problems": problems, "notes": notes, "repos": repos,
             "layout": "multi-repo" if subrepos else "single-repo", "nested_repos": subrepos}
 
 
 def load_setting(a, workspace=None):
-    """Return (workspace, agents_md_path, valid setting or None, pointer, needs)."""
+    """Return (workspace, settings_path, valid setting or None, pointer, needs)."""
     pointer = read_pointer(a.claude_dir)
     ws = workspace or (pointer or {}).get("workspace")
     path, entry = None, None
     if ws:
         ws = os.path.abspath(os.path.expanduser(ws))
-        path, text = read_agents(ws)
-        entry = parse_entry(text.splitlines()) if text is not None else None
+        path, data = read_settings_file(ws)
+        entry = parse_setting((data or {}).get(SETTINGS_KEY))
     needs = setting_needs(entry)
     return ws or None, path, None if needs else public(entry), pointer, needs
 
@@ -398,8 +414,8 @@ def cmd_status(a):
     counts = {}
     for item in links:
         counts[item["state"]] = counts.get(item["state"], 0) + 1
-    res = {"ok": not needs, "workspace": ws, "agents_md": path,
-           "agents_md_exists": bool(path and os.path.isfile(path)),
+    res = {"ok": not needs, "workspace": ws, "settings_file": path,
+           "settings_file_exists": bool(path and os.path.isfile(path)),
            "setting": setting, "dev_mode": setting["dev_mode"] if setting else None,
            "pointer_path": pointer_path(a.claude_dir), "pointer": pointer,
            "howtoai_root": HOWTOAI_ROOT, "git": git_health(ws, setting), "paths": paths, "links": links, "counts": counts}
@@ -410,34 +426,18 @@ def cmd_status(a):
     out(res, 1 if needs else 0)
 
 
-def md_link(rel):
-    rel = rel.replace("\\", "/").rstrip("/") + "/"  # rstrip only: an absolute shared plugins folder keeps its root
-    return "[%s](%s)" % (rel, "<%s>" % rel if " " in rel else rel)
-
-
-def devmode_block(on, src, plugins, git):
-    git_text = " Git version control should be enabled." if git else ""
-    git_line = "- **Git version control:** " + ("on" if git else "off")
-    if on:
-        text = ("Dev mode is on: the installed and created skills, agents, and tools are kept in this workspace's "
-                "files, under version control, and the global folders `~/.claude/skills/` and `~/.claude/agents/`, like "
-                "this workspace's `.claude`, `.agents`, and `.copilot` folders, hold only links to them (a directory "
-                "junction or symbolic link per skill, a symbolic link per agent)." + git_text)
-        return ["## " + DEVMODE_HEADING, "", text, "",
-                git_line, "- **Dev mode:** on", "- **Source folder:** " + md_link(src), "- **Plugins folder:** " + md_link(plugins)]
-    text = ("Dev mode is off: the installed skills, agents, and tools come from normal plugin installs, and created "
-            "ones are saved in this workspace's `AGENTS/` folder, with links in its `.claude`, `.agents`, and `.copilot` folders." + git_text)
-    return ["## " + DEVMODE_HEADING, "", text, "", git_line, "- **Dev mode:** off"]
-
-
 def holds_valid_setting(workspace):
     if not isinstance(workspace, str) or not os.path.isabs(workspace):
         return False
     try:
-        text = read_agents(workspace)[1]
-    except (OSError, ValueError):
+        data = read_settings_file(workspace)[1]
+    except Refused:
         return False
-    return text is not None and not setting_needs(parse_entry(text.splitlines()))
+    return not setting_needs(parse_setting((data or {}).get(SETTINGS_KEY)))
+
+
+def json_text(data):
+    return json.dumps(data, indent=1, ensure_ascii=False) + "\n"
 
 
 def cmd_set(a):
@@ -445,12 +445,11 @@ def cmd_set(a):
     if not os.path.isdir(ws):
         raise BadArgs("The workspace folder does not exist: %s" % ws)
     on = a.dev_mode == "on"
-    path, text = read_agents(ws)
-    if text is None:
-        raise Refused("No AGENTS.md in %s; the setting is kept there. Create one first (skill-audit's "
-                      "workspace audit drafts it)." % ws)
-    before = text.splitlines()
-    prev = parse_entry(before)
+    path, data = read_settings_file(ws)
+    whole = dict(data or {})
+    prev = parse_setting(whole.get(SETTINGS_KEY))
+    if prev and "howtoai" in prev.get("bad", {}):
+        prev = None
     src = check_relative("--source-folder", a.source_folder) if a.source_folder else (prev or {}).get("source_folder", "AGENTS")
     if a.plugins_folder:
         plugins = check_plugins_folder(a.plugins_folder)
@@ -458,16 +457,15 @@ def cmd_set(a):
         plugins = prev["plugins_folder"]
     else:
         plugins = src + "/plugins"
-    wanted = dict(prev or {}, dev_mode=on)
-    if a.git_version_control:
-        wanted["git_version_control"] = a.git_version_control == "on"
-    needs = setting_needs(wanted)
-    if needs:
-        raise Refused(needs_error(needs), needs_setting=needs)
-    git = wanted["git_version_control"]
-    lines, act = place(list(before), devmode_block(on, src, plugins, git), DEVMODE_HEADING,
-                       after=("Workspace layout",), before=(BASELINE_HEADING, "Installed skills"))
-    setting = {"git_version_control": git, "dev_mode": on, "source_folder": src, "plugins_folder": plugins}
+    setting = {"dev_mode": on, "source_folder": src, "plugins_folder": plugins}
+    key = {"dev_mode": on}
+    if src != "AGENTS":
+        key["source_folder"] = src
+    if plugins != src + "/plugins":
+        key["plugins_folder"] = plugins
+    before = json_text(data) if data is not None else ""
+    whole[SETTINGS_KEY] = key
+    after = json_text(whole)
     old_pointer = read_pointer(a.claude_dir)
     pointed = ws
     shared = not inside(os.path.join(ws, plugins), ws)
@@ -478,18 +476,22 @@ def cmd_set(a):
     pointer = {"workspace": pointed, "howtoai_root": HOWTOAI_ROOT, "updated": a.as_of or datetime.date.today().isoformat()}
     pointer_changed = old_pointer is None or {k: v for k, v in old_pointer.items() if k != "updated"} != \
         {k: v for k, v in pointer.items() if k != "updated"}
-    changed = lines != before
-    res = {"ok": True, "write": bool(a.write), "workspace": ws, "agents_md": path, "setting": setting,
-           "previous": {k: v for k, v in public(prev).items() if k != "line"} if prev else None,
-           "entry_action": act, "changed": changed,
-           "diff": "\n".join(difflib.unified_diff(before, lines, "AGENTS.md", "AGENTS.md (new)", lineterm="")) if changed else "",
+    changed = after != before
+    res = {"ok": True, "write": bool(a.write), "workspace": ws, "settings_file": path, "key": SETTINGS_KEY,
+           "setting": setting, "previous": {k: v for k, v in public(prev).items()} if prev else None, "changed": changed,
+           "diff": "\n".join(difflib.unified_diff(before.splitlines(), after.splitlines(), "AGENTS/settings.json",
+                                                    "AGENTS/settings.json (new)", lineterm="")) if changed else "",
            "pointer_path": pointer_path(a.claude_dir), "pointer": pointer, "pointer_changed": pointer_changed,
            "git": git_health(ws, setting), "paths": resolved_paths(ws, setting)}
     res["exists"] = {k: os.path.isdir(v) for k, v in res["paths"].items() if isinstance(v, str)}
     res["written"] = False
     if a.write:
         if changed:
-            write_text(path, text, lines)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            tmp = path + ".tmp"
+            with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+                f.write(after)
+            os.replace(tmp, path)
         if pointer_changed:
             p = pointer_path(a.claude_dir)
             os.makedirs(os.path.dirname(p), exist_ok=True)
@@ -521,7 +523,7 @@ def cmd_link(a):
                       "an AGENTS/ folder (AGENTS/skills/<name>, AGENTS/agents/<name>.md) and link it from there."
                       % (source, ", ".join(HARNESS_FOLDERS)), in_harness_folder=True)
     ws, _, setting, _, needs = load_setting(a, into_ws)
-    if needs and not into_ws:  # a workspace link needs no Dev mode entry in that workspace
+    if needs and not into_ws:  # a workspace link needs no setting in that workspace
         raise Refused(needs_error(needs), needs_setting=needs)
     paths = resolved_paths(ws, setting) or (
         {"source": os.path.join(into_ws, "AGENTS"), "plugins": os.path.join(into_ws, "AGENTS", "plugins")} if into_ws else None)
@@ -596,7 +598,7 @@ def cmd_check_deps(a):
                   "detail": "Python %d.%d.%d" % sys.version_info[:3],
                   "fix": "" if py_ok else "Install Python 3.10 or later (Windows: winget install Python.Python.3.13)"})
     git = shutil.which("git")
-    items.append({"name": "git", "kind": "tool", "need": "required for Git version control and dev mode", "status": "ok" if git else "missing",
+    items.append({"name": "git", "kind": "tool", "need": "required for dev mode", "status": "ok" if git else "missing",
                   "detail": git or "keeps the workspace's files under version control",
                   "fix": "" if git else "Windows: winget install Git.Git"})
     uv = shutil.which("uv")
@@ -769,7 +771,6 @@ def main():
     s.add_argument("--workspace", required=True)
     s.add_argument("--source-folder")
     s.add_argument("--plugins-folder")
-    s.add_argument("--git-version-control", choices=["on", "off"])
     s.add_argument("--as-of", help="date for the pointer's 'updated' field, YYYY-MM-DD (tests)")
     s.add_argument("--write", action="store_true")
     l = sub.add_parser("link")

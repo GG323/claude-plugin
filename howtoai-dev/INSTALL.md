@@ -25,7 +25,7 @@
 Install `howtoai-dev` for one user and one workspace, so the dev skills work the way this user and project need without any skill file edited for this install. Done means these are written, each only after a preview and the user's yes, and checked:
 
 - the user's defaults in `~/.claude/howtoai/dev-settings.json` and the project's settings in `<workspace>/AGENTS/settings.json`;
-- the `## Dev mode` entry in the workspace `AGENTS.md` (Git version control and dev mode, each on or off), and this plugin's one line under its `## Installed skills` section ([AUDIT.md](AUDIT.md#skills-line));
+- the dev-mode setting, the `howtoai` key in `<workspace>/AGENTS/settings.json` (on or off), and this plugin's one line under its `## Installed skills` section ([AUDIT.md](AUDIT.md#skills-line));
 - deny rules for secret env files in `<workspace>/.claude/settings.json`, through `update-config`;
 - workbooks and version workbooks in `AGENTS/workbooks/` through `dev-workbook`, and deploy targets in `AGENTS/deploy-targets.json` through `dev-deploy`;
 - in dev mode, links in `~/.claude/skills` and `~/.claude/agents` and the three hooks in `~/.claude/settings.json`; in plugin mode, the installed plugin;
@@ -59,29 +59,28 @@ A need no setting covers is a plugin change through `skill-builder`; [docs/insta
 ## Check dependencies
 
 1. Run `CHECK deps` (it reads only; its probes change nothing). In your first message to the user, show every entry of `missing`, the dev hooks too, with its `need` (what it blocks), also when no choice needs it yet or step 2 stops the install. For a nontechnical user, name each item by what it does and who can install it, with no command or `fix` line.
-2. **Required items missing** (`deps_ok` false): show them with their `fix` lines and stop. The `howtoai` plugin (`grilling`, `skill-builder`) is installed with its own `INSTALL.md` first, which also writes the dev-mode pointer. Stop the same way when `howtoai_root` is empty, even with `deps_ok` true: without its `devmode.py` the [Dev mode](#dev-mode) settings can be neither read nor recorded, so never go on as if dev mode were off. For a nontechnical user, name each missing item by what it does and who can install it, with no `fix` line; the `fix` lines go in the install record.
+2. **Required items missing** (`deps_ok` false): show them with their `fix` lines and stop. The `howtoai` plugin (`grilling`, `skill-builder`) is installed with its own `INSTALL.md` first, which also writes the dev-mode pointer. Stop the same way when `howtoai_root` is empty, even with `deps_ok` true: without its `devmode.py` the [Dev mode](#dev-mode) setting can be neither read nor recorded, so never go on as if dev mode were off. For a nontechnical user, name each missing item by what it does and who can install it, with no `fix` line; the `fix` lines go in the install record.
 3. **Items with `status` `unknown`** a script cannot see: check your own tool list for an Atlassian (Jira) and an Azure DevOps MCP server, and whether you can start subagents, publish an artifact (the Artifact tool), and run hooks (Claude Code).
 4. A missing optional tool only removes the choices that need it; offer to install it when the user picks such a choice. Keep `howtoai_root` and `pointer_workspace`.
 
 ## Dev mode
 
-The workspace's `## Dev mode` entry in `AGENTS.md` holds two required settings, **Git version control** and **Dev mode**, each `on` or `off`. Dev mode on needs Git version control on. A missing or invalid value is an error to resolve with the user, never a default.
+The dev-mode setting is the `howtoai` key in the workspace's `AGENTS/settings.json`: `dev_mode` true or false, plus the folders when they are not the defaults. It is required: a missing or invalid value is an error to resolve with the user, never a default. Git is not a setting: with dev mode on, the files must be under Git before anything is linked.
 
 1. Run `DEVMODE status --workspace "<workspace>"`:
-   - **Exit 0:** `setting` holds both values, and `paths.plugins` is the plugins folder.
-   - **Exit 1 with `needs_setting`:** tell the user each `problem` and go to step 3; `dev_mode` is then `null`, which never means off. When `agents_md_exists` is false, first ask to create `AGENTS.md`, where the setting is kept (`skill-audit`'s workspace audit drafts one), and stop if the user declines. For a nontechnical user, call `AGENTS.md` the folder's notes file, say what it is for, and say each `problem` as what is missing and who decides it.
+   - **Exit 0:** `setting` holds the value, and `paths.plugins` is the plugins folder.
+   - **Exit 1 with `needs_setting`:** tell the user each `problem` and go to step 3; `dev_mode` is then `null`, which never means off. For a nontechnical user, say each `problem` as what is missing and who decides it.
    - **Any other failure:** show its `error` and stop.
-2. **A valid setting:** say both values in one line ("Git version control and dev mode are on; plugins live in `<plugins folder>`"); for a nontechnical user, without the folder path. When the user wants to change one, go to step 3. When dev mode is on and `pointer.workspace` is another workspace, check `paths.plugins_shared`: when it is true, this workspace shares that workspace's clone and the pointer stays there by design, so go to step 5. When it is false, go to step 4 with the current values (`DEVMODE link` reads the pointer's workspace). Otherwise go to step 5.
+2. **A valid setting:** say the value in one line ("Dev mode is on; plugins live in `<plugins folder>`"); for a nontechnical user, without the folder path. When the user wants to change it, go to step 3. When dev mode is on and `pointer.workspace` is another workspace, check `paths.plugins_shared`: when it is true, this workspace shares that workspace's clone and the pointer stays there by design, so go to step 5. When it is false, go to step 4 with the current values (`DEVMODE link` reads the pointer's workspace). Otherwise go to step 5.
 3. **Ask.** A value already set is the recommendation.
-   - **Dev mode:** "Do you want to keep the skills, agents, and tools in workspace files, so they are under version control and easier to change?" Recommend no for a client who will not change the skills. Say that yes also turns Git version control on.
-   - **Yes:** Git version control is on, so do not ask it separately; a user who does not want Git gets dev mode off. Ask where the plugins folder is, recommending the default `AGENTS/plugins`: a clone in this workspace's `AGENTS/`, which makes it the main development workspace that the global links point to (the howtoai plugin's `INSTALL.md`, Ask the install questions, item 4, has the clone source and the main-workspace choice). Other choices: an existing clone of the `howtoai-mods` repository inside the workspace, written relative to it (`devmode.py` refuses `..`), or another workspace's clone, kept as the main one, given as its absolute path (the folder above the pointer's `howtoai_root`), so nothing is cloned or linked again and the pointer stays there.
-   - **No:** ask "Should Git version control be enabled for this workspace: on or off?", recommending on, because changes to the instructions and tools can then be reviewed and undone.
-4. **Record both values**, always with both flags:
-   - dev mode on: `DEVMODE set --dev-mode on --git-version-control on --workspace "<workspace>" --plugins-folder "<folder>"`;
-   - dev mode off: `DEVMODE set --dev-mode off --git-version-control <on or off> --workspace "<workspace>"`.
+   - **Dev mode:** "Do you want to keep the skills, agents, and tools in workspace files, so they are under version control and easier to change?" Recommend no for a client who will not change the skills. Say that yes needs the files under Git, which step 5 checks.
+   - **Yes:** a user who does not want Git gets dev mode off. Ask where the plugins folder is, recommending the default `AGENTS/plugins`: a clone in this workspace's `AGENTS/`, which makes it the main development workspace that the global links point to (the howtoai plugin's `INSTALL.md`, Ask the install questions, item 3, has the clone source and the main-workspace choice). Other choices: an existing clone of the `howtoai-mods` repository inside the workspace, written relative to it (`devmode.py` refuses `..`), or another workspace's clone, kept as the main one, given as its absolute path (the folder above the pointer's `howtoai_root`), so nothing is cloned or linked again and the pointer stays there.
+4. **Record the value:**
+   - dev mode on: `DEVMODE set --dev-mode on --workspace "<workspace>"`, adding `--plugins-folder "<folder>"` when it is not the default;
+   - dev mode off: `DEVMODE set --dev-mode off --workspace "<workspace>"`.
 
-   Show its `diff` and, when `pointer_changed` is true, what the pointer will hold; after a yes, run it again with `--write`. When it refuses, show the `error` and ask again; never change an answer to make it pass. When the user does not approve the write, stop: the install cannot go on without both settings.
-5. **Git problems.** With Git version control on, run `DEVMODE status` again, show every sentence in `git.problems`, and fix one only after the user's yes; for a nontechnical user, say each problem in plain words, and who can fix it:
+   Show its `diff` and, when `pointer_changed` is true, what the pointer will hold; after a yes, run it again with `--write`. When it refuses, show the `error` and ask again; never change an answer to make it pass. When the user does not approve the write, stop: the install cannot go on without the setting.
+5. **Git problems.** Run `DEVMODE status` again, show every sentence in `git.problems`, and fix one only after the user's yes; for a nontechnical user, say each problem in plain words, and who can fix it:
    - **Git is not installed:** give the official install source.
    - **`AGENTS/` not in a repository:** offer `git init "<workspace>/AGENTS"` and a `.gitignore` there with `state/` (and `plugins/` only when the plugins folder is a git clone of its own), written with the file tools after showing it; this works in a multi-repo workspace too. For a nontechnical user, offer to start change history for the AI tools folder, with no command.
    - **The workspace not in a repository:** offer `git init "<workspace>"` only when the user wants the whole workspace in one repository, never when `git.layout` is `multi-repo` (the root holds the user's own repositories; its root files are `git.notes`, not problems). Never add, commit, create a remote, or push. For a nontechnical user, offer to start change history for this folder, with no command.
@@ -159,16 +158,16 @@ When the user chose "now", run [dev-deploy's Set up a target route](skills/dev-d
 
 [AUDIT.md](AUDIT.md) holds what every install must leave true, so the install and every later audit check it the same way.
 
-1. Run `py -3 -I -B "<howtoai_root>/skills/skill-audit/scripts/check_plugins.py" --audit "<plugin>/AUDIT.md" --workspace "<workspace>"`, and again with `--audit "<howtoai_root>/AUDIT.md"` (both dev-mode settings, Git, and the `howtoai` links).
+1. Run `py -3 -I -B "<howtoai_root>/skills/skill-audit/scripts/check_plugins.py" --audit "<plugin>/AUDIT.md" --workspace "<workspace>"`, and again with `--audit "<howtoai_root>/AUDIT.md"` (the dev-mode setting, Git, the `howtoai` line, and the `howtoai` links).
 2. For each `fail`, show the check's fix and any `text` as a preview, and apply it after the user's yes. For each `needs-approval`, show the command, run it after the user's yes, and judge it by its `pass_when`. Judge a `review` from its listed files. An `invalid` is a broken check: report it, never count it as passed. For a nontechnical user, say what each check looks at and that it changes nothing, with no command.
-3. Check what only this install knows: each approved value is the one in the settings and the dev-mode entry, `DEVMODE status` exits 0 and each of its `git.problems` is fixed or under Left out, and `<workspace>/.claude/settings.json` holds each approved deny rule for secret env files. A check for a deferred step goes under Left out, not as a failed check.
+3. Check what only this install knows: each approved value is the one in the settings and the `howtoai` key in `AGENTS/settings.json`, `DEVMODE status` exits 0 and each of its `git.problems` is fixed or under Left out, and `<workspace>/.claude/settings.json` holds each approved deny rule for secret env files. A check for a deferred step goes under Left out, not as a failed check.
 4. Run step 1 again and record every result in the install record's Checks table.
 
 Fix a failing check now when the fix stays within the user's decisions; otherwise report it.
 
 ## Double check with skill-builder
 
-Hand the finished install to the `skill-builder` skill (`/skill-builder` in Claude Code) on its verification-only route, with this brief: "Verify the howtoai-dev install in `<workspace>`: compare `AGENTS/install.md`, the dev settings, the results of `<plugin>/AUDIT.md`, the `AGENTS.md` dev-mode entry, the links and hooks, and the workbooks against the decisions in the install record and `<plugin>/docs/install-index.md`. Read only; report each mismatch with its file."
+Hand the finished install to the `skill-builder` skill (`/skill-builder` in Claude Code) on its verification-only route, with this brief: "Verify the howtoai-dev install in `<workspace>`: compare `AGENTS/install.md`, the dev settings, the results of `<plugin>/AUDIT.md`, the dev-mode setting (`howtoai` key in `AGENTS/settings.json`), the links and hooks, and the workbooks against the decisions in the install record and `<plugin>/docs/install-index.md`. Read only; report each mismatch with its file."
 
 1. Fix each mismatch that stays within the user's decisions, then hand it the same brief again. Stop after two rounds.
 2. A mismatch that would change a decision, or needs a dev skill file changed, goes to the user first; a skill file change then runs as a `skill-builder` change to the `howtoai-dev` plugin, with its own plan.
@@ -192,7 +191,7 @@ Run this file again: every value already set is the recommendation, and each wri
 
 Turning dev mode off, each step previewed and written only after a yes:
 
-1. Ask whether Git version control is on or off, recommending its current value, or on when it has none. Then run `DEVMODE set --dev-mode off --git-version-control <on or off> --workspace "<workspace>"`, and again with `--write`.
+1. Run `DEVMODE set --dev-mode off --workspace "<workspace>"`, and again with `--write`.
 2. When the pointer names another workspace, say that the links serve that workspace too, and ask before removing any. For each of this plugin's links in `dev_links` (state `ok`): `DEVMODE unlink --dest "<dest>"`, then again with `--write`. The plugin's files stay where they are.
 3. Hand the removal of the three hook registrations from `~/.claude/settings.json` to `update-config`, changing nothing else, so a later plugin install does not run them twice.
 4. Then follow [Install or link](#install-or-link) for plugin mode.
@@ -201,7 +200,7 @@ Turning dev mode off, each step previewed and written only after a yes:
 
 | Symptom | Fix |
 | --- | --- |
-| `devmode.py` exits 1 with `needs_setting` | A value is missing or invalid, or dev mode is on with Git off (for `link`, in the pointer's workspace): ask the user and record both values, as [Dev mode](#dev-mode) says; never assume one |
+| `devmode.py` exits 1 with `needs_setting` | The setting is missing or invalid (for `link`, in the pointer's workspace): ask the user and record it, as [Dev mode](#dev-mode) says; never assume one |
 | `install_check.py deps` gives no `howtoai_root` | Stop: the `howtoai` plugin's `INSTALL.md` runs first; for a nontechnical user, say the HowToAI tools need installing first, by whoever looks after this computer |
 | `devmode.py set` exits 2 on the plugins folder | Use a folder inside the workspace, written relative to it, with no `..`, or the absolute path of an existing `howtoai-mods` clone (with `.claude-plugin/marketplace.json` and `howtoai/`) to share it |
 | `devmode.py link` refuses a destination | A real folder or file is in the way: leave it, list it under Left out, and ask the user whether it is an old copy they want to remove themselves |

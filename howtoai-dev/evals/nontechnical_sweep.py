@@ -25,8 +25,8 @@ PRECEDENCE = "For a nontechnical user, the nontechnical form wins over any step'
 # Lines that are flagged but never reach a nontechnical user, each named by a phrase it holds.
 AGENT_ONLY = {
     "Preview every write.": "a write preview keeps the exact path, the one exception the rules allow",
-    "entry in `AGENTS.md` holds two required settings": "describes where the setting lives; no message text",
-    "**Yes:** Git version control is on, so do not ask it separately": "dev mode on only, a developer choice",
+    "The dev-mode setting is the `howtoai` key": "describes where the setting lives; no message text",
+    "**Yes:** a user who does not want Git gets dev mode off": "dev mode on only, a developer choice",
     "The plugin lives in `<plugins folder>/howtoai-dev/`": "dev mode on only, a developer step",
     "**Git before links.**": "dev mode on only, a developer step",
     "**Links.** For each skill folder": "dev mode on only, a developer step",
@@ -38,7 +38,6 @@ AGENT_ONLY = {
     "**Project settings:** `DEVCORE setup": "a write preview, then the agent's own commands",
     "**Install record:** copy": "agent runs it; never shown to the user",
     "Hand the finished install to the `skill-builder` skill": "the agent's brief to skill-builder; never shown to the user",
-    "Ask whether Git version control is on or off, recommending its current value": "turning dev mode off, a developer step",
     "When the pointer names another workspace, say that the links serve": "turning dev mode off, a developer step",
     "Hand the removal of the three hook registrations": "turning dev mode off, a developer step",
     "under `UserPromptSubmit`, matcher `*`": "the update-config brief for dev mode's hooks, a developer step",
