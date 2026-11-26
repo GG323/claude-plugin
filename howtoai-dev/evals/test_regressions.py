@@ -805,7 +805,7 @@ class EveryEntryPoint(Workspace):
     settings = {"testing": {"entry_points": [{"name": "api", "command": "dotnet test Api"},
                                              {"name": "worker", "command": "dotnet test Worker"}]}}
 
-    def checked(self, rows, result="green", stage="review", started="test", later=None, points=None, then=()):
+    def checked(self, rows, result="green", stage="review", started="test", later=None, points=None, then=(), route="run"):
         """rows: the Results of a run that started at stage `started`. later: those of a run review started."""
         if points is not None:
             write(os.path.join(self.ws, "AGENTS", "settings", "dev", "settings.json"), json.dumps({"testing": {"entry_points": points}}))
@@ -814,7 +814,7 @@ class EveryEntryPoint(Workspace):
         reports = [rows] if later is None else [rows, later]
         for n, body in enumerate(reports, 1):
             self.patch(change, {"append": {"test_runs": {
-                "n": n, "route": "run", "wi": None, "result": result, "passed": 1, "failed": 0, "flaky": 0,
+                "n": n, "route": route, "wi": None, "result": result, "passed": 1, "failed": 0, "flaky": 0,
                 "report": f"test-run-{n}.md"}}})
             write(os.path.join(change, f"test-run-{n}.md"), "# Run\n\n## Results\n\n"
                   "| Entry point | Passed | Failed | Skipped | Flaky | Duration (s) |\n"
@@ -838,6 +838,9 @@ class EveryEntryPoint(Workspace):
             return json.loads(p.stdout).get("entry_points", {}).get("result")
         except ValueError:
             return "crashed"
+
+    def test_a_green_repro_run_is_not_the_stage_test_run(self):
+        self.assertEqual(self.checked(self.BOTH, route="repro"), "fail")
 
     def test_a_missing_entry_point_fails(self):
         self.assertEqual(self.checked("| api: `dotnet test Api` | 13 | 0 | 0 | 0 | 1 |"), "fail")

@@ -1,5 +1,7 @@
 # Stage: draft
 
+For a bug report, Scope and size has a `reproduction` row; when it has none, run scope's [Reproduce](scope.md#reproduce) section first.
+
 ## Architect proposals
 
 Large only; Small and Medium skip to [Fill the plan](#fill-the-plan).

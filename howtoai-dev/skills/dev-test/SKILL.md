@@ -8,7 +8,7 @@ compatibility: Needs Python 3 (standard library only) and the dev-core and dev-w
 
 ## Goal
 
-Stages 3 and 5 of `howtoai-dev`. **Write** (after `dev-plan`'s approval): every Verification criterion, acceptance criterion, and "must not change" entry becomes a test, written before any code and proven to fail for the expected reason, mapped in `<change folder>/test-map.md` (or `test-map-<n>.md` per work item). **Run** (after `dev-build`): the suite runs through the project's own entry points, only after every target it could reach is classified by evidence and none is production. Every run, the red check included, leaves `<change folder>/test-run-<n>.md` and a regenerated Latest run section in each affected `TESTING.md`. `dev-build` follows a red check, `dev-review` a green run.
+Stages 3 and 5 of `howtoai-dev`. **Write** (after `dev-plan`'s approval): every Verification criterion, acceptance criterion, and "must not change" entry becomes a test, written before any code and proven to fail for the expected reason, mapped in `<change folder>/test-map.md` (or `test-map-<n>.md` per work item). **Run** (after `dev-build`): the suite runs through the project's own entry points, only after every target it could reach is classified by evidence and none is production. Every run, the red check included, leaves `<change folder>/test-run-<n>.md` and a regenerated Latest run section in each affected `TESTING.md`; a repro run, which `dev-plan` asks for before the plan, leaves only `test-run-<n>.md`. `dev-build` follows a red check, `dev-review` a green run.
 
 ## Before you start
 
@@ -34,7 +34,8 @@ Stages 3 and 5 of `howtoai-dev`. **Write** (after `dev-plan`'s approval): every 
 | Stage `tests-first`, or the user asks to write the tests first | [Write](routes/write.md) |
 | Stage `test`, a rerun asked by `dev-review` or the user, or "which environments would the tests hit" | [Run](routes/run.md) |
 | Stage `build` and the user asks to run the tests | [Run](routes/run.md) as a progress run; the stage stays `build` |
-| Stage `plan` or `accept` | Stop: the plan is not approved yet; hand back to `dev-plan` |
+| Stage `plan` and `dev-plan`'s scope stage asks for a reproduction | [Run](routes/run.md) as a repro run; the stage stays `plan` |
+| Any other request at stage `plan` or `accept` | Stop: the plan is not approved yet; hand back to `dev-plan` |
 | "Refresh TESTING.md" with no test run | [Run](routes/run.md) from [Start the run](routes/run.md#start-the-run), so the targets are classified and refused as in every run: the Latest run section only ever describes a real run |
 
 Write calls Run for its red check; Run never calls Write.
@@ -61,7 +62,7 @@ The hooks run only in Claude Code with the plugin installed; elsewhere these rul
 
 ## Verify the output
 
-Before the closing report (a refused run checks only the report, state, and tear-down; it keeps its stage and skips `TESTING.md`):
+Before the closing report (a refused or repro run checks only the report, state, and tear-down; it keeps its stage and skips `TESTING.md`):
 
 - After Write: `test-map.md` has one row per Verification criterion, acceptance criterion, and "must not change" entry, and no `{placeholder}` left.
 - `test-run-<n>.md` figures match the `RESULTS` output, and its Targets table matches the `TARGETS` output.

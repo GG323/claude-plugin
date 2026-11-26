@@ -5,4 +5,4 @@ timeout_seconds: 1500
 allowed_tools: [Read, Glob, Grep, Skill, Bash, Write, Edit, Agent]
 ---
 
-Plan a fix with dev-plan: the nightly export fails on big days because the upload to finance times out after 30 seconds. Stop at the approval question.
+Plan a fix with dev-plan: the nightly export fails on big days because the upload to finance times out after 30 seconds. I ran last night's export and its log shows the upload timed out after 30 seconds. Stop at the approval question.

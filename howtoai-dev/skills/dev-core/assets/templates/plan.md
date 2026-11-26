@@ -16,7 +16,7 @@ Every decision names its source and is marked **confirmed** (file and line, or d
 
 | Item | Kind | Fact | Evidence | Mark |
 | --- | --- | --- | --- | --- |
-| {item} | {caller / data / contract / test / untested / outside effect / convention / reuse} | {fact} | {file:line, or the search run} | {confirmed / inferred: reason} |
+| {item} | {caller / data / contract / test / untested / outside effect / convention / reuse / reproduction} | {fact} | {file:line, or the search run} | {confirmed / inferred: reason} |
 
 **Size:** {Small / Medium / Large} - {one-line reason citing the riskiest fact}
 

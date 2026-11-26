@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: small-bug-fix
 expected_outcome: |
-  dev-plan sizes the export timeout fix Small (one file, reversible), asks at most one question or none, writes questions.md and plan.md with a Verification section that has a "Behaviour that must not change" entry, runs one review round with comprehension and critic only, does no split, and stops at the approval question with a rendered plan page.
+  dev-plan sizes the export timeout fix Small (one file, reversible), asks at most one question or none, writes questions.md and plan.md with a Verification section that has a "Behaviour that must not change" entry and a reproduction row from the user's report (Mark inferred; no reproduction question is asked and nothing is run), runs one review round with comprehension and critic only, does no split, and stops at the approval question with a rendered plan page.
 context:
   scaffold_script: place-files.sh

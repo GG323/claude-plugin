@@ -124,6 +124,19 @@ class DeployTests(unittest.TestCase):
         for part in ("not deploy", "no accepted human review", "not green"):
             self.assertIn(part, joined)
 
+    def test_gate_without_change_ignores_an_untracked_change_folder(self):
+        self.add_target()
+        subprocess.run(["git", "init", "-q", self.ws], check=True)
+        subprocess.run(["git", "-C", self.ws, "add", "-A"], check=True)
+        subprocess.run(["git", "-C", self.ws, "-c", "user.name=t", "-c", "user.email=t@example.invalid",
+                        "commit", "-q", "-m", "x"], check=True)
+        write(os.path.join(self.ws, "dev-plans", "c1", "state.json"), json.dumps({"id": "c1", "stage": "plan"}))
+        write(os.path.join(self.ws, "AGENTS", "plans", "c2", "plan.md"), "# plan" + chr(10))
+        res = run("gate", "--workspace", self.ws, "--target", "local-k8s")[1]
+        self.assertTrue(res["ok"], res)
+        write(os.path.join(self.ws, "tests", "Repro_Discount.cs"), "x" + chr(10))
+        self.assertIn("uncommitted", " ".join(run("gate", "--workspace", self.ws, "--target", "local-k8s")[1]["problems"]))
+
     def gate_after(self, runs, later=()):
         """runs: (minute, result). Stage test is entered at minute 10 and review at 20; later: (minute, stage)."""
         self.add_target()

@@ -82,6 +82,14 @@ class TestFirstTests(HookBase):
         self.change("build", test_runs=[{"route": "red-check", "result": "red"}])
         self.assertEqual(self.hook(self.H, "Edit", file_path=self.path("src/Api/Auth.cs"))[0], None)
 
+    def test_a_repro_run_is_not_a_red_check(self):
+        self.change("build", test_runs=[{"route": "repro", "result": "red"}])
+        self.assertEqual(self.hook(self.H, "Edit", file_path=self.path("src/Api/Auth.cs"))[0], "warn")
+
+    def test_control_a_reproduction_test_at_stage_plan_is_not_blocked(self):
+        self.change("plan")
+        self.assertEqual(self.hook(self.H, "Write", file_path=self.path("tests/Api.Tests/Repro_Discount.cs"))[0], None)
+
     def test_warn_and_off_modes(self):
         self.change("tests-first")
         self.settings({"testing": {"test_first": "warn"}})

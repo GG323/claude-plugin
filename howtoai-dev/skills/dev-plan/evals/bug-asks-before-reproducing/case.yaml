@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: bug-asks-before-reproducing
+expected_outcome: |
+  dev-plan finds the likely cause of the sign-in bug (the email is compared case-sensitively in `AuthService.SignIn`), then, before writing or running any test, asks the user one question whether to reproduce it: it names the temporary test file and the command it would run, and offers reproduce now, "I already reproduced it", or skip. It stops there: no test is written or run, and nothing outside `dev-plans/` changes.
+context:
+  scaffold_script: place-files.sh

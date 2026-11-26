@@ -151,6 +151,16 @@ none: no existing function, type, or contract changed
         core("state", self.cdir, "--patch", json.dumps({"append": {"test_runs": {
             "n": 2, "route": "run", "wi": 1, "result": "green", "passed": 3, "failed": 0, "flaky": 0, "report": "test-run-2.md"}}}))
 
+    def test_a_repro_run_is_not_a_red_check(self):
+        path = os.path.join(self.cdir, "state.json")
+        with open(path, encoding="utf-8") as f:
+            state = json.load(f)
+        state["test_runs"] = [{"n": 1, "route": "repro", "wi": None, "result": "red", "passed": 0, "failed": 1, "flaky": 0}]
+        write(path, json.dumps(state))
+        code, s = self.b("start", "--wi", "1")
+        self.assertEqual(code, 1, s)
+        self.assertIn("missing, not red", s["error"])
+
     def test_snapshot_and_hunks_leave_index_alone(self):
         code, s = self.b("start", "--wi", "1")
         self.assertEqual(code, 0, s)

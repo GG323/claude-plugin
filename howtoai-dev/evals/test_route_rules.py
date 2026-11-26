@@ -278,5 +278,54 @@ class WithoutHooks(unittest.TestCase):
         self.assertIn("second layer", row[0])
 
 
+class ReproduceRules(unittest.TestCase):
+    def test_scope_asks_then_reproduces_a_bug_before_size(self):
+        scope = text("dev-plan", "stages", "scope.md")
+        self.assertIn("## Reproduce", scope)
+        self.assertLess(scope.index("## Workbook statements"), scope.index("## Reproduce"))
+        self.assertLess(scope.index("## Reproduce"), scope.index("## Size"))
+        part = scope.split("## Reproduce")[1].split("## Size")[0]
+        for phrase in ("a wording, docs, or config-text change is not one",
+                       "skip the ask", "write or run nothing before the answer",
+                       "reproduce now (recommended when it can be tested)", '"I already reproduced it"', "or skip",
+                       "does not replace `dev-test`'s or `dev-deploy`'s own questions",
+                       "run it through `dev-test`'s Run route as a repro run", "remove it in the same turn",
+                       "`git status --short`",
+                       "with `dev-deploy`, as a deploy on its own, before the test is written",
+                       '`"production": false`', "Never a production target.",
+                       "`not reproduced: the user chose to skip`", "`not reproduced: <reason>`",
+                       "`inferred: the user's run, not repeated here`", "ask the user for a failing example"):
+            self.assertIn(phrase, part)
+
+    def test_draft_checks_for_the_reproduction_row_first(self):
+        head = text("dev-plan", "stages", "draft.md").split("## Architect proposals")[0]
+        self.assertIn("run scope's [Reproduce](scope.md#reproduce) section first", head)
+
+    def test_no_code_allows_only_the_temporary_reproduction_test(self):
+        skill = text("dev-plan", "SKILL.md")
+        self.assertNotIn("Never write tests or product code", skill)
+        self.assertIn("The only test is scope's temporary reproduction test, after the user's yes, removed in the same turn.", skill)
+        verify = skill.split("## Verify the output")[1]
+        self.assertIn("a `reproduction` row", verify)
+        self.assertIn("`git status --short`", verify)
+
+    def test_the_plan_template_has_the_reproduction_kind(self):
+        with open(os.path.join(SKILLS, "dev-core", "assets", "templates", "plan.md"), encoding="utf-8") as f:
+            self.assertIn("reuse / reproduction}", f.read())
+
+    def test_dev_test_runs_a_reproduction_at_stage_plan_and_stops_otherwise(self):
+        skill = text("dev-test", "SKILL.md")
+        self.assertIn("| Stage `plan` and `dev-plan`'s scope stage asks for a reproduction | [Run](routes/run.md) as a repro run; the stage stays `plan` |", skill)
+        self.assertIn("| Any other request at stage `plan` or `accept` | Stop", skill)
+        self.assertIn("a refused or repro run checks only", skill)
+        run = text("dev-test", "routes", "run.md")
+        for phrase in ("`repro` when `dev-plan`'s scope stage called it", "A red check or repro run never reruns.",
+                       "Skip for a refused or repro run.", "A repro run changes no stage"):
+            self.assertIn(phrase, run)
+
+    def test_a_reproduction_deploy_is_on_its_own_and_never_production(self):
+        self.assertIn('no `--change`, only a target with `"production": false`', text("dev-deploy", "SKILL.md"))
+
+
 if __name__ == "__main__":
     unittest.main()

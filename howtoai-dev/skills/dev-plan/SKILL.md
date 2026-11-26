@@ -44,7 +44,7 @@ Stages, in order; read each file when you reach it: [setup](stages/setup.md), [s
 - **Sources and marks.** Every decision and fact names its source (user, project, tool with the workbook ID, industry, or general) and is **confirmed** (file and line, doc link, or workbook ID; a search that found nothing counts when you name what was searched) or **inferred** (with the reason).
 - **Workbooks bind.** Resolved MUST and MUST NOT statements bind the plan; going against one is the user's decision, recorded with the statement ID.
 - **Numbers from scripts.** Counts, the round number, the clean-round test, and the page come from `DEVCORE`, `FINDINGS`, and `PAGE`. Never edit `state.json` or `INDEX.md` by hand.
-- **No code.** Write only into the change folder, and to the tracker after the user approves the list. Never write tests or product code, commit, or push.
+- **No code.** Write only into the change folder, and to the tracker after the user approves the list. Never write product code, commit, or push. The only test is scope's temporary reproduction test, after the user's yes, removed in the same turn.
 - **Tracker.** Create items only; never edit, move, or close existing ones, except the description of the plan item this change created, after a yes.
 - **Chat.** One line per stage with what it found or decided ("Size: Medium - one subsystem, reversible"), the question rounds, and the approval question. No raw JSON.
 
@@ -53,7 +53,8 @@ Stages, in order; read each file when you reach it: [setup](stages/setup.md), [s
 Before the approval question:
 
 - `plan.md` has no `{placeholder}`; each section has content or its stated "none".
-- Every Verification criterion has a method and an exact passing result; a bug fix has a "Behaviour that must not change" entry.
+- Every Verification criterion has a method and an exact passing result; a bug fix has a "Behaviour that must not change" entry and a `reproduction` row in Scope and size.
+- After a reproduction test, `git status --short` (or the test folder listing) matches the one taken before it was written, outside the change folder and `dev-deploy`'s own files: no hook is active at stage `plan`, so this is what catches a test left behind.
 - `FINDINGS check` on the last `plan-review-<n>.md` returns `"ok": true`.
 - `DEVCORE state` shows the size and, for a split, every work item.
 - The plan is shown where `plan.publish` says; a rendered page has no errors and its figures match the files.
